@@ -1,12 +1,24 @@
+import { useState } from "react";
 import type { Character, Item } from "../types/rpg.types";
 import { useThemeClasses } from "../contexts/AppSettingsContext";
-import { CirclePlus, Sword, Shield, Package, Coins } from "lucide-react";
+import {
+  CirclePlus,
+  Sword,
+  Shield,
+  Package,
+  Coins,
+  FlaskConical,
+  ScrollText,
+  WandSparkles,
+  Funnel,
+} from "lucide-react";
 
 interface Props {
   activeChar: Character;
   items: Item[];
   onToggleItemEquip: (itemId: string) => void;
   onOpenAddItem: () => void;
+  onOpenEditItem: (item: Item) => void;
   onUpdateCurrency: <T extends keyof Character>(
     field: T,
     value: Character[T],
@@ -18,13 +30,74 @@ export function DnDInventory({
   items,
   onToggleItemEquip,
   onOpenAddItem,
+  onOpenEditItem,
   onUpdateCurrency,
 }: Props) {
   const t = useThemeClasses();
+  const [showTypeFilters, setShowTypeFilters] = useState(false);
+  const [objectFilter, setObjectFilter] = useState<
+    "all" | "objet" | "potion" | "parchemin" | "objet_magique"
+  >("all");
+
+  const objectTypeOptions: Array<{
+    key: "all" | "objet" | "potion" | "parchemin" | "objet_magique";
+    label: string;
+  }> = [
+    { key: "all", label: "Tout" },
+    { key: "objet", label: "Objet" },
+    { key: "potion", label: "Potion" },
+    { key: "parchemin", label: "Parchemin" },
+    { key: "objet_magique", label: "Magique" },
+  ];
+
+  const getObjectIcon = (category?: Item["category"]) => {
+    if (category === "potion") return FlaskConical;
+    if (category === "parchemin") return ScrollText;
+    if (category === "objet_magique") return WandSparkles;
+    return Package;
+  };
+
+  const getObjectTone = (category?: Item["category"]) => {
+    if (category === "potion") {
+      return {
+        cardTint: "bg-emerald-500/6 border-emerald-400/25",
+        iconTint: "bg-emerald-500/16 border-emerald-400/35 text-emerald-300",
+      };
+    }
+    if (category === "parchemin") {
+      return {
+        cardTint: "bg-amber-500/6 border-amber-400/25",
+        iconTint: "bg-amber-500/16 border-amber-400/35 text-amber-300",
+      };
+    }
+    if (category === "objet_magique") {
+      return {
+        cardTint: "bg-fuchsia-500/7 border-fuchsia-400/28",
+        iconTint: "bg-fuchsia-500/18 border-fuchsia-400/40 text-fuchsia-300",
+      };
+    }
+    return {
+      cardTint: "bg-sky-500/5 border-sky-400/22",
+      iconTint: "bg-sky-500/14 border-sky-400/30 text-sky-300",
+    };
+  };
 
   const weapons = items.filter((i) => i.category === "arme");
   const armors = items.filter((i) => i.category === "armure");
-  const objects = items.filter((i) => !i.category || i.category === "objet");
+  const objects = items.filter(
+    (i) =>
+      !i.category ||
+      i.category === "objet" ||
+      i.category === "potion" ||
+      i.category === "parchemin" ||
+      i.category === "objet_magique",
+  );
+
+  const filteredObjects = objects.filter((item) => {
+    if (objectFilter === "all") return true;
+    const normalizedCategory = item.category || "objet";
+    return normalizedCategory === objectFilter;
+  });
 
   return (
     <div className="space-y-2">
@@ -54,7 +127,7 @@ export function DnDInventory({
                     Math.max(0, Number(e.target.value) || 0),
                   )
                 }
-                className={`${t.inputText} bg-transparent w-full font-mono text-[11px] leading-none focus:outline-none`}
+                className={`${t.inputText} bg-transparent w-full font-mono text-[20px] leading-none focus:outline-none text-end`}
               />
             </div>
 
@@ -76,7 +149,7 @@ export function DnDInventory({
                     Math.max(0, Number(e.target.value) || 0),
                   )
                 }
-                className={`${t.inputText} bg-transparent w-full font-mono text-[11px] leading-none focus:outline-none`}
+                className={`${t.inputText} bg-transparent w-full font-mono text-[20px] leading-none focus:outline-none text-end`}
               />
             </div>
 
@@ -98,7 +171,7 @@ export function DnDInventory({
                     Math.max(0, Number(e.target.value) || 0),
                   )
                 }
-                className={`${t.inputText} bg-transparent w-full font-mono text-[11px] leading-none focus:outline-none`}
+                className={`${t.inputText} bg-transparent w-full font-mono text-[20px] leading-none focus:outline-none text-end`}
               />
             </div>
           </div>
@@ -132,6 +205,11 @@ export function DnDInventory({
                   >
                     {item.name}
                   </span>
+                  {item.description && (
+                    <p className={`text-[10px] ${t.textSecondary} mt-0.5 leading-snug wrap-break-word`}>
+                      {item.description}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 mt-0.5">
                     {item.damage && (
                       <span className={`text-[9px] font-mono ${t.accent}`}>
@@ -174,6 +252,11 @@ export function DnDInventory({
                   >
                     {item.name}
                   </span>
+                  {item.description && (
+                    <p className={`text-[10px] ${t.textSecondary} mt-0.5 leading-snug wrap-break-word`}>
+                      {item.description}
+                    </p>
+                  )}
                   {item.defense_bonus !== undefined &&
                     item.defense_bonus > 0 && (
                       <span
@@ -210,44 +293,109 @@ export function DnDInventory({
           >
             <Package size={14} /> Inventaire
           </h4>
-          <button
-            onClick={onOpenAddItem}
-            className={`w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}
-          >
-            <CirclePlus size={16} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowTypeFilters((prev) => !prev)}
+              className={`w-6 h-6 flex items-center justify-center rounded-xl border transition-all ${
+                showTypeFilters || objectFilter !== "all"
+                  ? `${t.accentBg} ${t.accentBorder} ${t.accent}`
+                  : `${t.cardBg} ${t.cardBorder} ${t.textMuted}`
+              } hover:brightness-110 active:scale-90`}
+              aria-label="Filtrer par type"
+            >
+              <Funnel size={14} />
+            </button>
+            <button
+              onClick={onOpenAddItem}
+              className={`w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}
+            >
+              <CirclePlus size={16} />
+            </button>
+          </div>
         </div>
-        <div className="space-y-2">
-          {objects.length > 0 ? (
-            objects.map((item) => (
-              <div
-                key={item.id}
-                className={`flex justify-between items-center ${t.inputBg} p-2.5 rounded-xl border ${t.cardBorder}`}
-              >
-                <div>
-                  <span className={`text-xs font-bold ${t.textPrimary} block`}>
-                    {item.name}
-                  </span>
-                  <span className={`text-[9px] ${t.textMuted} block mt-0.5`}>
-                    Qté : {item.quantity}
-                  </span>
-                </div>
+
+        {(showTypeFilters || objectFilter !== "all") && (
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {objectTypeOptions.map((option) => {
+              const isActive = objectFilter === option.key;
+              return (
                 <button
+                  key={option.key}
                   type="button"
-                  onClick={() => onToggleItemEquip(item.id)}
-                  className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-all ${
-                    item.equipped
-                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
-                      : `${t.btnSecondaryBg} ${t.btnSecondaryText} ${t.btnSecondaryBorder}`
+                  onClick={() => setObjectFilter(option.key)}
+                  className={`text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-lg border transition-all ${
+                    isActive
+                      ? `${t.accentBg} ${t.accentBorder} ${t.accent}`
+                      : `${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.btnSecondaryText}`
                   }`}
                 >
-                  {item.equipped ? "ÉQUIPÉ" : "SAC"}
+                  {option.label}
                 </button>
-              </div>
-            ))
+              );
+            })}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {filteredObjects.length > 0 ? (
+            filteredObjects.map((item) => {
+              const Icon = getObjectIcon(item.category);
+              const tone = getObjectTone(item.category);
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => onOpenEditItem(item)}
+                  className={`${t.inputBg} ${tone.cardTint} p-2.5 rounded-xl border ${t.cardBorder} cursor-pointer transition-all hover:brightness-105 active:scale-[0.99]`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg border shrink-0 ${tone.iconTint}`}
+                    >
+                      <Icon size={14} />
+                    </div>
+
+                    <div className="w-full min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`text-xs font-bold ${t.textPrimary} truncate`}>
+                            {item.name}
+                          </span>
+                          <span className={`text-[9px] ${t.textMuted} shrink-0`}>
+                            Qté : {item.quantity}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleItemEquip(item.id);
+                          }}
+                          className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-all shrink-0 ${
+                            item.equipped
+                              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                              : `${t.btnSecondaryBg} ${t.btnSecondaryText} ${t.btnSecondaryBorder}`
+                          }`}
+                        >
+                          {item.equipped ? "ÉQUIPÉ" : "SAC"}
+                        </button>
+                      </div>
+                      {item.description && (
+                        <p className={`text-[10px] ${t.textSecondary} mt-1 leading-snug wrap-break-word`}>
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
           ) : (
             <p className={`text-xs ${t.textMuted} italic text-center p-4`}>
-              Votre inventaire est vide.
+              {objectFilter === "all"
+                ? "Votre inventaire est vide."
+                : "Aucun objet dans ce type."}
             </p>
           )}
         </div>

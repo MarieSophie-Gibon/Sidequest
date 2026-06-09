@@ -4,7 +4,7 @@ import { AVATAR_TEMPLATES } from './constants';
 import { useAuth } from './hooks/useAuth';
 import { useCharacterData } from './hooks/useCharacterData';
 import { useThemeClasses } from './contexts/AppSettingsContext';
-import type { Character, CoreAttribute, Feature } from './types/rpg.types';
+import type { Character, CoreAttribute, Feature, Item } from './types/rpg.types';
 
 // Components
 import { AuthScreen } from './components/AuthScreen';
@@ -310,6 +310,20 @@ export default function App() {
                     items={data.items}
                     onToggleItemEquip={data.handleToggleItemEquip}
                     onOpenAddItem={() => setModalType('add_item')}
+                    onOpenEditItem={(item: Item) => {
+                      data.setNewItem({
+                        id: item.id,
+                        name: item.name,
+                        description: item.description || '',
+                        quantity: item.quantity,
+                        equipped: item.equipped,
+                        category: item.category || 'objet',
+                        damage: item.damage || '',
+                        range: item.range || '',
+                        defense_bonus: item.defense_bonus || 0,
+                      });
+                      setModalType('add_item');
+                    }}
                     onUpdateCurrency={data.syncCharacterField}
                   />
                 )}
@@ -374,7 +388,16 @@ export default function App() {
             <AddSpellModal newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' }); setModalType(null); }} />
           )}
           {modalType === 'add_item' && (
-            <AddItemModal newItem={data.newItem} setNewItem={data.setNewItem} onSubmit={(e) => { data.handleAddItem(e); setModalType(null); }} onClose={() => setModalType(null)} />
+            <AddItemModal
+              newItem={data.newItem}
+              setNewItem={data.setNewItem}
+              onSubmit={async (e) => { await data.handleSaveItem(e); setModalType(null); }}
+              onDelete={data.handleDeleteItem}
+              onClose={() => {
+                data.setNewItem({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
+                setModalType(null);
+              }}
+            />
           )}
           {modalType === 'change_avatar' && data.activeChar && (
             <ChangeAvatarModal

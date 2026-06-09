@@ -73,10 +73,11 @@ export interface Item {
   id: string;
   character_id: string;
   name: string;
+  description?: string;
   quantity: number;
   weight: number;
   equipped: boolean;
-  category?: 'objet' | 'arme' | 'armure';
+  category?: 'objet' | 'arme' | 'armure' | 'potion' | 'parchemin' | 'objet_magique';
   damage?: string;
   range?: string;
   defense_bonus?: number;

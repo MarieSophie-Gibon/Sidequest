@@ -40,10 +40,12 @@ export interface NewSpellState {
 }
 
 export interface NewItemState {
+  id?: string;
   name: string;
+  description: string;
   quantity: number;
   equipped: boolean;
-  category: 'objet' | 'arme' | 'armure';
+  category: 'objet' | 'arme' | 'armure' | 'potion' | 'parchemin' | 'objet_magique';
   damage: string;
   range: string;
   defense_bonus: number;
@@ -72,7 +74,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   const [newFeature, setNewFeature] = useState<NewFeatureState>({ name: '', max: 2, recharge: 'LONG_REST', description: '', category: 'active', type: 'classe', resource_id: '', resource_cost: 0 });
   const [newResource, setNewResource] = useState<NewResourceState>({ name: '', max: 10, current: 10, recharge: 'LONG_REST' });
   const [newSpell, setNewSpell] = useState<NewSpellState>({ name: '', level: 0, range: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' });
-  const [newItem, setNewItem] = useState<NewItemState>({ name: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
+  const [newItem, setNewItem] = useState<NewItemState>({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
   const [newSpellSlot, setNewSpellSlot] = useState<NewSpellSlotState>({ level: 1, max: 4, current: 4 });
 
   async function fetchCharactersList() {
@@ -354,13 +356,14 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   }
 
   // Items
-  async function handleAddItem(e: React.FormEvent) {
+  async function handleSaveItem(e: React.FormEvent) {
     e.preventDefault();
     if (!activeChar || !newItem.name.trim()) return;
 
     const payload = {
       character_id: activeChar.id,
       name: newItem.name.trim(),
+      description: newItem.description.trim() || null,
       quantity: Number(newItem.quantity),
       weight: 1,
       equipped: newItem.equipped,
@@ -369,14 +372,31 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       ...(newItem.category === 'armure' && { defense_bonus: Number(newItem.defense_bonus) }),
     };
 
-    const { data, error } = await supabase.from('items').insert([payload]).select().single();
-    if (!error && data) {
-      setItems(prev => [...prev, data as Item]);
-      showAlert("Objet Ajouté", `${payload.name} est dans le sac.`);
+    if (newItem.id) {
+      const { character_id: _, ...updatePayload } = payload;
+      const { data, error } = await supabase.from('items').update(updatePayload).eq('id', newItem.id).select().single();
+      if (!error && data) {
+        setItems(prev => prev.map(it => it.id === newItem.id ? (data as Item) : it));
+        showAlert("Objet Modifié", `${payload.name} a été mis à jour.`);
+      }
+    } else {
+      const { data, error } = await supabase.from('items').insert([payload]).select().single();
+      if (!error && data) {
+        setItems(prev => [...prev, data as Item]);
+        showAlert("Objet Ajouté", `${payload.name} est dans le sac.`);
+      }
     }
 
-    setNewItem({ name: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
+    setNewItem({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
     return true;
+  }
+
+  async function handleDeleteItem(id: string, name: string) {
+    const { error } = await supabase.from('items').delete().eq('id', id);
+    if (!error) {
+      setItems(prev => prev.filter(it => it.id !== id));
+      showAlert("Objet Retiré", `${name} a été supprimé de l'inventaire.`);
+    }
   }
 
   async function handleToggleItemEquip(itemId: string) {
@@ -609,7 +629,8 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     handleAddSpell,
     handleDeleteSpell,
     handleToggleSkill,
-    handleAddItem,
+    handleSaveItem,
+    handleDeleteItem,
     handleToggleItemEquip,
     handleCreateCharacter,
     handleShortRest,
