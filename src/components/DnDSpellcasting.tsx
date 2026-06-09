@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Spell, SpellSlot } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { CirclePlus, ChevronDown } from 'lucide-react';
+import { CirclePlus, ChevronDown, Sword, Sparkles, Shield } from 'lucide-react';
 
 interface DnDSpellcastingProps {
   spellSlots: SpellSlot[];
@@ -31,6 +31,25 @@ export function DnDSpellcasting({
   const accentDimHex = t.accent.includes('violet') ? '#7c3aed' : '#2563eb';
   const [expandedSpell, setExpandedSpell] = useState<string | null>(null);
 
+  const castingTypeMeta: Record<NonNullable<Spell['casting_type']>, { label: string; icon: typeof Sword }> = {
+    action: { label: 'Action', icon: Sword },
+    bonus: { label: 'Bonus', icon: Sparkles },
+    reaction: { label: 'Réaction', icon: Shield },
+  };
+
+  const getLevelBadgeClass = (level: number) => {
+    if (level <= 0) return 'text-emerald-300 bg-emerald-500/10 border-emerald-500/25';
+    if (level === 1) return 'text-blue-200 bg-blue-500/16 border-blue-400/35';
+    if (level === 2) return 'text-violet-200 bg-violet-500/16 border-violet-400/35';
+    if (level === 3) return 'text-indigo-300 bg-indigo-500/10 border-indigo-500/25';
+    if (level === 4) return 'text-violet-300 bg-violet-500/10 border-violet-500/25';
+    if (level === 5) return 'text-fuchsia-300 bg-fuchsia-500/10 border-fuchsia-500/25';
+    if (level === 6) return 'text-rose-300 bg-rose-500/10 border-rose-500/25';
+    if (level === 7) return 'text-orange-300 bg-orange-500/10 border-orange-500/25';
+    if (level === 8) return 'text-amber-300 bg-amber-500/10 border-amber-500/25';
+    return 'text-red-300 bg-red-500/10 border-red-500/25';
+  };
+
   return (
     <div className="space-y-2">
       <div onClick={onEditSpellcasting} className={`${t.cardBg} border ${t.cardBorder} rounded-2xl px-3 py-2 shadow-sm ${t.cardShadow} cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex items-center justify-between`}>
@@ -45,43 +64,46 @@ export function DnDSpellcasting({
       <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>
         <div className="flex justify-between items-center mb-3">
           <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider`}>Emplacements de Sorts</h4>
+          <span className={`text-[9px] ${t.textMuted} uppercase`}>Cliquer un niveau pour ajuster</span>
         </div>
-        <div className="space-y-2.5">
+        <div className="grid grid-cols-2 gap-2.5">
             {spellSlots.map((slot) => (
               <div
                 key={slot.level}
                 onClick={() => onOpenEditSpellSlot(slot)}
-                className={`flex justify-between items-center ${t.inputBg} p-3 rounded-xl border ${t.cardBorder} hover:${t.accentBorder} cursor-pointer transition-all`}
+                className={`${t.inputBg} p-3 rounded-xl border ${t.cardBorder} hover:${t.accentBorder} cursor-pointer transition-all`}
               >
-                <span className={`text-xs font-bold ${t.textPrimary} font-mono`}>Niveau {slot.level}</span>
-                <div className="flex gap-2">
-                  {Array.from({ length: slot.max }).map((_, i) => {
-                    const isUsed = i >= slot.current;
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleSpellSlot(slot.level, i);
-                        }}
-                        className="focus:outline-none"
-                      >
-                        <svg className="w-6 h-6 transform rotate-45" viewBox="0 0 24 24">
-                          <rect
-                            x="4"
-                            y="4"
-                            width="16"
-                            height="16"
-                            fill={!isUsed ? `${accentHex}40` : 'transparent'}
-                            stroke={!isUsed ? accentDimHex : '#64748b'}
-                            strokeWidth="2"
-                          />
-                          {!isUsed && <rect x="8" y="8" width="8" height="8" fill={`${accentHex}60`} />}
-                        </svg>
-                      </button>
-                    );
-                  })}
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`text-xs font-bold ${t.textPrimary} font-mono shrink-0`}>Niv.{slot.level}</span>
+                  <div className="flex gap-1.5 flex-wrap justify-end">
+                    {Array.from({ length: slot.max }).map((_, i) => {
+                      const isUsed = i >= slot.current;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleSpellSlot(slot.level, i);
+                          }}
+                          className="focus:outline-none"
+                        >
+                          <svg className="w-5 h-5 transform rotate-45" viewBox="0 0 24 24">
+                            <rect
+                              x="4"
+                              y="4"
+                              width="15"
+                              height="15"
+                              fill={!isUsed ? `${accentHex}40` : 'transparent'}
+                              stroke={!isUsed ? accentDimHex : '#64748b'}
+                              strokeWidth="2"
+                            />
+                            {!isUsed && <rect x="8" y="8" width="8" height="8" fill={`${accentHex}60`} />}
+                          </svg>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             ))}
@@ -116,12 +138,17 @@ export function DnDSpellcasting({
                     )}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {spell.casting_type && (
-                      <span className={`text-[9px] font-mono ${t.textSecondary} uppercase ${t.btnSecondaryBg} px-1.5 py-0.5 rounded-lg border ${t.btnSecondaryBorder}`}>
-                        {spell.casting_type === 'bonus' ? 'Bonus' : spell.casting_type === 'reaction' ? 'Réaction' : 'Action'}
-                      </span>
-                    )}
-                    <span className={`text-[9px] font-mono ${t.textSecondary} uppercase ${t.btnSecondaryBg} px-1.5 py-0.5 rounded-lg border ${t.btnSecondaryBorder}`}>
+                    {spell.casting_type && (() => {
+                      const meta = castingTypeMeta[spell.casting_type];
+                      const CastIcon = meta.icon;
+                      return (
+                        <span className={`text-[9px] font-mono ${t.textSecondary} uppercase ${t.btnSecondaryBg} px-1.5 py-0.5 rounded-lg border ${t.btnSecondaryBorder} flex items-center gap-1`}>
+                          <CastIcon size={10} />
+                          {meta.label}
+                        </span>
+                      );
+                    })()}
+                    <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-lg border ${getLevelBadgeClass(spell.level)}`}>
                       {spell.level === 0 ? 'Mineur' : `Niv ${spell.level}`}
                     </span>
                   </div>

@@ -345,12 +345,19 @@ export default function App() {
               newSpellSlot={data.newSpellSlot}
               setNewSpellSlot={data.setNewSpellSlot}
               onSave={async () => {
-                data.setSpellSlots(prev => prev.map(s => s.level === data.newSpellSlot.level ? { ...s, current: data.newSpellSlot.current } : s));
+                data.setSpellSlots(prev => prev.map(s => s.level === data.newSpellSlot.level ? { ...s, max: data.newSpellSlot.max, current: Math.min(data.newSpellSlot.current, data.newSpellSlot.max) } : s));
                 setModalType(null);
                 if (data.activeChar) {
-                  await supabase.from('spell_slots').update({ current: data.newSpellSlot.current }).eq('character_id', data.activeChar.id).eq('level', data.newSpellSlot.level);
+                  await supabase
+                    .from('spell_slots')
+                    .update({
+                      max: data.newSpellSlot.max,
+                      current: Math.min(data.newSpellSlot.current, data.newSpellSlot.max),
+                    })
+                    .eq('character_id', data.activeChar.id)
+                    .eq('level', data.newSpellSlot.level);
                 }
-                showAlert("Slots Synchronisés", "Utilisations restantes mises à jour.");
+                showAlert("Slots Synchronisés", "Nombre total et utilisations restantes mis à jour.");
               }}
               onClose={() => setModalType(null)}
             />

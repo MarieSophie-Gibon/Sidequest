@@ -24,8 +24,33 @@ export function EditSpellSlotModal({ newSpellSlot, setNewSpellSlot, onSave, onCl
             <p>• Niv. 1 → 4 slots • Niv. 2-5 → 3 • Niv. 6-7 → 2 • Niv. 8-9 → 1</p>
           </div>
           <div>
+            <label className={`text-[10px] ${t.textMuted} block mb-1`}>Emplacements disponibles (max total)</label>
+            <input
+              type="number"
+              min="0"
+              max="12"
+              value={newSpellSlot.max}
+              onChange={(e) => {
+                const nextMax = Math.max(0, Number(e.target.value) || 0);
+                setNewSpellSlot(prev => ({
+                  ...prev,
+                  max: nextMax,
+                  current: Math.min(prev.current, nextMax),
+                }));
+              }}
+              className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs font-mono font-bold text-center focus:outline-none`}
+            />
+          </div>
+          <div>
             <label className={`text-[10px] ${t.textMuted} block mb-1`}>Slots restants (max. {newSpellSlot.max})</label>
-            <input type="number" min="0" max={newSpellSlot.max} value={newSpellSlot.current} onChange={(e) => setNewSpellSlot(prev => ({ ...prev, current: Math.min(newSpellSlot.max, Number(e.target.value)) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs font-mono font-bold text-center focus:outline-none`} />
+            <input
+              type="number"
+              min="0"
+              max={newSpellSlot.max}
+              value={newSpellSlot.current}
+              onChange={(e) => setNewSpellSlot(prev => ({ ...prev, current: Math.min(prev.max, Math.max(0, Number(e.target.value) || 0)) }))}
+              className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs font-mono font-bold text-center focus:outline-none`}
+            />
           </div>
         </div>
         <div className={`grid grid-cols-2 gap-2 pt-2 border-t ${t.cardBorder}`}>
