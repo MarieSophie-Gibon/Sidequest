@@ -1,14 +1,16 @@
-import type { Item } from '../types/rpg.types';
+import type { Character, Item } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { CirclePlus, Sword, Shield, Package } from 'lucide-react';
+import { CirclePlus, Sword, Shield, Package, Coins } from 'lucide-react';
 
 interface Props {
+  activeChar: Character;
   items: Item[];
   onToggleItemEquip: (itemId: string) => void;
   onOpenAddItem: () => void;
+  onUpdateCurrency: <T extends keyof Character>(field: T, value: Character[T]) => void;
 }
 
-export function DnDInventory({ items, onToggleItemEquip, onOpenAddItem }: Props) {
+export function DnDInventory({ activeChar, items, onToggleItemEquip, onOpenAddItem, onUpdateCurrency }: Props) {
   const t = useThemeClasses();
 
   const weapons = items.filter(i => i.category === 'arme');
@@ -17,6 +19,48 @@ export function DnDInventory({ items, onToggleItemEquip, onOpenAddItem }: Props)
 
   return (
     <div className="space-y-2">
+      {/* Purse section */}
+      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>
+        <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider mb-3 flex items-center gap-1.5`}>
+          <Coins size={14} /> Bourse
+        </h4>
+
+        <div className="grid grid-cols-3 gap-2">
+          <div className={`${t.inputBg} border ${t.cardBorder} rounded-xl p-2.5`}>
+            <label className={`text-[9px] ${t.textMuted} uppercase font-semibold block mb-1`}>PO</label>
+            <input
+              type="number"
+              min="0"
+              value={activeChar.gold}
+              onChange={(e) => onUpdateCurrency('gold', Math.max(0, Number(e.target.value) || 0))}
+              className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-lg px-2 py-1.5 w-full font-mono text-xs focus:outline-none`}
+            />
+          </div>
+
+          <div className={`${t.inputBg} border ${t.cardBorder} rounded-xl p-2.5`}>
+            <label className={`text-[9px] ${t.textMuted} uppercase font-semibold block mb-1`}>PA</label>
+            <input
+              type="number"
+              min="0"
+              value={activeChar.silver}
+              onChange={(e) => onUpdateCurrency('silver', Math.max(0, Number(e.target.value) || 0))}
+              className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-lg px-2 py-1.5 w-full font-mono text-xs focus:outline-none`}
+            />
+          </div>
+
+          <div className={`${t.inputBg} border ${t.cardBorder} rounded-xl p-2.5`}>
+            <label className={`text-[9px] ${t.textMuted} uppercase font-semibold block mb-1`}>PC</label>
+            <input
+              type="number"
+              min="0"
+              value={activeChar.copper}
+              onChange={(e) => onUpdateCurrency('copper', Math.max(0, Number(e.target.value) || 0))}
+              className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-lg px-2 py-1.5 w-full font-mono text-xs focus:outline-none`}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Equipment section */}
       {(weapons.length > 0 || armors.length > 0) && (
         <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>

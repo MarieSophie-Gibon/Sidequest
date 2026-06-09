@@ -24,6 +24,8 @@ export interface Character {
   wis: number;
   cha: number;
   gold: number;
+  silver: number;
+  copper: number;
   proficiency_bonus: number;
   avatar_key: string;
   avatar_url?: string;

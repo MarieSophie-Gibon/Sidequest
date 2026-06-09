@@ -306,9 +306,11 @@ export default function App() {
 
                 {activeTab === 'inventory' && (
                   <DnDInventory
+                    activeChar={data.activeChar}
                     items={data.items}
                     onToggleItemEquip={data.handleToggleItemEquip}
                     onOpenAddItem={() => setModalType('add_item')}
+                    onUpdateCurrency={data.syncCharacterField}
                   />
                 )}
 
