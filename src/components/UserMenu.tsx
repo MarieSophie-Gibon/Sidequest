@@ -14,6 +14,7 @@ export function UserMenu({ username, onLogout, showAlert }: Props) {
   const { isDark } = useAppSettings();
   const dropdownBg = isDark ? 'bg-[#1a0f2e]' : 'bg-white';
   const [isOpen, setIsOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [editMode, setEditMode] = useState<'pseudo' | 'email' | 'password' | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [confirmValue, setConfirmValue] = useState('');
@@ -82,8 +83,6 @@ export function UserMenu({ username, onLogout, showAlert }: Props) {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm('⚠️ Supprimer votre compte ? Cette action est irréversible.');
-    if (!confirmed) return;
     setLoading(true);
     const { error } = await supabase.rpc('delete_user');
     setLoading(false);
@@ -135,7 +134,10 @@ export function UserMenu({ username, onLogout, showAlert }: Props) {
                 <LogOut size={13} className={t.textMuted} /> Déconnexion
               </button>
               <button
-                onClick={handleDeleteAccount}
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsDeleteConfirmOpen(true);
+                }}
                 className="w-full text-left px-4 py-2.5 text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-colors flex items-center gap-2"
               >
                 <Trash2 size={13} /> Supprimer le compte
@@ -186,6 +188,38 @@ export function UserMenu({ username, onLogout, showAlert }: Props) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {isDeleteConfirmOpen && (
+        <div className={`fixed inset-0 ${t.modalOverlay} z-60 flex items-center justify-center p-4`}>
+          <div className={`${t.modalBg} border ${t.cardBorder} rounded-2xl p-5 w-full max-w-sm shadow-2xl ${t.cardShadow} space-y-4 animate-scaleUp`}>
+            <h3 className={`font-bold ${t.textPrimary} text-sm tracking-wide uppercase`}>Supprimer le compte</h3>
+            <p className={`text-xs ${t.textSecondary}`}>
+              Cette action est irreversible. Votre compte et tous vos personnages seront supprimes definitivement.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                className={`${t.btnSecondaryBg} ${t.btnSecondaryText} border ${t.btnSecondaryBorder} py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all hover:brightness-105 active:scale-95 disabled:opacity-50`}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  await handleDeleteAccount();
+                  setIsDeleteConfirmOpen(false);
+                }}
+                className="bg-rose-600/85 border border-rose-300/65 text-white py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
+              >
+                {loading ? '...' : 'Confirmer'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -22,13 +22,17 @@ export function EditProfileModal({ activeChar, syncCharacterField, onClose }: Pr
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
+              <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Race</label>
+              <input type="text" value={activeChar.race} onChange={(e) => syncCharacterField('race', e.target.value)} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-sm focus:outline-none`} />
+            </div>
+            <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Classe</label>
               <input type="text" value={activeChar.class} onChange={(e) => syncCharacterField('class', e.target.value)} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-sm focus:outline-none`} />
             </div>
-            <div>
-              <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Sous-classe</label>
-              <input type="text" value={activeChar.subclass} onChange={(e) => syncCharacterField('subclass', e.target.value)} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-sm focus:outline-none`} />
-            </div>
+          </div>
+          <div>
+            <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Sous-classe</label>
+            <input type="text" value={activeChar.subclass} onChange={(e) => syncCharacterField('subclass', e.target.value)} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-sm focus:outline-none`} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
