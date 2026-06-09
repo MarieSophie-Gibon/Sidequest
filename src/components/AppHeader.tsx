@@ -24,7 +24,7 @@ export function AppHeader({ username, showBack, onBack, onLogout, showAlert }: P
             <ArrowLeft size={14} />
           </button>
         )}
-        <img src="/logo.svg" alt="SideQuest" className="h-14" />
+        <img src="/sq-logo.svg" alt="SideQuest" className="h-14" />
       </div>
       <UserMenu
         username={username}

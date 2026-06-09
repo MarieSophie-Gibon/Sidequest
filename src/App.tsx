@@ -121,10 +121,13 @@ export default function App() {
   // Loading state
   if (data.loading && data.view === 'dashboard' && auth.user) {
     return (
-      <div className={`${t.pageBg} min-h-screen ${t.textSecondary} flex items-center justify-center font-mono`}>
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs uppercase tracking-widest">Chargement...</span>
+      <div className={`${t.pageBg} min-h-screen ${t.textSecondary} flex items-center justify-center font-mono relative overflow-hidden`}>
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full blur-3xl pointer-events-none"
+          style={{ background: t.glow }}
+        />
+        <div className="relative z-10 w-52 h-52 sm:w-60 sm:h-60">
+          <img src="/logo.svg" alt="SideQuest" className="w-full h-full object-contain animate-loaderBlink" />
         </div>
       </div>
     );
@@ -398,6 +401,13 @@ export default function App() {
         }
         .animate-slideDown {
           animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes loaderBlink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.35; }
+        }
+        .animate-loaderBlink {
+          animation: loaderBlink 1.1s ease-in-out infinite;
         }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
