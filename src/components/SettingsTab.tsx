@@ -1,11 +1,8 @@
 import { useAppSettings, useThemeClasses } from '../contexts/AppSettingsContext';
-import { Sword, Sparkles, Moon, Sun, Shield } from 'lucide-react';
+import { Sword, Sparkles, Moon, Sun, Shield, GraduationCap } from 'lucide-react';
 
-interface Props {
-  onLogout: () => void;
-}
 
-export function SettingsTab({ onLogout }: Props) {
+export function SettingsTab() {
   const { isDark, setIsDark, dashboardVisibility, setDashboardVisibility } = useAppSettings();
   const t = useThemeClasses();
 
@@ -13,13 +10,14 @@ export function SettingsTab({ onLogout }: Props) {
     { key: 'showClassFeatures', label: 'Capacités de Classe', icon: Sword },
     { key: 'showTraits', label: 'Traits & Dons', icon: Sparkles },
     { key: 'showEquipment', label: 'Équipement', icon: Shield },
+    { key: 'showProficientSkills', label: 'Maîtrises', icon: GraduationCap },
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Mode Light / Dark */}
-      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>
-        <h4 className={`text-xs font-bold ${t.textSecondary} uppercase tracking-wider mb-4`}>Apparence</h4>
+      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
+        <h4 className={`text-xs font-bold ${t.textSecondary} uppercase tracking-wider mb-3`}>Apparence</h4>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-xl">{isDark ? <Moon size={20} /> : <Sun size={20} />}</span>
@@ -38,9 +36,9 @@ export function SettingsTab({ onLogout }: Props) {
       </div>
 
       {/* Dashboard visibility toggles */}
-      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>
-        <h4 className={`text-xs font-bold ${t.textSecondary} uppercase tracking-wider mb-4`}>Éléments du Dashboard</h4>
-        <div className="space-y-3">
+      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
+        <h4 className={`text-xs font-bold ${t.textSecondary} uppercase tracking-wider mb-3`}>Éléments du Dashboard</h4>
+        <div className="space-y-2">
           {toggleItems.map(item => (
             <div key={item.key} className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -58,15 +56,7 @@ export function SettingsTab({ onLogout }: Props) {
         </div>
       </div>
 
-      {/* Déconnexion */}
-      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 text-center shadow-sm ${t.cardShadow}`}>
-        <button
-          onClick={onLogout}
-          className={`w-full ${t.btnSecondaryBg} ${t.btnSecondaryText} border ${t.btnSecondaryBorder} py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all hover:brightness-105 active:scale-95`}
-        >
-          Quitter ma Session
-        </button>
-      </div>
+      
     </div>
   );
 }

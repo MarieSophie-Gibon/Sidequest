@@ -1,28 +1,24 @@
 import { useState } from 'react';
 import type { Character } from '../types/rpg.types';
-import type { User } from '../hooks/useAuth';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
 import { AVATAR_TEMPLATES } from '../constants';
-import { Plus } from 'lucide-react';
+import { Swords } from 'lucide-react';
 
 interface Props {
-  user: User;
   characters: Character[];
   onLoadCharacter: (charId: string) => void;
   onCreateCharacter: (name: string) => Promise<Character | null | undefined>;
-  onLogout: () => void;
-  showAlert: (title: string, text: string) => void;
 }
 
-export function Dashboard({ user, characters, onLoadCharacter, onCreateCharacter, onLogout, showAlert }: Props) {
+export function Dashboard({ characters, onLoadCharacter, onCreateCharacter }: Props) {
   const [isCreateHeroModalOpen, setIsCreateHeroModalOpen] = useState(false);
   const [newHeroNameInput, setNewHeroNameInput] = useState('Nouveau Héros');
   const t = useThemeClasses();
 
   return (
-    <div className="flex-1 overflow-y-auto space-y-6 pb-2 pr-1">
+    <div className="flex flex-col flex-1 min-h-0">
 
-      <div className="space-y-3">
+      <div className="flex-1 overflow-y-auto space-y-2 pb-3">
         {characters.length > 0 ? (
           characters.map(char => (
             <div
@@ -66,15 +62,19 @@ export function Dashboard({ user, characters, onLoadCharacter, onCreateCharacter
         )}
       </div>
 
-      <button
-        onClick={() => {
-          setNewHeroNameInput('Nouveau Héros');
-          setIsCreateHeroModalOpen(true);
-        }}
-        className={`w-full bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} font-bold shadow-lg hover:brightness-110 active:scale-95 border ${t.btnPrimaryBorder} py-3.5 rounded-xl text-xs tracking-widest uppercase flex items-center justify-center gap-2 transition-all`}
-      >
-        <Plus size={14} /> Forger un nouveau héros
-      </button>
+      <div className="pt-2 pb-1 shrink-0">
+        <button
+          onClick={() => {
+            setNewHeroNameInput('Nouveau Héros');
+            setIsCreateHeroModalOpen(true);
+          }}
+          className={`w-full flex items-center justify-center gap-2.5 ${t.cardBg} border ${t.accentBorder} ${t.accent} rounded-2xl py-3 text-xs font-bold uppercase tracking-widest shadow-md hover:brightness-110 active:scale-[0.98] transition-all`}
+          style={{ boxShadow: `0 0 18px ${t.glowAccent}` }}
+        >
+          <Swords size={15} />
+          Forger un nouveau héros
+        </button>
+      </div>
 
       {isCreateHeroModalOpen && (
         <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>

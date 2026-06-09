@@ -151,7 +151,7 @@ export default function App() {
 
       {/* Ambient glow */}
       <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full blur-[150px] pointer-events-none transition-all duration-700"
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-150 h-150 rounded-full blur-[150px] pointer-events-none transition-all duration-700"
         style={{ background: t.glow, zIndex: 2 }}
       />
 
@@ -183,7 +183,7 @@ export default function App() {
           onSubmit={(e) => auth.handleAuthSubmit(e, showAlert)}
         />
       ) : (
-        <div className="h-full max-h-full relative z-10 flex flex-col p-4 pb-24 overflow-hidden">
+        <div className={`h-full max-h-full relative z-10 flex flex-col p-4 pb-4 overflow-hidden`}>
 
           {/* HEADER */}
           {data.view === 'dashboard' && (
@@ -198,12 +198,9 @@ export default function App() {
           {/* DASHBOARD */}
           {data.view === 'dashboard' && (
             <Dashboard
-              user={auth.user}
               characters={data.characters}
               onLoadCharacter={(id) => data.loadCharacterData(id)}
               onCreateCharacter={(name) => data.handleCreateCharacter(name)}
-              onLogout={() => { data.setLoading(true); auth.handleLogout(showAlert).then(() => data.setLoading(false)); }}
-              showAlert={showAlert}
             />
           )}
 
@@ -232,13 +229,16 @@ export default function App() {
 
 
 
-              <main className="flex-1 overflow-y-auto space-y-2 pb-20 pr-1">
+              <main className="flex-1 overflow-y-auto space-y-2 pb-14 pr-1">
 
                 {activeTab === 'home' && (
                   <DnDAttributes
                     features={data.features}
                     items={data.items}
                     resources={data.resources}
+                    skills={data.skills}
+                    activeChar={data.activeChar!}
+                    getModValue={data.getModValue}
                     onToggleFeatureUse={data.toggleFeatureUse}
                     onShortRest={data.handleShortRest}
                     onLongRest={data.handleLongRest}
@@ -310,9 +310,7 @@ export default function App() {
                 )}
 
                 {activeTab === 'settings' && (
-                  <SettingsTab
-                    onLogout={() => { data.setLoading(true); auth.handleLogout(showAlert).then(() => data.setLoading(false)); }}
-                  />
+                  <SettingsTab />
                 )}
               </main>
 

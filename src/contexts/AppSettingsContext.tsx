@@ -4,6 +4,7 @@ export interface DashboardVisibility {
   showClassFeatures: boolean;
   showTraits: boolean;
   showEquipment: boolean;
+  showProficientSkills: boolean;
 }
 
 interface AppSettings {
@@ -24,7 +25,7 @@ function loadSettings(): { isDark: boolean; dashboardVisibility: DashboardVisibi
   } catch { /* ignore */ }
   return {
     isDark: false,
-    dashboardVisibility: { showClassFeatures: true, showTraits: true, showEquipment: false }
+    dashboardVisibility: { showClassFeatures: true, showTraits: true, showEquipment: false, showProficientSkills: true }
   };
 }
 

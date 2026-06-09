@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { useThemeClasses } from '../contexts/AppSettingsContext';
+import { useAppSettings, useThemeClasses } from '../contexts/AppSettingsContext';
 import { supabase } from '../supabaseClient';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Pencil, Mail, Lock, LogOut, Trash2 } from 'lucide-react';
 
 interface Props {
   username: string;
@@ -11,6 +11,8 @@ interface Props {
 
 export function UserMenu({ username, onLogout, showAlert }: Props) {
   const t = useThemeClasses();
+  const { isDark } = useAppSettings();
+  const dropdownBg = isDark ? 'bg-[#1a0f2e]' : 'bg-white';
   const [isOpen, setIsOpen] = useState(false);
   const [editMode, setEditMode] = useState<'pseudo' | 'email' | 'password' | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -104,39 +106,39 @@ export function UserMenu({ username, onLogout, showAlert }: Props) {
       </button>
 
       {isOpen && (
-        <div className={`absolute right-0 top-full mt-2 w-56 ${t.cardBg} border ${t.cardBorder} rounded-xl shadow-lg ${t.cardShadow} z-50 overflow-hidden animate-scaleUp`}>
+        <div className={`absolute right-0 top-full mt-2 w-56 ${dropdownBg} border ${t.cardBorder} rounded-xl shadow-2xl z-50 overflow-hidden animate-scaleUp`}>
           {!editMode ? (
             <div className="py-1">
               <button
                 onClick={() => { setEditMode('pseudo'); setInputValue(''); }}
                 className={`w-full text-left px-4 py-2.5 text-xs font-medium ${t.textPrimary} hover:${t.accentBg} transition-colors flex items-center gap-2`}
               >
-                <span>✏️</span> Changer le pseudo
+                <Pencil size={13} className={t.textMuted} /> Changer le pseudo
               </button>
               <button
                 onClick={() => { setEditMode('email'); setInputValue(''); }}
                 className={`w-full text-left px-4 py-2.5 text-xs font-medium ${t.textPrimary} hover:${t.accentBg} transition-colors flex items-center gap-2`}
               >
-                <span>📧</span> Changer l'email
+                <Mail size={13} className={t.textMuted} /> Changer l'email
               </button>
               <button
                 onClick={() => { setEditMode('password'); setInputValue(''); setConfirmValue(''); }}
                 className={`w-full text-left px-4 py-2.5 text-xs font-medium ${t.textPrimary} hover:${t.accentBg} transition-colors flex items-center gap-2`}
               >
-                <span>🔒</span> Changer le mot de passe
+                <Lock size={13} className={t.textMuted} /> Changer le mot de passe
               </button>
               <div className={`border-t ${t.cardBorder} my-1`} />
               <button
                 onClick={onLogout}
                 className={`w-full text-left px-4 py-2.5 text-xs font-medium ${t.textSecondary} hover:${t.accentBg} transition-colors flex items-center gap-2`}
               >
-                <span>🚪</span> Déconnexion
+                <LogOut size={13} className={t.textMuted} /> Déconnexion
               </button>
               <button
                 onClick={handleDeleteAccount}
                 className="w-full text-left px-4 py-2.5 text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-colors flex items-center gap-2"
               >
-                <span>🗑️</span> Supprimer le compte
+                <Trash2 size={13} /> Supprimer le compte
               </button>
             </div>
           ) : (

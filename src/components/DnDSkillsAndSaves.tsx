@@ -37,7 +37,7 @@ export function DnDSkillsAndSaves({
     <div className="space-y-2">
       <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>
         <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider mb-3`}>Compétences & Maîtrises</h4>
-        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+        <div className="space-y-3">
           {skillsByAttr.map(({ attr, skills: groupSkills }) => (
             <div key={attr}>
               <p className={`text-[10px] font-semibold ${t.textSecondary} uppercase tracking-wider mb-1.5 pl-1`}>
@@ -50,7 +50,11 @@ export function DnDSkillsAndSaves({
                   const finalBonusSign = finalBonus >= 0 ? `+${finalBonus}` : `${finalBonus}`;
 
                   return (
-                    <div key={skill.name} className={`flex justify-between items-center ${t.inputBg} px-3 py-2 rounded-xl border ${t.cardBorder}`}>
+                    <div key={skill.name} className={`flex justify-between items-center px-3 py-2 rounded-xl border transition-all ${
+                      skill.proficient
+                        ? `${t.accentBg} ${t.accentBorder}`
+                        : `${t.inputBg} ${t.cardBorder}`
+                    }`}>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -61,9 +65,9 @@ export function DnDSkillsAndSaves({
                               : `${t.cardBg} ${t.inputBorder}`
                           }`}
                         />
-                        <span className={`text-xs font-bold ${t.textPrimary} ml-1.5`}>{skill.name}</span>
+                        <span className={`text-xs font-bold ml-1.5 ${skill.proficient ? t.accent : t.textPrimary}`}>{skill.name}</span>
                       </div>
-                      <span className="text-xs font-bold font-mono text-emerald-500">{finalBonusSign}</span>
+                      <span className={`text-xs font-bold font-mono ${skill.proficient ? t.accent : 'text-emerald-500'}`}>{finalBonusSign}</span>
                     </div>
                   );
                 })}

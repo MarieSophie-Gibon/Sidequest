@@ -14,7 +14,7 @@ export function AppHeader({ username, showBack, onBack, onLogout, showAlert }: P
   const t = useThemeClasses();
 
   return (
-    <header className={`${t.navBg} border-b ${t.cardBorder} rounded-2xl mb-3 px-2 py-0 flex justify-between items-center shrink-0 shadow-lg ${t.cardShadow}`}>
+    <header className={`relative z-20 ${t.navBg} border-b ${t.cardBorder} rounded-2xl mb-3 px-2 py-0 flex justify-between items-center shrink-0 shadow-lg ${t.cardShadow}`}>
       <div className="flex items-center gap-2.5">
         {showBack && (
           <button
