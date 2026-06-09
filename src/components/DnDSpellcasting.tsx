@@ -61,7 +61,7 @@ export function DnDSpellcasting({
       </div>
 
       {spellSlots.length > 0 && (
-      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>
+      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
         <div className="flex justify-between items-center mb-3">
           <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider`}>Emplacements de Sorts</h4>
           <span className={`text-[9px] ${t.textMuted} uppercase`}>Cliquer un niveau pour ajuster</span>
@@ -111,12 +111,12 @@ export function DnDSpellcasting({
       </div>
       )}
 
-      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>
+      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
         <div className="flex justify-between items-center mb-3">
           <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider`}>Votre Grimoire</h4>
           <button
             onClick={onOpenAddSpell}
-            className={`w-8 h-8 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}
+            className={`w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}
           >
             <CirclePlus size={16} />
           </button>

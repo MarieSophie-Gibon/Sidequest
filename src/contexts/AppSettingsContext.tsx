@@ -39,7 +39,7 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
   }, [isDark, dashboardVisibility]);
 
   useEffect(() => {
-    const bgColor = isDark ? '#0f0a1a' : '#5f7fa6';
+    const bgColor = isDark ? '#1a1130' : '#5f7fa6';
     document.documentElement.style.backgroundColor = bgColor;
     document.body.style.backgroundColor = bgColor;
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -65,39 +65,39 @@ export function useThemeClasses() {
 
   return isDark ? {
     // Dark neon violet - glassmorphism
-    pageBg: 'bg-[#0f0a1a]/80',
-    cardBg: 'bg-violet-950/20 backdrop-blur-xl',
-    cardBorder: 'border-violet-400/30',
-    cardShadow: 'shadow-[0_8px_32px_rgba(139,92,246,0.15)]',
+    pageBg: 'bg-[#1a1130]/85',
+    cardBg: 'bg-violet-900/22 backdrop-blur-xl',
+    cardBorder: 'border-violet-400/55',
+    cardShadow: 'shadow-[0_8px_32px_rgba(139,92,246,0.22)]',
     textPrimary: 'text-white',
-    textSecondary: 'text-slate-300',
-    textMuted: 'text-slate-400',
-    accent: 'text-violet-300',
-    accentBg: 'bg-violet-500/15 backdrop-blur-sm',
-    accentBorder: 'border-violet-400/30',
-    inputBg: 'bg-violet-950/25 backdrop-blur-sm',
-    inputBorder: 'border-violet-400/30',
+    textSecondary: 'text-slate-200',
+    textMuted: 'text-slate-300',
+    accent: 'text-violet-200',
+    accentBg: 'bg-violet-500/20 backdrop-blur-sm',
+    accentBorder: 'border-violet-300/55',
+    inputBg: 'bg-violet-900/28 backdrop-blur-sm',
+    inputBorder: 'border-violet-400/55',
     inputText: 'text-white',
     btnPrimaryFrom: 'from-violet-500',
     btnPrimaryTo: 'to-fuchsia-600',
     btnPrimaryText: 'text-white',
-    btnPrimaryBorder: 'border-violet-400/40',
-    btnSecondaryBg: 'bg-violet-950/20 backdrop-blur-sm',
-    btnSecondaryText: 'text-slate-200',
-    btnSecondaryBorder: 'border-violet-400/30',
-    navBg: 'bg-violet-950/35 backdrop-blur-xl',
-    navBorder: 'border-violet-400/30',
-    navActive: 'text-violet-300 bg-linear-to-b from-violet-500/30 to-fuchsia-600/30 border border-violet-400/40 backdrop-blur-sm',
-    navInactive: 'text-slate-500 hover:text-violet-300',
-    glow: 'rgba(139, 92, 246, 0.2)',
-    glowAccent: 'rgba(192, 132, 252, 0.3)',
-    alertBg: 'bg-violet-950/60 backdrop-blur-xl border-violet-500/30',
+    btnPrimaryBorder: 'border-violet-300/60',
+    btnSecondaryBg: 'bg-violet-900/22 backdrop-blur-sm',
+    btnSecondaryText: 'text-slate-100',
+    btnSecondaryBorder: 'border-violet-400/55',
+    navBg: 'bg-violet-900/38 backdrop-blur-xl',
+    navBorder: 'border-violet-400/55',
+    navActive: 'text-violet-200 bg-linear-to-b from-violet-500/35 to-fuchsia-600/35 border border-violet-300/60 backdrop-blur-sm',
+    navInactive: 'text-slate-400 hover:text-violet-200',
+    glow: 'rgba(139, 92, 246, 0.25)',
+    glowAccent: 'rgba(192, 132, 252, 0.38)',
+    alertBg: 'bg-violet-900/55 backdrop-blur-xl border-violet-400/55',
     selectionBg: 'selection:bg-violet-500/30',
-    scrollbarThumb: 'scrollbar-thumb-violet-800',
+    scrollbarThumb: 'scrollbar-thumb-violet-700',
     modalOverlay: 'bg-black/50 backdrop-blur-lg',
-    modalBg: 'bg-violet-950/40 backdrop-blur-xl border-violet-500/25',
+    modalBg: 'bg-violet-900/42 backdrop-blur-xl border-violet-400/50',
     hpBar: 'from-violet-500 to-fuchsia-500',
-    badge: 'bg-violet-500/25 text-violet-200 border-violet-400/40',
+    badge: 'bg-violet-500/28 text-violet-100 border-violet-300/60',
     bgImage: '/bg-dark.jpg',
   } : {
     // Silver blue (dark-like ambience)
