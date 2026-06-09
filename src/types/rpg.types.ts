@@ -95,6 +95,18 @@ export interface SpellSlot {
   current: number;
 }
 
+export interface Biography {
+  character_id: string;
+  ideaux?: string;
+  alignement?: string;
+  liens?: string;
+  description_physique?: string;
+  traits_principaux?: string;
+  defauts?: string;
+  backstory?: string;
+  updated_at?: string;
+}
+
 export type CharacterStatKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
 export interface CoreAttribute {

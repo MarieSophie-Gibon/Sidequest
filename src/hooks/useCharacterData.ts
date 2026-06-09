@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { DEFAULT_SKILLS_TEMPLATES } from '../constants';
-import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource } from '../types/rpg.types';
+import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography } from '../types/rpg.types';
 import type { User } from './useAuth';
 
 export interface NewFeatureState {
@@ -68,6 +68,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   const [spellSlots, setSpellSlots] = useState<SpellSlot[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [activeConditions, setActiveConditions] = useState<string[]>([]);
+  const [biography, setBiography] = useState<Biography | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Modal form states
@@ -77,6 +78,25 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   const [newItem, setNewItem] = useState<NewItemState>({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
   const [newSpellSlot, setNewSpellSlot] = useState<NewSpellSlotState>({ level: 1, max: 4, current: 4 });
 
+  function getNetworkAwareMessage(rawMessage?: string, fallback = 'Une erreur est survenue.') {
+    const message = (rawMessage || '').toLowerCase();
+    const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+    const looksLikeNetwork =
+      message.includes('network') ||
+      message.includes('failed to fetch') ||
+      message.includes('fetch') ||
+      message.includes('offline') ||
+      message.includes('timeout') ||
+      message.includes('timed out') ||
+      message.includes('connection');
+
+    if (offline || looksLikeNetwork) {
+      return 'Erreur reseau : connexion impossible. Verifiez votre internet puis reessayez.';
+    }
+
+    return rawMessage || fallback;
+  }
+
   async function fetchCharactersList() {
     const { data, error } = await supabase
       .from('characters')
@@ -85,6 +105,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
     if (error) {
       console.error("Erreur récupération liste :", error.message);
+      showAlert('Erreur', getNetworkAwareMessage(error.message, 'Impossible de recuperer vos personnages.'));
     } else {
       setCharacters(data || []);
     }
@@ -101,6 +122,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
         }
       } catch (err) {
         console.error("Erreur d'initialisation de session :", err);
+        showAlert('Erreur', getNetworkAwareMessage((err as Error)?.message, 'Impossible de recuperer la session.'));
       } finally {
         setLoading(false);
       }
@@ -159,8 +181,10 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       const { data: skls } = await supabase.from('character_skills').select('*').eq('character_id', charId);
       const { data: slts } = await supabase.from('spell_slots').select('*').eq('character_id', charId);
       const { data: rcs } = await supabase.from('resources').select('*').eq('character_id', charId);
+      const { data: bio } = await supabase.from('character_biography').select('*').eq('character_id', charId).maybeSingle();
 
       setActiveChar(char as Character);
+      setBiography(bio as Biography | null);
       setFeatures(feats || []);
       setSpells(spls || []);
       setItems(itms || []);
@@ -179,7 +203,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       setView('sheet');
     } catch (e: unknown) {
       console.error("Erreur de chargement :", (e as Error).message);
-      showAlert("Erreur", "Impossible de charger la fiche.");
+      showAlert('Erreur', getNetworkAwareMessage((e as Error)?.message, 'Impossible de charger la fiche.'));
     } finally {
       setLoading(false);
     }
@@ -195,7 +219,10 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       .update({ [field]: value })
       .eq('id', activeChar.id);
 
-    if (error) console.error("Erreur de sauvegarde persistante :", error.message);
+    if (error) {
+      console.error("Erreur de sauvegarde persistante :", error.message);
+      showAlert('Erreur', getNetworkAwareMessage(error.message, 'La sauvegarde n\'a pas pu etre effectuee.'));
+    }
   }
 
   // Features CRUD
@@ -472,7 +499,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     }
 
     if (!createdCharacter) {
-      alert("Erreur lors de la création : " + (lastError?.message || 'échec inconnu'));
+      showAlert('Erreur', getNetworkAwareMessage(lastError?.message, 'Erreur lors de la creation du personnage.'));
       setLoading(false);
       return null;
     }
@@ -565,6 +592,24 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     return Math.floor((score - 10) / 2);
   }
 
+  // Biography
+  async function saveBiography(fields: Partial<Omit<Biography, 'character_id' | 'updated_at'>>) {
+    if (!activeChar) return;
+    const payload = { character_id: activeChar.id, ...fields };
+    const { data, error } = await supabase
+      .from('character_biography')
+      .upsert(payload, { onConflict: 'character_id' })
+      .select()
+      .single();
+    if (error) {
+      console.error('Erreur sauvegarde biographie :', error.message);
+      showAlert('Erreur', 'Impossible de sauvegarder la biographie.');
+    } else {
+      setBiography(data as Biography);
+      showAlert('Biographie', 'Modifications sauvegardées.');
+    }
+  }
+
   // Avatar upload
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -629,6 +674,8 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     handleAddSpell,
     handleDeleteSpell,
     handleToggleSkill,
+    biography, setBiography,
+    saveBiography,
     handleSaveItem,
     handleDeleteItem,
     handleToggleItemEquip,

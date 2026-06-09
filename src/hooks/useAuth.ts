@@ -17,6 +17,25 @@ export function useAuth() {
   const [authPseudo, setAuthPseudo] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
+  function getNetworkAwareMessage(rawMessage?: string, fallback = 'Une erreur est survenue.') {
+    const message = (rawMessage || '').toLowerCase();
+    const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+    const looksLikeNetwork =
+      message.includes('network') ||
+      message.includes('failed to fetch') ||
+      message.includes('fetch') ||
+      message.includes('offline') ||
+      message.includes('timeout') ||
+      message.includes('timed out') ||
+      message.includes('connection');
+
+    if (offline || looksLikeNetwork) {
+      return 'Erreur reseau : connexion impossible. Verifiez votre internet puis reessayez.';
+    }
+
+    return rawMessage || fallback;
+  }
+
   async function handleAuthSubmit(e: React.FormEvent, showAlert: (title: string, text: string) => void) {
     e.preventDefault();
     setAuthLoading(true);
@@ -24,7 +43,7 @@ export function useAuth() {
     try {
       if (authMode === 'signup') {
         if (!authPseudo.trim()) {
-          alert("Veuillez renseigner un pseudo pour votre aventurier.");
+          showAlert('Pseudo requis', 'Veuillez renseigner un pseudo pour votre aventurier.');
           setAuthLoading(false);
           return;
         }
@@ -53,7 +72,8 @@ export function useAuth() {
         }
       }
     } catch (err: unknown) {
-      alert("Erreur d'authentification : " + (err as Error).message);
+      const message = getNetworkAwareMessage((err as Error)?.message, "Erreur d'authentification.");
+      showAlert("Erreur d'authentification", message);
     } finally {
       setAuthLoading(false);
     }
@@ -62,7 +82,7 @@ export function useAuth() {
   async function handleLogout(showAlert: (title: string, text: string) => void) {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      alert("Erreur lors de la déconnexion : " + error.message);
+      showAlert('Erreur de deconnexion', getNetworkAwareMessage(error.message, 'Impossible de vous deconnecter.'));
     } else {
       setUser(null);
       showAlert("Déconnecté", "À bientôt pour de nouvelles SideQuests !");

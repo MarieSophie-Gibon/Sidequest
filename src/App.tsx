@@ -15,6 +15,7 @@ import { DnDSpellcasting } from './components/DnDSpellcasting';
 import { DnDFeatures } from './components/DnDFeatures';
 import { DnDSkillsAndSaves } from './components/DnDSkillsAndSaves';
 import { DnDInventory } from './components/DnDInventory';
+import { DnDBiography } from './components/DnDBiography';
 import { SettingsTab } from './components/SettingsTab';
 import { BottomNav } from './components/BottomNav';
 import { AppHeader } from './components/AppHeader';
@@ -32,6 +33,9 @@ import { AddItemModal } from './components/modals/AddItemModal';
 import { ChangeAvatarModal } from './components/modals/ChangeAvatarModal';
 import { EditConditionsModal } from './components/modals/EditConditionsModal';
 import { EditSpellcastingModal } from './components/modals/EditSpellcastingModal';
+import { EditBiographyModal } from './components/modals/EditBiographyModal';
+import { EditBackstoryModal } from './components/modals/EditBackstoryModal';
+import { EditPersonalityModal } from './components/modals/EditPersonalityModal';
 
 export default function App() {
   const t = useThemeClasses();
@@ -49,7 +53,7 @@ export default function App() {
   const data = useCharacterData(auth.user, showAlert);
 
   // Tabs & modal state
-  const [activeTab, setActiveTab] = useState<'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'settings'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'settings'>('home');
   const [modalType, setModalType] = useState<string | null>(null);
 
   // Auth state listener
@@ -65,6 +69,33 @@ export default function App() {
       }
     });
     return () => { subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    const showNetworkAlert = (title: string, text: string) => {
+      setAlertMsg({ title, text });
+      setTimeout(() => setAlertMsg(null), 4000);
+    };
+
+    const handleOffline = () => {
+      showNetworkAlert('Hors ligne', 'Connexion internet perdue. Certaines actions peuvent echouer.');
+    };
+
+    const handleOnline = () => {
+      showNetworkAlert('Reseau retabli', 'Connexion internet detectee.');
+    };
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      handleOffline();
+    }
+
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
   }, []);
 
   // Derived state
@@ -121,13 +152,20 @@ export default function App() {
   // Loading state
   if (data.loading && data.view === 'dashboard' && auth.user) {
     return (
-      <div className={`${t.pageBg} min-h-screen ${t.textSecondary} flex items-center justify-center font-mono relative overflow-hidden`}>
+      <div className={`${t.pageBg} min-h-screen ${t.textSecondary} flex flex-col items-center justify-center font-mono relative overflow-hidden`}>
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full blur-3xl pointer-events-none"
           style={{ background: t.glow }}
         />
         <div className="relative z-10 w-52 h-52 sm:w-60 sm:h-60">
           <img src="/logo.svg" alt="SideQuest" className="w-full h-full object-contain animate-loaderBlink" />
+        </div>
+        {/* Loading bar */}
+        <div className="relative z-10 mt-6 w-48 sm:w-56 flex flex-col items-center gap-2">
+          <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'rgba(139,92,246,0.2)' }}>
+            <div className="h-full rounded-full animate-loaderBar" style={{ background: 'linear-gradient(90deg, #a78bfa, #e879f9, #a78bfa)', backgroundSize: '200% 100%' }} />
+          </div>
+          <span className="text-xs tracking-widest uppercase animate-loaderBlink" style={{ color: 'rgba(167,139,250,0.7)' }}>Chargement…</span>
         </div>
       </div>
     );
@@ -328,6 +366,15 @@ export default function App() {
                   />
                 )}
 
+                {activeTab === 'biography' && (
+                  <DnDBiography
+                    biography={data.biography}
+                    onOpenEdit={() => setModalType('edit_biography')}
+                    onOpenPersonalityEdit={() => setModalType('edit_personality')}
+                    onOpenBackstoryEdit={() => setModalType('edit_backstory')}
+                  />
+                )}
+
                 {activeTab === 'settings' && (
                   <SettingsTab />
                 )}
@@ -408,6 +455,27 @@ export default function App() {
               onClose={() => setModalType(null)}
             />
           )}
+          {modalType === 'edit_biography' && (
+            <EditBiographyModal
+              biography={data.biography}
+              onSave={data.saveBiography}
+              onClose={() => setModalType(null)}
+            />
+          )}
+          {modalType === 'edit_backstory' && (
+            <EditBackstoryModal
+              biography={data.biography}
+              onSave={data.saveBiography}
+              onClose={() => setModalType(null)}
+            />
+          )}
+          {modalType === 'edit_personality' && (
+            <EditPersonalityModal
+              biography={data.biography}
+              onSave={data.saveBiography}
+              onClose={() => setModalType(null)}
+            />
+          )}
         </div>
       )}
 
@@ -433,6 +501,14 @@ export default function App() {
         }
         .animate-loaderBlink {
           animation: loaderBlink 1.1s ease-in-out infinite;
+        }
+        @keyframes loaderBar {
+          0% { background-position: 200% center; width: 30%; }
+          50% { background-position: 0% center; width: 80%; }
+          100% { background-position: 200% center; width: 30%; }
+        }
+        .animate-loaderBar {
+          animation: loaderBar 1.6s ease-in-out infinite;
         }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
