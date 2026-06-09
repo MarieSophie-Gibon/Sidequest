@@ -134,8 +134,8 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen max-h-screen flex justify-center bg-black overflow-hidden">
-      <div className={`${t.pageBg} w-full max-w-md h-full ${t.textPrimary} font-sans overflow-hidden relative ${t.selectionBg}`}>
+    <div className="h-dvh max-h-dvh flex justify-center bg-black overflow-hidden">
+      <div className={`${t.pageBg} w-full max-w-md h-full max-h-dvh ${t.textPrimary} font-sans overflow-hidden relative ${t.selectionBg}`}>
 
       {/* Background image */}
       <div
@@ -232,7 +232,7 @@ export default function App() {
 
 
 
-              <main className="flex-1 overflow-y-auto space-y-2 pb-14 pr-1">
+              <main className="flex-1 overflow-y-auto space-y-2 pb-24 pr-1">
 
                 {activeTab === 'home' && (
                   <DnDAttributes

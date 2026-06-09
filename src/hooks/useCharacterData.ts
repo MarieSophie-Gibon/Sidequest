@@ -115,17 +115,18 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
     const updateSlots = async () => {
       const nextSlots = activeSpellLevels.map(lvl => {
-        let maxSlots = 3;
-        if (lvl === 1) maxSlots = 4;
-        else if (lvl >= 2 && lvl <= 5) maxSlots = 3;
-        else if (lvl >= 6 && lvl <= 7) maxSlots = 2;
-        else if (lvl >= 8 && lvl <= 9) maxSlots = 1;
+        let defaultMaxSlots = 3;
+        if (lvl === 1) defaultMaxSlots = 4;
+        else if (lvl >= 2 && lvl <= 5) defaultMaxSlots = 3;
+        else if (lvl >= 6 && lvl <= 7) defaultMaxSlots = 2;
+        else if (lvl >= 8 && lvl <= 9) defaultMaxSlots = 1;
 
         const existing = spellSlots.find(s => s.level === lvl);
+        const effectiveMax = existing ? existing.max : defaultMaxSlots;
         return {
           level: lvl,
-          max: maxSlots,
-          current: existing ? Math.min(existing.current, maxSlots) : maxSlots
+          max: effectiveMax,
+          current: existing ? Math.min(existing.current, effectiveMax) : effectiveMax
         };
       }).sort((a, b) => a.level - b.level);
 

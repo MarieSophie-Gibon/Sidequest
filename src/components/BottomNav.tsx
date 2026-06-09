@@ -22,7 +22,10 @@ export function BottomNav({ activeTab, setActiveTab, onDashboard }: Props) {
   const t = useThemeClasses();
 
   return (
-    <nav className={`absolute bottom-4 left-4 right-4 z-40 ${t.navBg} border ${t.navBorder} rounded-2xl p-2 shadow-lg ${t.cardShadow} flex justify-between items-center backdrop-blur-sm`}>
+    <nav
+      className={`absolute left-4 right-4 z-40 ${t.navBg} border ${t.navBorder} rounded-2xl p-2 shadow-lg ${t.cardShadow} flex justify-between items-center backdrop-blur-sm`}
+      style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+    >
       {onDashboard && (
         <button
           onClick={onDashboard}
