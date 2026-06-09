@@ -316,7 +316,7 @@ export function DnDAttributes({
                           >
                             {feat.name}
                           </span>
-                          <span className="text-[10px] font-mono font-bold text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-md border border-violet-500/20 flex items-center gap-0.5 shrink-0">
+                          <span className="text-[10px] font-mono font-bold text-violet-100 bg-violet-500/45 px-1.5 py-0.5 rounded-md border border-violet-200/70 shadow-[0_0_12px_rgba(167,139,250,0.35)] flex items-center gap-0.5 shrink-0">
                             <Zap size={10} className="inline" />
                             {feat.resource_cost}
                           </span>
