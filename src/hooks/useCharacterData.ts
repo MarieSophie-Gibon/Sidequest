@@ -98,9 +98,15 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   }
 
   async function fetchCharactersList() {
+    if (!user?.id) {
+      setCharacters([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('characters')
       .select('*')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -119,6 +125,17 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           await fetchCharactersList();
+        } else {
+          setCharacters([]);
+          setActiveChar(null);
+          setFeatures([]);
+          setSpells([]);
+          setItems([]);
+          setSkills([]);
+          setSpellSlots([]);
+          setResources([]);
+          setActiveConditions([]);
+          setBiography(null);
         }
       } catch (err) {
         console.error("Erreur d'initialisation de session :", err);
@@ -211,13 +228,13 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
   async function syncCharacterField<T extends keyof Character>(field: T, value: Character[T]) {
     if (!activeChar) return;
-    const updatedChar = { ...activeChar, [field]: value };
-    setActiveChar(updatedChar);
+    const charId = activeChar.id;
+    setActiveChar(prev => (prev ? { ...prev, [field]: value } : prev));
 
     const { error } = await supabase
       .from('characters')
       .update({ [field]: value })
-      .eq('id', activeChar.id);
+      .eq('id', charId);
 
     if (error) {
       console.error("Erreur de sauvegarde persistante :", error.message);
@@ -435,7 +452,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   }
 
   // Character creation
-  async function handleCreateCharacter(heroName: string) {
+  async function handleCreateCharacter(heroName: string, heroRace: string) {
     if (!user) return;
     if (!heroName.trim()) {
       showAlert("Nom requis", "Veuillez saisir un nom valide.");
@@ -444,11 +461,12 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
     setLoading(true);
     const sanitizedHeroName = heroName.trim();
+    const sanitizedHeroRace = heroRace.trim() || 'Humain';
 
     const newHeroTemplate = {
       user_id: user.id,
       name: sanitizedHeroName,
-      race: 'Humain',
+      race: sanitizedHeroRace,
       class: 'Guerrier',
       subclass: 'Aucune',
       level: 1,
@@ -471,42 +489,51 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       avatar_key: 'horns'
     };
 
-    const clonePayloadFromExisting = (): Record<string, unknown> | null => {
-      if (characters.length === 0) return null;
-      const seed = characters[0] as unknown as Record<string, unknown>;
-      const cloned: Record<string, unknown> = { ...seed, user_id: user.id, name: sanitizedHeroName };
-      delete cloned.id;
-      delete cloned.created_at;
-      delete cloned.updated_at;
-      return cloned;
-    };
+    const { data: createdCharacter, error } = await supabase
+      .from('characters')
+      .insert([newHeroTemplate])
+      .select()
+      .single();
 
-    const candidatePayloads: Array<Record<string, unknown>> = [];
-    const clonePayload = clonePayloadFromExisting();
-    if (clonePayload) candidatePayloads.push(clonePayload);
-    candidatePayloads.push(newHeroTemplate as unknown as Record<string, unknown>);
-
-    let createdCharacter: Character | null = null;
-    let lastError: { message?: string } | null = null;
-
-    for (const payload of candidatePayloads) {
-      const { data, error } = await supabase.from('characters').insert([payload]).select().single();
-      if (!error && data) {
-        createdCharacter = data as Character;
-        break;
-      }
-      lastError = error;
-    }
-
-    if (!createdCharacter) {
-      showAlert('Erreur', getNetworkAwareMessage(lastError?.message, 'Erreur lors de la creation du personnage.'));
+    if (error || !createdCharacter) {
+      console.error('Erreur creation personnage :', error?.message);
+      const baseMessage = getNetworkAwareMessage(error?.message, 'Erreur lors de la creation du personnage.');
+      showAlert('Erreur', baseMessage === error?.message ? 'Impossible de creer le personnage pour le moment. Reessayez dans quelques instants.' : baseMessage);
       setLoading(false);
       return null;
     }
 
     await fetchCharactersList();
-    await loadCharacterData(createdCharacter.id);
+    await loadCharacterData((createdCharacter as Character).id);
     return createdCharacter;
+  }
+
+  async function handleDeleteCharacter() {
+    if (!activeChar) return false;
+
+    const charId = activeChar.id;
+    const charName = activeChar.name;
+    const { error } = await supabase.from('characters').delete().eq('id', charId);
+
+    if (error) {
+      console.error('Erreur suppression personnage :', error.message);
+      showAlert('Erreur', getNetworkAwareMessage(error.message, 'Impossible de supprimer le personnage.'));
+      return false;
+    }
+
+    setCharacters(prev => prev.filter(c => c.id !== charId));
+    setActiveChar(null);
+    setFeatures([]);
+    setSpells([]);
+    setItems([]);
+    setSkills([]);
+    setSpellSlots([]);
+    setResources([]);
+    setActiveConditions([]);
+    setBiography(null);
+    setView('dashboard');
+    showAlert('Personnage supprimé', `${charName} a été effacé.`);
+    return true;
   }
 
   // Rest actions
@@ -680,6 +707,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     handleDeleteItem,
     handleToggleItemEquip,
     handleCreateCharacter,
+    handleDeleteCharacter,
     handleShortRest,
     handleLongRest,
     applyDamage,

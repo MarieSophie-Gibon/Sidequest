@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import type { Character } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { AVATAR_TEMPLATES } from '../constants';
-import { Swords } from 'lucide-react';
+import { Swords, User } from 'lucide-react';
 
 interface Props {
   characters: Character[];
   onLoadCharacter: (charId: string) => void;
-  onCreateCharacter: (name: string) => Promise<Character | null | undefined>;
+  onCreateCharacter: (name: string, race: string) => Promise<Character | null | undefined>;
 }
 
 export function Dashboard({ characters, onLoadCharacter, onCreateCharacter }: Props) {
   const [isCreateHeroModalOpen, setIsCreateHeroModalOpen] = useState(false);
   const [newHeroNameInput, setNewHeroNameInput] = useState('Nouveau Héros');
+  const [newHeroRaceInput, setNewHeroRaceInput] = useState('Humain');
   const t = useThemeClasses();
 
   return (
@@ -35,7 +35,7 @@ export function Dashboard({ characters, onLoadCharacter, onCreateCharacter }: Pr
                   <img src={char.avatar_url} alt={char.name} className="absolute inset-0 w-full h-full object-cover" />
                 ) : (
                   <div className="absolute inset-0 w-full h-full p-2 flex items-center justify-center">
-                    {AVATAR_TEMPLATES[char.avatar_key || 'horns']?.icon(t.accent.includes('violet') ? '#a78bfa' : '#3b82f6')}
+                    <User size={24} className={t.textMuted} />
                   </div>
                 )}
               </div>
@@ -66,6 +66,7 @@ export function Dashboard({ characters, onLoadCharacter, onCreateCharacter }: Pr
         <button
           onClick={() => {
             setNewHeroNameInput('Nouveau Héros');
+            setNewHeroRaceInput('Humain');
             setIsCreateHeroModalOpen(true);
           }}
           className={`w-full flex items-center justify-center gap-2.5 ${t.cardBg} border ${t.accentBorder} ${t.accent} rounded-2xl py-3 text-xs font-bold uppercase tracking-widest shadow-md hover:brightness-110 active:scale-[0.98] transition-all`}
@@ -81,9 +82,12 @@ export function Dashboard({ characters, onLoadCharacter, onCreateCharacter }: Pr
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              await onCreateCharacter(newHeroNameInput);
-              setIsCreateHeroModalOpen(false);
-              setNewHeroNameInput('Nouveau Héros');
+              const created = await onCreateCharacter(newHeroNameInput, newHeroRaceInput);
+              if (created) {
+                setIsCreateHeroModalOpen(false);
+                setNewHeroNameInput('Nouveau Héros');
+                setNewHeroRaceInput('Humain');
+              }
             }}
             className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-5 w-full max-w-sm shadow-2xl ${t.cardShadow} space-y-4 animate-scaleUp`}
           >
@@ -98,12 +102,23 @@ export function Dashboard({ characters, onLoadCharacter, onCreateCharacter }: Pr
                 autoFocus
               />
             </div>
+            <div>
+              <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Race</label>
+              <input
+                type="text"
+                value={newHeroRaceInput}
+                onChange={(e) => setNewHeroRaceInput(e.target.value)}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-sm focus:outline-none focus:ring-1 focus:ring-blue-400/50`}
+                placeholder="Humain"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setIsCreateHeroModalOpen(false);
                   setNewHeroNameInput('Nouveau Héros');
+                  setNewHeroRaceInput('Humain');
                 }}
                 className={`${t.btnSecondaryBg} ${t.btnSecondaryText} font-bold py-2.5 rounded-xl text-xs uppercase border ${t.btnSecondaryBorder} tracking-wider transition-all hover:brightness-105 active:scale-95`}
               >

@@ -1,10 +1,16 @@
+import { useState } from 'react';
 import { useAppSettings, useThemeClasses } from '../contexts/AppSettingsContext';
-import { Sword, Sparkles, Moon, Sun, Shield, GraduationCap } from 'lucide-react';
+import { Sword, Sparkles, Moon, Sun, Shield, GraduationCap, Trash2, AlertTriangle } from 'lucide-react';
 
+interface Props {
+  activeCharacterName?: string;
+  onDeleteCharacter?: () => Promise<boolean>;
+}
 
-export function SettingsTab() {
+export function SettingsTab({ activeCharacterName, onDeleteCharacter }: Props) {
   const { isDark, setIsDark, dashboardVisibility, setDashboardVisibility } = useAppSettings();
   const t = useThemeClasses();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const toggleItems: { key: keyof typeof dashboardVisibility; label: string; icon: typeof Sword }[] = [
     { key: 'showClassFeatures', label: 'Capacités de Classe', icon: Sword },
@@ -55,6 +61,52 @@ export function SettingsTab() {
           ))}
         </div>
       </div>
+
+      {/* Danger zone */}
+      {onDeleteCharacter && (
+        <div className={`${t.cardBg} border border-rose-400/45 rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
+          <h4 className="text-xs font-bold text-rose-300 uppercase tracking-wider mb-2">Zone sensible</h4>
+          <p className={`text-[11px] ${t.textMuted} mb-3`}>
+            Supprimer définitivement {activeCharacterName ? `"${activeCharacterName}"` : 'ce personnage'}.
+          </p>
+          {!confirmDelete ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="w-full py-2.5 rounded-xl bg-rose-500/20 border border-rose-400/55 text-rose-300 text-xs font-bold uppercase tracking-wider transition-all hover:bg-rose-500/30 active:scale-95 flex items-center justify-center gap-1.5"
+            >
+              <Trash2 size={14} />
+              Supprimer le personnage
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <div className="text-[11px] text-rose-200 flex items-center gap-1.5">
+                <AlertTriangle size={13} />
+                Cette action est irréversible.
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  className={`${t.btnSecondaryBg} ${t.btnSecondaryText} border ${t.btnSecondaryBorder} py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95`}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const ok = await onDeleteCharacter();
+                    if (!ok) setConfirmDelete(false);
+                  }}
+                  className="bg-rose-600/85 border border-rose-300/65 text-white py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all hover:brightness-110 active:scale-95"
+                >
+                  Confirmer
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       
     </div>

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
-import { AVATAR_TEMPLATES } from './constants';
 import { useAuth } from './hooks/useAuth';
 import { useCharacterData } from './hooks/useCharacterData';
 import { useThemeClasses } from './contexts/AppSettingsContext';
 import type { Character, CoreAttribute, Feature, Item } from './types/rpg.types';
+import { User } from 'lucide-react';
 
 // Components
 import { AuthScreen } from './components/AuthScreen';
@@ -114,10 +114,9 @@ export default function App() {
     if (character.avatar_url) {
       return <img src={character.avatar_url} alt="Portrait" className="absolute inset-0 w-full h-full object-cover" />;
     }
-    const iconColor = t.accent.includes('violet') ? '#a78bfa' : '#3b82f6';
     return (
       <div className="absolute inset-0 w-full h-full p-2.5 flex items-center justify-center">
-        {AVATAR_TEMPLATES[character.avatar_key || 'horns'].icon(iconColor)}
+        <User size={42} className={t.textMuted} />
       </div>
     );
   };
@@ -241,7 +240,7 @@ export default function App() {
             <Dashboard
               characters={data.characters}
               onLoadCharacter={(id) => data.loadCharacterData(id)}
-              onCreateCharacter={(name) => data.handleCreateCharacter(name)}
+              onCreateCharacter={(name, race) => data.handleCreateCharacter(name, race)}
             />
           )}
 
@@ -376,7 +375,10 @@ export default function App() {
                 )}
 
                 {activeTab === 'settings' && (
-                  <SettingsTab />
+                  <SettingsTab
+                    activeCharacterName={data.activeChar?.name}
+                    onDeleteCharacter={data.handleDeleteCharacter}
+                  />
                 )}
               </main>
 
