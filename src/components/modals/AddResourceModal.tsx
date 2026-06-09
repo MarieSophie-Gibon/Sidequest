@@ -1,6 +1,7 @@
-import { X, Check, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { NewResourceState } from '../../hooks/useCharacterData';
+import { ModalActions, ModalHeader } from './ModalControls';
 
 interface Props {
   newResource: NewResourceState;
@@ -17,9 +18,7 @@ export function AddResourceModal({ newResource, setNewResource, onSubmit, onDele
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
       <form onSubmit={onSubmit} className={`${t.modalBg} border rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4 animate-scaleUp`}>
-        <h3 className={`font-bold ${t.textPrimary} text-sm tracking-wide uppercase font-mono`}>
-          {isEditing ? 'Modifier la Ressource' : 'Nouvelle Ressource'}
-        </h3>
+        <ModalHeader title={isEditing ? 'Modifier la Ressource' : 'Nouvelle Ressource'} onClose={onClose} />
         <div className="space-y-3">
           <div>
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Nom</label>
@@ -48,19 +47,13 @@ export function AddResourceModal({ newResource, setNewResource, onSubmit, onDele
             </div>
           </div>
         </div>
-        <div className={`flex items-center justify-center gap-3 pt-2 border-t ${t.cardBorder}`}>
-          <button type="button" onClick={onClose} className={`w-10 h-10 flex items-center justify-center rounded-xl ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textMuted} hover:brightness-90 active:scale-90 transition-all`}>
-            <X size={18} />
+        {isEditing && onDelete && (
+          <button type="button" onClick={() => { onDelete(newResource.id!); onClose(); }} className="w-full bg-rose-500/20 border border-rose-500/40 text-rose-400 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all hover:bg-rose-500/30 active:scale-95 flex items-center justify-center gap-1.5">
+            <Trash2 size={14} />
+            Supprimer
           </button>
-          {isEditing && onDelete && (
-            <button type="button" onClick={() => { onDelete(newResource.id!); onClose(); }} className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 border border-red-300 text-red-500 hover:bg-red-100 active:scale-90 transition-all">
-              <Trash2 size={18} />
-            </button>
-          )}
-          <button type="submit" className={`w-10 h-10 flex items-center justify-center rounded-xl bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} border ${t.btnPrimaryBorder} shadow-md hover:brightness-110 active:scale-90 transition-all`}>
-            <Check size={18} />
-          </button>
-        </div>
+        )}
+        <ModalActions onCancel={onClose} saveType="submit" saveLabel="Sauvegarder" />
       </form>
     </div>
   );

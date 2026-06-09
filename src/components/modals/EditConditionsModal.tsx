@@ -1,5 +1,6 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import { AlertTriangle } from 'lucide-react';
+import { ModalActions, ModalHeader } from './ModalControls';
 
 export const DND_CONDITIONS = [
   { key: 'avantage', label: 'Avantage', icon: '🎯' },
@@ -42,9 +43,8 @@ export function EditConditionsModal({ activeConditions, setActiveConditions, onC
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
       <div className={`${t.modalBg} border rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4 animate-scaleUp max-h-[80vh] flex flex-col`}>
-        <div className={`border-b ${t.cardBorder} pb-2 flex justify-between items-center shrink-0`}>
-          <h3 className={`font-bold ${t.textPrimary} text-sm tracking-wide uppercase flex items-center gap-1.5`}><AlertTriangle size={16} /> États</h3>
-          <button type="button" onClick={onClose} className={`${t.textMuted} hover:${t.textPrimary} text-lg font-bold font-mono`}>✕</button>
+        <div className="shrink-0">
+          <ModalHeader title={<span className="flex items-center gap-1.5"><AlertTriangle size={16} /> États</span>} onClose={onClose} />
         </div>
 
         <div className="overflow-y-auto flex-1 space-y-1.5 pr-1">
@@ -69,13 +69,9 @@ export function EditConditionsModal({ activeConditions, setActiveConditions, onC
           })}
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className={`w-full ${t.btnSecondaryBg} ${t.btnSecondaryText} border ${t.btnSecondaryBorder} py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all hover:brightness-105 active:scale-95 shrink-0`}
-        >
-          Fermer
-        </button>
+        <div className="shrink-0">
+          <ModalActions onCancel={onClose} onSave={onClose} saveLabel="Sauvegarder" />
+        </div>
       </div>
     </div>
   );

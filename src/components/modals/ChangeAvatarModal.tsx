@@ -2,6 +2,7 @@ import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import { supabase } from '../../supabaseClient';
 import { AVATAR_TEMPLATES } from '../../constants';
 import type { Character } from '../../types/rpg.types';
+import { ModalActions, ModalHeader } from './ModalControls';
 
 interface Props {
   activeChar: Character;
@@ -18,7 +19,7 @@ export function ChangeAvatarModal({ activeChar, setActiveChar, onAvatarUpload, s
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
       <div className={`${t.modalBg} border rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4 animate-scaleUp max-h-[90vh] overflow-y-auto`}>
-        <h3 className={`font-bold ${t.textPrimary} text-sm tracking-wide uppercase`}>Portrait</h3>
+        <ModalHeader title="Portrait" onClose={onClose} />
 
         <div className={`border-2 border-dashed ${t.cardBorder} rounded-2xl p-4 text-center cursor-pointer relative group transition-all`}>
           <input type="file" accept="image/*" onChange={onAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
@@ -58,7 +59,7 @@ export function ChangeAvatarModal({ activeChar, setActiveChar, onAvatarUpload, s
             </button>
           ))}
         </div>
-        <button type="button" onClick={onClose} className={`w-full ${t.btnSecondaryBg} ${t.btnSecondaryText} font-bold py-2.5 rounded-xl text-xs uppercase border ${t.btnSecondaryBorder}`}>Fermer</button>
+        <ModalActions onCancel={onClose} onSave={onClose} saveLabel="Sauvegarder" />
       </div>
     </div>
   );

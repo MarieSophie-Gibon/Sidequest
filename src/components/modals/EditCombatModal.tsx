@@ -1,5 +1,6 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { Character } from '../../types/rpg.types';
+import { ModalActions, ModalHeader } from './ModalControls';
 
 interface Props {
   activeChar: Character;
@@ -13,7 +14,7 @@ export function EditCombatModal({ activeChar, syncCharacterField, onClose }: Pro
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
       <div className={`${t.modalBg} border rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4 animate-scaleUp`}>
-        <h3 className={`font-bold ${t.textPrimary} text-sm tracking-wide uppercase`}>Combat</h3>
+        <ModalHeader title="Combat" onClose={onClose} />
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -42,7 +43,7 @@ export function EditCombatModal({ activeChar, syncCharacterField, onClose }: Pro
             </div>
           </div>
         </div>
-        <button type="button" onClick={onClose} className={`w-full bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md border ${t.btnPrimaryBorder} hover:brightness-110 active:scale-95`}>Valider & Fermer</button>
+        <ModalActions onCancel={onClose} onSave={onClose} saveLabel="Sauvegarder" />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { Character } from '../../types/rpg.types';
+import { ModalActions, ModalHeader } from './ModalControls';
 
 interface Props {
   activeChar: Character;
@@ -17,10 +18,7 @@ export function EditHpModal({ activeChar, syncCharacterField, applyDamage, apply
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
       <div className={`${t.modalBg} border rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4 animate-scaleUp`}>
-        <div className={`border-b ${t.cardBorder} pb-2 flex justify-between items-center`}>
-          <h3 className={`font-bold ${t.textPrimary} text-sm tracking-wide uppercase`}>❤️ Vitalité</h3>
-          <button type="button" onClick={onClose} className={`${t.textMuted} hover:${t.textPrimary} text-lg font-bold font-mono`}>✕</button>
-        </div>
+        <ModalHeader title="Vitalité" onClose={onClose} />
         <div className={`grid grid-cols-3 gap-2 ${t.inputBg} p-3 rounded-xl border ${t.inputBorder}`}>
           <div className="text-center">
             <label className={`text-[9px] ${t.textMuted} font-bold block mb-1 uppercase`}>Act.</label>
@@ -43,7 +41,7 @@ export function EditHpModal({ activeChar, syncCharacterField, applyDamage, apply
             <button type="button" onClick={() => { applyHealing(Number(hpActionValue)); setHpActionValue(''); }} className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 py-2 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-emerald-500/30 active:scale-95 transition-all">Soins</button>
           </div>
         </div>
-        <button type="button" onClick={onClose} className={`w-full bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all mt-2 shadow-md border ${t.btnPrimaryBorder} hover:brightness-110 active:scale-95`}>Confirmer</button>
+        <ModalActions onCancel={onClose} onSave={onClose} saveLabel="Sauvegarder" />
       </div>
     </div>
   );

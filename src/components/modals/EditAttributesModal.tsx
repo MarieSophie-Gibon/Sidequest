@@ -1,6 +1,7 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { Character, CoreAttribute } from '../../types/rpg.types';
 import { BarChart3 } from 'lucide-react';
+import { ModalActions, ModalHeader } from './ModalControls';
 
 interface Props {
   activeChar: Character;
@@ -15,9 +16,7 @@ export function EditAttributesModal({ coreAttributes, syncCharacterField, onClos
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
       <div className={`${t.modalBg} border rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4 animate-scaleUp max-h-[90vh] overflow-y-auto`}>
-        <h3 className={`font-bold ${t.textPrimary} text-sm tracking-wide uppercase flex items-center gap-2 font-mono`}>
-          <BarChart3 size={16} /> Caractéristiques
-        </h3>
+        <ModalHeader title={<span className="flex items-center gap-2 font-mono"><BarChart3 size={16} /> Caractéristiques</span>} onClose={onClose} />
         <div className="grid grid-cols-2 gap-3">
           {coreAttributes.map(stat => (
             <div key={stat.short}>
@@ -32,7 +31,7 @@ export function EditAttributesModal({ coreAttributes, syncCharacterField, onClos
             </div>
           ))}
         </div>
-        <button type="button" onClick={onClose} className={`w-full bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all mt-2 shadow-md border ${t.btnPrimaryBorder} hover:brightness-110 active:scale-95`}>Fermer</button>
+        <ModalActions onCancel={onClose} onSave={onClose} saveLabel="Sauvegarder" />
       </div>
     </div>
   );

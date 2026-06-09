@@ -1,6 +1,7 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { NewFeatureState } from '../../hooks/useCharacterData';
 import type { Resource } from '../../types/rpg.types';
+import { ModalActions, ModalHeader } from './ModalControls';
 
 interface Props {
   newFeature: NewFeatureState;
@@ -17,7 +18,7 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
       <form onSubmit={onSubmit} className={`${t.modalBg} border rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4 animate-scaleUp`}>
-        <h3 className={`font-bold ${t.textPrimary} text-sm tracking-wide uppercase font-mono`}>{newFeature.id ? '✏️ Modifier' : '➕ Créer'}</h3>
+        <ModalHeader title={newFeature.id ? 'Modifier' : 'Créer'} onClose={onClose} />
 
         <div className="space-y-3">
           <div>
@@ -91,10 +92,7 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
           >🗑 Supprimer</button>
         )}
 
-        <div className={`grid grid-cols-2 gap-2 pt-2 border-t ${t.cardBorder}`}>
-          <button type="button" onClick={onClose} className={`${t.btnSecondaryBg} ${t.btnSecondaryText} font-bold py-2.5 rounded-xl text-xs uppercase border ${t.btnSecondaryBorder} tracking-wider transition-all`}>Annuler</button>
-          <button type="submit" className={`bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-md border ${t.btnPrimaryBorder} hover:brightness-110 active:scale-95 transition-all`}>Sauvegarder</button>
-        </div>
+        <ModalActions onCancel={onClose} saveType="submit" saveLabel="Sauvegarder" />
       </form>
     </div>
   );
