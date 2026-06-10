@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from './supabaseClient';
 import { useAuth } from './hooks/useAuth';
 import { useCharacterData } from './hooks/useCharacterData';
+import { useSwipeNav } from './hooks/useSwipeNav';
 import { useThemeClasses } from './contexts/AppSettingsContext';
 import type { Character, CoreAttribute, Feature, Item, Familiar } from './types/rpg.types';
 import { User } from 'lucide-react';
@@ -56,6 +57,8 @@ export default function App() {
 
   // Tabs & modal state
   const [activeTab, setActiveTab] = useState<'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'settings'>('home');
+  const swipe = useSwipeNav(activeTab, setActiveTab);
+
   const [modalType, setModalType] = useState<string | null>(null);
 
   // Death saves auto-trigger
@@ -259,7 +262,7 @@ export default function App() {
 
           {/* CHARACTER SHEET */}
           {data.view === 'sheet' && data.activeChar && (
-            <>
+            <div className="flex flex-col flex-1 overflow-hidden" onTouchStart={swipe.onTouchStart} onTouchEnd={swipe.onTouchEnd}>
               <DnDCombatHUD
                 activeChar={data.activeChar}
                 hpPercent={hpPercent}
@@ -406,7 +409,7 @@ export default function App() {
               </main>
 
               <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} onDashboard={() => data.setView('dashboard')} />
-            </>
+            </div>
           )}
 
           {/* MODALS */}
