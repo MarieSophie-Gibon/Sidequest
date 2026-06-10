@@ -578,12 +578,16 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   // Rest actions
   async function handleShortRest() {
     if (!activeChar) return;
-    const restoredFeatures = features.map(f => f.recharge === 'SHORT_REST' ? { ...f, current: f.max } : f);
-    setFeatures(restoredFeatures);
-    for (const f of restoredFeatures) {
-      if (f.recharge === 'SHORT_REST') {
-        await supabase.from('features').update({ current: f.max }).eq('id', f.id);
-      }
+    const { data: currentFeats } = await supabase.from('features').select('*').eq('character_id', activeChar.id);
+    if (currentFeats && currentFeats.length > 0) {
+      const toRestore = (currentFeats as Feature[]).filter(f =>
+        f.category === 'active' && (f.recharge === 'SHORT_REST' || !f.recharge)
+      );
+      await Promise.all(toRestore.map(f =>
+        supabase.from('features').update({ current: f.max }).eq('id', f.id)
+      ));
+      const { data: freshFeats } = await supabase.from('features').select('*').eq('character_id', activeChar.id);
+      setFeatures((freshFeats || currentFeats) as Feature[]);
     }
     const restoredResources = resources.map(r => r.recharge === 'SHORT_REST' ? { ...r, current: r.max } : r);
     setResources(restoredResources);
@@ -607,12 +611,15 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     setActiveChar(updatedChar);
     await supabase.from('characters').update({ hp_current: activeChar.hp_max, hp_temp: 0, hit_dice_current: nextHitDice }).eq('id', activeChar.id);
 
-    const restoredFeatures = features.map(f => (f.recharge === 'LONG_REST' || f.recharge === 'SHORT_REST') ? { ...f, current: f.max } : f);
-    setFeatures(restoredFeatures);
-    for (const f of restoredFeatures) {
-      if (f.recharge === 'LONG_REST' || f.recharge === 'SHORT_REST') {
-        await supabase.from('features').update({ current: f.max }).eq('id', f.id);
-      }
+    // Restore active features: query DB directly, restore ALL active features (long rest = full restore)
+    const { data: currentFeats } = await supabase.from('features').select('*').eq('character_id', activeChar.id);
+    if (currentFeats && currentFeats.length > 0) {
+      const toRestore = (currentFeats as Feature[]).filter(f => f.category === 'active');
+      await Promise.all(toRestore.map(f =>
+        supabase.from('features').update({ current: f.max }).eq('id', f.id)
+      ));
+      const { data: freshFeats } = await supabase.from('features').select('*').eq('character_id', activeChar.id);
+      setFeatures((freshFeats || currentFeats) as Feature[]);
     }
 
     const restoredSlots = spellSlots.map(s => ({ ...s, current: s.max }));

@@ -241,7 +241,6 @@ export function DnDAttributes({
             <h4 className={`text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} flex items-center gap-1.5`}>
               <PawPrint size={12} /> Familiers présents
             </h4>
-            <span className={`text-[9px] ${t.textMuted} uppercase`}>{presentFamiliars.length}</span>
           </div>
           <div className="space-y-2">
             {presentFamiliars.map(fam => {
@@ -253,8 +252,15 @@ export function DnDAttributes({
                     <PawPrint size={12} className="text-emerald-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className={`text-xs font-bold ${t.textPrimary} block truncate`}>{fam.name}</span>
-                    {fam.species && <span className={`text-[9px] ${t.textMuted}`}>{fam.species}</span>}
+                    <div className={`flex items-center gap-1.5 max-w-max justify-between w-full`}>
+                      <div className={`flex items-center gap-1.5 max-w-max`}>
+                        <span className={`text-xs font-bold ${t.textPrimary} block truncate`}>{fam.name}</span>
+                        {fam.species && <span className={`text-[9px] ${t.textMuted}`}>{fam.species}</span>}
+                      </div>
+                      {fam.ac && (
+                        <span className={`text-[9px] font-mono font-bold ${t.textMuted} flex items-center gap-0.5`}>CA {fam.ac}</span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5 mt-1">
                       <div className="flex items-center gap-1">
                         <button type="button" onClick={() => onUpdateFamiliarHp(fam.id, -1)} className={`w-5 h-5 flex items-center justify-center rounded-md ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-xs font-bold hover:brightness-90 active:scale-90 transition-all`}>−</button>
@@ -264,9 +270,7 @@ export function DnDAttributes({
                       <div className="flex-1 h-1.5 rounded-full bg-slate-700/40 overflow-hidden">
                         <div className={`h-full rounded-full transition-all ${hpColor}`} style={{ width: `${hpPct}%` }} />
                       </div>
-                      {fam.ac && (
-                        <span className={`text-[9px] font-mono font-bold ${t.textMuted} flex items-center gap-0.5`}><Heart size={9} />{fam.ac}</span>
-                      )}
+
                     </div>
                   </div>
                 </div>
@@ -440,22 +444,22 @@ export function DnDAttributes({
                       {feat.name}
                     </span>
                     <div className="flex items-center gap-1.5">
-                    {Array.from({ length: feat.max }).map((_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleFeatureUse(feat.id, i);
-                        }}
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${i < feat.current ? `${t.accentBg} ${t.accentBorder} shadow-sm` : `${t.cardBg} ${t.cardBorder}`}`}
-                      >
-                        <div
-                          className={`w-2 h-2 rounded-full ${i < feat.current ? `bg-current ${t.accent}` : "bg-transparent"}`}
-                        />
-                      </button>
-                    ))}
-                  </div>
+                      {Array.from({ length: feat.max }).map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleFeatureUse(feat.id, i);
+                          }}
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${i < feat.current ? `${t.accentBg} ${t.accentBorder} shadow-sm` : `${t.cardBg} ${t.cardBorder}`}`}
+                        >
+                          <div
+                            className={`w-2 h-2 rounded-full ${i < feat.current ? `bg-current ${t.accent}` : "bg-transparent"}`}
+                          />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -469,25 +473,25 @@ export function DnDAttributes({
                     <span className={`text-xs font-bold ${t.textPrimary}`}>
                       {feat.name}
                     </span>
-                   <div className="flex items-center gap-1.5">
-                    {Array.from({ length: feat.max }).map((_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleFeatureUse(feat.id, i);
-                        }}
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${i < feat.current ? `${t.accentBg} ${t.accentBorder} shadow-sm` : `${t.cardBg} ${t.cardBorder}`}`}
-                      >
-                        <div
-                          className={`w-2 h-2 rounded-full ${i < feat.current ? `bg-current ${t.accent}` : "bg-transparent"}`}
-                        />
-                      </button>
-                    ))}
+                    <div className="flex items-center gap-1.5">
+                      {Array.from({ length: feat.max }).map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleFeatureUse(feat.id, i);
+                          }}
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${i < feat.current ? `${t.accentBg} ${t.accentBorder} shadow-sm` : `${t.cardBg} ${t.cardBorder}`}`}
+                        >
+                          <div
+                            className={`w-2 h-2 rounded-full ${i < feat.current ? `bg-current ${t.accent}` : "bg-transparent"}`}
+                          />
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  </div>
-                  
+
                 </div>
               ))}
             </div>
