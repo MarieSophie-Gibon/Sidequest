@@ -282,14 +282,22 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   // Resources CRUD
   async function handleSaveResource(e: React.FormEvent) {
     e.preventDefault();
-    if (!activeChar || !newResource.name.trim()) return;
-    const payload = { character_id: activeChar.id, name: newResource.name.trim(), max: Number(newResource.max), current: Number(newResource.current), recharge: newResource.recharge };
+    if (!activeChar || !newResource.name.trim()) return false;
+    const fields = { name: newResource.name.trim(), max: Number(newResource.max), current: Number(newResource.current), recharge: newResource.recharge };
     if (newResource.id) {
-      const { data, error } = await supabase.from('resources').update(payload).eq('id', newResource.id).select().single();
-      if (!error && data) setResources(prev => prev.map(r => r.id === newResource.id ? (data as Resource) : r));
+      const { data, error } = await supabase.from('resources').update(fields).eq('id', newResource.id).select().single();
+      if (error) {
+        showAlert('Erreur', getNetworkAwareMessage(error.message, 'Impossible de modifier la ressource.'));
+        return false;
+      }
+      if (data) setResources(prev => prev.map(r => r.id === newResource.id ? (data as Resource) : r));
     } else {
-      const { data, error } = await supabase.from('resources').insert([payload]).select().single();
-      if (!error && data) setResources(prev => [...prev, data as Resource]);
+      const { data, error } = await supabase.from('resources').insert([{ character_id: activeChar.id, ...fields }]).select().single();
+      if (error) {
+        showAlert('Erreur', getNetworkAwareMessage(error.message, 'Impossible de créer la ressource.'));
+        return false;
+      }
+      if (data) setResources(prev => [...prev, data as Resource]);
     }
     setNewResource({ name: '', max: 10, current: 10, recharge: 'LONG_REST' });
     return true;

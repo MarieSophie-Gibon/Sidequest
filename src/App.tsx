@@ -406,7 +406,7 @@ export default function App() {
             <AddFeatureModal newFeature={data.newFeature} setNewFeature={data.setNewFeature} resources={data.resources} onSubmit={(e) => { data.handleSaveFeature(e); setModalType(null); }} onDelete={data.handleDeleteFeature} onClose={() => setModalType(null)} />
           )}
           {modalType === 'add_resource' && (
-            <AddResourceModal newResource={data.newResource} setNewResource={data.setNewResource} onSubmit={async (e) => { await data.handleSaveResource(e); setModalType(null); }} onDelete={async (id) => { await data.handleDeleteResource(id); setModalType(null); }} onClose={() => setModalType(null)} />
+            <AddResourceModal newResource={data.newResource} setNewResource={data.setNewResource} onSubmit={async (e) => { const ok = await data.handleSaveResource(e); if (ok) setModalType(null); }} onDelete={async (id) => { await data.handleDeleteResource(id); setModalType(null); }} onClose={() => setModalType(null)} />
           )}
           {modalType === 'edit_spell_slot' && (
             <EditSpellSlotModal

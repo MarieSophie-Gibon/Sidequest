@@ -1,5 +1,5 @@
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { ArrowLeft, LayoutDashboard, BookOpen, Star, Swords, Backpack, Settings, User } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, BookOpen, Star, Backpack, Settings, User, GraduationCap } from 'lucide-react';
 
 type TabKey = 'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'settings';
 
@@ -13,7 +13,7 @@ const TABS: { key: TabKey; icon: typeof LayoutDashboard }[] = [
   { key: 'home', icon: LayoutDashboard },
   { key: 'spells', icon: BookOpen },
   { key: 'features', icon: Star },
-  { key: 'attributes', icon: Swords },
+  { key: 'attributes', icon: GraduationCap },
   { key: 'inventory', icon: Backpack },
   { key: 'biography', icon: User },
   { key: 'settings', icon: Settings },

@@ -1,6 +1,6 @@
 import type { Feature, Resource } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { Sword, Dna, Zap, CirclePlus } from 'lucide-react';
+import { Sword, Dna, Zap, CirclePlus, Star } from 'lucide-react';
 
 interface DnDFeaturesProps {
   features: Feature[];
@@ -101,7 +101,7 @@ export function DnDFeatures({
 
       <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
         <div className="flex justify-between items-center mb-3">
-          <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider`}>⭐ Dons & Talents</h4>
+          <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider flex items-center gap-1.5`}><Star size={14} /> Dons & Talents</h4>
           <button onClick={() => onOpenCreateFeature('don')} className={`w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}><CirclePlus size={16} /></button>
         </div>
         <div className="space-y-3">
