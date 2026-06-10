@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient';
 import { useAuth } from './hooks/useAuth';
 import { useCharacterData } from './hooks/useCharacterData';
 import { useSwipeNav } from './hooks/useSwipeNav';
-import { useThemeClasses } from './contexts/AppSettingsContext';
+import { useThemeClasses, useAppSettings } from './contexts/AppSettingsContext';
 import type { Character, CoreAttribute, Feature, Item, Familiar } from './types/rpg.types';
 import { User } from 'lucide-react';
 
@@ -42,6 +42,7 @@ import { DeathSavingThrowsModal } from './components/modals/DeathSavingThrowsMod
 
 export default function App() {
   const t = useThemeClasses();
+  const settings = useAppSettings();
 
   const [alertMsg, setAlertMsg] = useState<{ title: string; text: string } | null>(null);
   const showAlert = (title: string, text: string) => {
@@ -197,7 +198,7 @@ export default function App() {
       />
 
       {/* Blurred glass overlay */}
-      <div className="absolute inset-0 backdrop-blur-xs bg-black/40 pointer-events-none" style={{ zIndex: 1 }} />
+      {settings.bgOverlay && <div className="absolute inset-0 backdrop-blur-xs bg-black/40 pointer-events-none" style={{ zIndex: 1 }} />}
 
       {/* Star overlay */}
       <div
