@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { DEFAULT_SKILLS_TEMPLATES } from '../constants';
-import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography } from '../types/rpg.types';
+import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography, Familiar } from '../types/rpg.types';
 import type { User } from './useAuth';
 
 export interface NewFeatureState {
@@ -53,6 +53,27 @@ export interface NewItemState {
   defense_bonus: number;
 }
 
+export interface NewFamiliarState {
+  id?: string;
+  name: string;
+  species: string;
+  description: string;
+  hp_current: number;
+  hp_max: number;
+  ac: number;
+  speed: string;
+  str: number;
+  dex: number;
+  con: number;
+  int: number;
+  wis: number;
+  cha: number;
+  passive_perception: number;
+  senses: string;
+  abilities: string;
+  status: 'present' | 'distant' | 'unconscious' | 'dead';
+}
+
 export interface NewSpellSlotState {
   level: number;
   max: number;
@@ -65,6 +86,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   const [activeChar, setActiveChar] = useState<Character | null>(null);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [spells, setSpells] = useState<Spell[]>([]);
+  const [familiars, setFamiliars] = useState<Familiar[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [spellSlots, setSpellSlots] = useState<SpellSlot[]>([]);
@@ -77,6 +99,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   const [newFeature, setNewFeature] = useState<NewFeatureState>({ name: '', max: 2, recharge: 'LONG_REST', description: '', category: 'active', type: 'classe', resource_id: '', resource_cost: 0 });
   const [newResource, setNewResource] = useState<NewResourceState>({ name: '', max: 10, current: 10, recharge: 'LONG_REST' });
   const [newSpell, setNewSpell] = useState<NewSpellState>({ name: '', level: 0, range: '', duration: '', components: [], casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' });
+  const [newFamiliar, setNewFamiliar] = useState<NewFamiliarState>({ name: '', species: '', description: '', hp_current: 1, hp_max: 1, ac: 10, speed: '', str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, passive_perception: 10, senses: '', abilities: '', status: 'present' });
   const [newItem, setNewItem] = useState<NewItemState>({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
   const [newSpellSlot, setNewSpellSlot] = useState<NewSpellSlotState>({ level: 1, max: 4, current: 4 });
 
@@ -132,6 +155,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
           setActiveChar(null);
           setFeatures([]);
           setSpells([]);
+          setFamiliars([]);
           setItems([]);
           setSkills([]);
           setSpellSlots([]);
@@ -196,6 +220,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
       const { data: feats } = await supabase.from('features').select('*').eq('character_id', charId);
       const { data: spls } = await supabase.from('spells').select('*').eq('character_id', charId);
+      const { data: fams } = await supabase.from('familiars').select('*').eq('character_id', charId);
       const { data: itms } = await supabase.from('items').select('*').eq('character_id', charId);
       const { data: skls } = await supabase.from('character_skills').select('*').eq('character_id', charId);
       const { data: slts } = await supabase.from('spell_slots').select('*').eq('character_id', charId);
@@ -206,6 +231,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       setBiography(bio as Biography | null);
       setFeatures(feats || []);
       setSpells(spls || []);
+      setFamiliars((fams || []) as Familiar[]);
       setItems(itms || []);
 
       const mappedSkills = DEFAULT_SKILLS_TEMPLATES.map(tmpl => {
@@ -537,6 +563,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     setActiveChar(null);
     setFeatures([]);
     setSpells([]);
+    setFamiliars([]);
     setItems([]);
     setSkills([]);
     setSpellSlots([]);
@@ -631,6 +658,71 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     return Math.floor((score - 10) / 2);
   }
 
+  // Familiars
+  async function handleSaveFamiliar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!activeChar || !newFamiliar.name.trim()) return;
+
+    const payload = {
+      character_id: activeChar.id,
+      name: newFamiliar.name.trim(),
+      species: newFamiliar.species || null,
+      description: newFamiliar.description || null,
+      hp_current: Number(newFamiliar.hp_current),
+      hp_max: Number(newFamiliar.hp_max),
+      ac: Number(newFamiliar.ac) || null,
+      speed: newFamiliar.speed || null,
+      str: Number(newFamiliar.str) || null,
+      dex: Number(newFamiliar.dex) || null,
+      con: Number(newFamiliar.con) || null,
+      int: Number(newFamiliar.int) || null,
+      wis: Number(newFamiliar.wis) || null,
+      cha: Number(newFamiliar.cha) || null,
+      passive_perception: Number(newFamiliar.passive_perception) || null,
+      senses: newFamiliar.senses || null,
+      abilities: newFamiliar.abilities || null,
+      status: newFamiliar.status,
+    };
+
+    if (newFamiliar.id) {
+      const { character_id: _, ...updatePayload } = payload;
+      const { data, error } = await supabase.from('familiars').update(updatePayload).eq('id', newFamiliar.id).select().single();
+      if (error) {
+        showAlert('Erreur', `Impossible de sauvegarder : ${error.message}`);
+      } else if (data) {
+        setFamiliars(prev => prev.map(f => f.id === newFamiliar.id ? (data as Familiar) : f));
+        showAlert('Familier modifié', `${payload.name} a été mis à jour.`);
+      }
+    } else {
+      const { data, error } = await supabase.from('familiars').insert([payload]).select().single();
+      if (error) {
+        showAlert('Erreur', `Impossible d'ajouter : ${error.message}`);
+      } else if (data) {
+        setFamiliars(prev => [...prev, data as Familiar]);
+        showAlert('Familier ajouté', `${payload.name} est désormais votre compagnon.`);
+      }
+    }
+
+    setNewFamiliar({ name: '', species: '', description: '', hp_current: 1, hp_max: 1, ac: 10, speed: '', str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, passive_perception: 10, senses: '', abilities: '', status: 'present' });
+    return true;
+  }
+
+  async function handleDeleteFamiliar(id: string, name: string) {
+    const { error } = await supabase.from('familiars').delete().eq('id', id);
+    if (!error) {
+      setFamiliars(prev => prev.filter(f => f.id !== id));
+      showAlert('Familier retiré', `${name} a quitté votre troupe.`);
+    }
+  }
+
+  async function handleUpdateFamiliarHp(id: string, delta: number) {
+    const target = familiars.find(f => f.id === id);
+    if (!target) return;
+    const next = Math.max(0, Math.min(target.hp_max, target.hp_current + delta));
+    setFamiliars(prev => prev.map(f => f.id === id ? { ...f, hp_current: next } : f));
+    await supabase.from('familiars').update({ hp_current: next }).eq('id', id);
+  }
+
   // Biography
   async function saveBiography(fields: Partial<Omit<Biography, 'character_id' | 'updated_at'>>) {
     if (!activeChar) return;
@@ -690,6 +782,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     items,
     skills,
     spellSlots, setSpellSlots,
+    familiars,
     activeConditions, setActiveConditions,
     loading, setLoading,
     resources, setResources,
@@ -697,6 +790,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     // Form states
     newFeature, setNewFeature,
     newSpell, setNewSpell,
+    newFamiliar, setNewFamiliar,
     newItem, setNewItem,
     newSpellSlot, setNewSpellSlot,
     // Actions
@@ -712,6 +806,9 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     handleToggleSpellSlot,
     handleAddSpell,
     handleDeleteSpell,
+    handleSaveFamiliar,
+    handleDeleteFamiliar,
+    handleUpdateFamiliarHp,
     handleToggleSkill,
     biography, setBiography,
     saveBiography,

@@ -111,6 +111,28 @@ export interface Biography {
 
 export type CharacterStatKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
+export interface Familiar {
+  id: string;
+  character_id: string;
+  name: string;
+  species?: string;
+  description?: string;
+  hp_current: number;
+  hp_max: number;
+  ac?: number;
+  speed?: string;
+  str?: number;
+  dex?: number;
+  con?: number;
+  int?: number;
+  wis?: number;
+  cha?: number;
+  passive_perception?: number;
+  senses?: string;
+  abilities?: string;
+  status: 'present' | 'distant' | 'unconscious' | 'dead';
+}
+
 export interface CoreAttribute {
   label: string;
   score: number;

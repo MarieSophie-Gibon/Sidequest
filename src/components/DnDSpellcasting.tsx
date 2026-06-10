@@ -176,7 +176,7 @@ export function DnDSpellcasting({
 
         <div className="space-y-2">
           {[...spells]
-            .sort((a, b) => a.level - b.level)
+            .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name, 'fr'))
             .filter(s => filterLevel === null || Number(s.level) === filterLevel)
             .filter(s => filterType === null || s.casting_type === filterType)
             .map((spell) => {
@@ -191,10 +191,13 @@ export function DnDSpellcasting({
                     <ChevronDown size={12} className={`${t.textMuted} transition-transform ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
                     <span className={`text-xs font-bold ${t.textPrimary}`}>{spell.name}</span>
                     {spell.concentration && (
-                      <span className="text-[8px] font-bold text-blue-500 bg-blue-500/10 px-1 py-0.5 rounded border border-blue-500/20 uppercase leading-none">C</span>
+                      <span className="text-[8px] font-bold text-cyan-300 bg-cyan-400/10 px-1.5 py-0.5 rounded border border-cyan-400/50 uppercase leading-none tracking-wide shadow-[0_0_6px_rgba(34,211,238,0.5)]">Conc.</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1.5">
+                    {spell.components && spell.components.length > 0 && (
+                      <span className="text-[9px] font-mono font-semibold text-slate-400 bg-slate-500/15 px-1.5 py-0.5 rounded-lg border border-slate-500/30">{spell.components.join('·')}</span>
+                    )}
                     {spell.casting_type && (() => {
                       const meta = castingTypeMeta[spell.casting_type];
                       const CastIcon = meta.icon;
@@ -212,27 +215,19 @@ export function DnDSpellcasting({
                 </div>
                 {isExpanded && (
                   <div className="px-3 pb-3 space-y-2" onClick={() => onEditSpell(spell)}>
-                    <div className="flex items-center justify-between flex-wrap gap-1">
+                    <div className="flex items-center flex-wrap gap-1">
                       {spell.damage && (
-                        <span className={`text-[9px] font-mono font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-500/20`}>⚔ {spell.damage}</span>
+                        <span className="text-[9px] font-mono font-bold text-rose-300 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-400/50 shadow-[0_0_6px_rgba(251,113,133,0.5)]">⚔ {spell.damage}</span>
                       )}
                       {spell.is_aoe && spell.save_type && (
                         <span className={`text-[9px] font-mono font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20`}>🛡 JS {spell.save_type}{spell.save_effect ? ` · ${spell.save_effect}` : ''}</span>
                       )}
-                      {spell.range && (
-                        <span className={`text-[9px] ${t.textMuted} font-mono`}>{spell.range}</span>
+                      {(spell.range || spell.duration) && (
+                        <span className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>
+                          {[spell.range, spell.duration ? `⏱ ${spell.duration}` : null].filter(Boolean).join(' · ')}
+                        </span>
                       )}
                     </div>
-                    {(spell.duration || (spell.components && spell.components.length > 0)) && (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {spell.duration && (
-                          <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>⏱ {spell.duration}</span>
-                        )}
-                        {spell.components && spell.components.length > 0 && (
-                          <span className={`text-[9px] font-mono font-bold ${t.textSecondary} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>{spell.components.join(' · ')}</span>
-                        )}
-                      </div>
-                    )}
                     {spell.desc && (
                       <p className={`text-[10px] ${t.textSecondary} leading-relaxed ${t.cardBg} p-2 rounded-lg border ${t.cardBorder}`}>
                         {spell.desc}

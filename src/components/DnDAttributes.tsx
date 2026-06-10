@@ -4,6 +4,7 @@ import type {
   Resource,
   Skill,
   Character,
+  Familiar,
 } from "../types/rpg.types";
 import {
   useAppSettings,
@@ -18,6 +19,8 @@ import {
   Sparkles,
   GraduationCap,
   Backpack,
+  PawPrint,
+  Heart,
 } from "lucide-react";
 
 interface DnDAttributesProps {
@@ -25,12 +28,14 @@ interface DnDAttributesProps {
   items: Item[];
   resources: Resource[];
   skills: Skill[];
+  familiars: Familiar[];
   activeChar: Character;
   getModValue: (score: number) => number;
   onToggleFeatureUse: (featureId: string, index: number) => void;
   onShortRest: () => void;
   onLongRest: () => void;
   onUpdateResourceCurrent: (id: string, delta: number) => void;
+  onUpdateFamiliarHp: (id: string, delta: number) => void;
 }
 
 export function DnDAttributes({
@@ -38,15 +43,19 @@ export function DnDAttributes({
   items,
   resources,
   skills,
+  familiars,
   activeChar,
   getModValue,
   onToggleFeatureUse,
   onShortRest,
   onLongRest,
   onUpdateResourceCurrent,
+  onUpdateFamiliarHp,
 }: DnDAttributesProps) {
   const t = useThemeClasses();
   const { dashboardVisibility } = useAppSettings();
+
+  const presentFamiliars = familiars.filter(f => f.status === 'present');
 
   const equippedWeapons = items.filter(
     (i) => i.category === "arme" && i.equipped,
@@ -223,6 +232,49 @@ export function DnDAttributes({
             </div>
           </section>
         )}
+
+      {presentFamiliars.length > 0 && (
+        <section
+          className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow} border-emerald-400/22 bg-emerald-500/4`}
+        >
+          <div className="flex items-center justify-between mb-2.5">
+            <h4 className={`text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} flex items-center gap-1.5`}>
+              <PawPrint size={12} /> Familiers présents
+            </h4>
+            <span className={`text-[9px] ${t.textMuted} uppercase`}>{presentFamiliars.length}</span>
+          </div>
+          <div className="space-y-2">
+            {presentFamiliars.map(fam => {
+              const hpPct = fam.hp_max > 0 ? Math.round((fam.hp_current / fam.hp_max) * 100) : 0;
+              const hpColor = hpPct > 60 ? 'bg-emerald-500' : hpPct > 30 ? 'bg-amber-500' : 'bg-rose-500';
+              return (
+                <div key={fam.id} className={`${t.inputBg} rounded-xl px-3 py-2 border ${t.cardBorder} flex items-center gap-3`}>
+                  <div className={`w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-500/15 border border-emerald-500/30 shrink-0`}>
+                    <PawPrint size={12} className="text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-xs font-bold ${t.textPrimary} block truncate`}>{fam.name}</span>
+                    {fam.species && <span className={`text-[9px] ${t.textMuted}`}>{fam.species}</span>}
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <div className="flex items-center gap-1">
+                        <button type="button" onClick={() => onUpdateFamiliarHp(fam.id, -1)} className={`w-5 h-5 flex items-center justify-center rounded-md ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-xs font-bold hover:brightness-90 active:scale-90 transition-all`}>−</button>
+                        <span className={`text-[10px] font-mono font-bold ${t.textPrimary} min-w-8 text-center`}>{fam.hp_current}<span className={`${t.textMuted} font-normal`}>/{fam.hp_max}</span></span>
+                        <button type="button" onClick={() => onUpdateFamiliarHp(fam.id, +1)} className={`w-5 h-5 flex items-center justify-center rounded-md ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-xs font-bold hover:brightness-90 active:scale-90 transition-all`}>+</button>
+                      </div>
+                      <div className="flex-1 h-1.5 rounded-full bg-slate-700/40 overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${hpColor}`} style={{ width: `${hpPct}%` }} />
+                      </div>
+                      {fam.ac && (
+                        <span className={`text-[9px] font-mono font-bold ${t.textMuted} flex items-center gap-0.5`}><Heart size={9} />{fam.ac}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {dashboardVisibility.showClassFeatures &&
         displayedClassFeatures.length > 0 && (

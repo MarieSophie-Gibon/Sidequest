@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient';
 import { useAuth } from './hooks/useAuth';
 import { useCharacterData } from './hooks/useCharacterData';
 import { useThemeClasses } from './contexts/AppSettingsContext';
-import type { Character, CoreAttribute, Feature, Item } from './types/rpg.types';
+import type { Character, CoreAttribute, Feature, Item, Familiar } from './types/rpg.types';
 import { User } from 'lucide-react';
 
 // Components
@@ -36,6 +36,7 @@ import { EditSpellcastingModal } from './components/modals/EditSpellcastingModal
 import { EditBiographyModal } from './components/modals/EditBiographyModal';
 import { EditBackstoryModal } from './components/modals/EditBackstoryModal';
 import { EditPersonalityModal } from './components/modals/EditPersonalityModal';
+import { AddFamiliarModal } from './components/modals/AddFamiliarModal';
 
 export default function App() {
   const t = useThemeClasses();
@@ -277,12 +278,14 @@ export default function App() {
                     items={data.items}
                     resources={data.resources}
                     skills={data.skills}
+                    familiars={data.familiars}
                     activeChar={data.activeChar!}
                     getModValue={data.getModValue}
                     onToggleFeatureUse={data.toggleFeatureUse}
                     onShortRest={data.handleShortRest}
                     onLongRest={data.handleLongRest}
                     onUpdateResourceCurrent={data.handleUpdateResourceCurrent}
+                    onUpdateFamiliarHp={data.handleUpdateFamiliarHp}
                   />
                 )}
 
@@ -324,6 +327,7 @@ export default function App() {
                   <DnDFeatures
                     features={data.features}
                     resources={data.resources}
+                    familiars={data.familiars}
                     onShortRest={data.handleShortRest}
                     onLongRest={data.handleLongRest}
                     onOpenEditFeature={openEditFeature}
@@ -331,6 +335,9 @@ export default function App() {
                     onOpenAddResource={() => { data.setNewResource({ name: '', max: 10, current: 10, recharge: 'LONG_REST' }); setModalType('add_resource'); }}
                     onOpenEditResource={(res) => { data.setNewResource({ id: res.id, name: res.name, max: res.max, current: res.current, recharge: res.recharge ?? 'LONG_REST' }); setModalType('add_resource'); }}
                     onUpdateResourceCurrent={data.handleUpdateResourceCurrent}
+                    onOpenAddFamiliar={() => { data.setNewFamiliar({ name: '', species: '', description: '', hp_current: 1, hp_max: 1, ac: 10, speed: '', str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, passive_perception: 10, senses: '', abilities: '', status: 'present' }); setModalType('add_familiar'); }}
+                    onOpenEditFamiliar={(fam: Familiar) => { data.setNewFamiliar({ id: fam.id, name: fam.name, species: fam.species || '', description: fam.description || '', hp_current: fam.hp_current, hp_max: fam.hp_max, ac: fam.ac ?? 10, speed: fam.speed || '', str: fam.str ?? 10, dex: fam.dex ?? 10, con: fam.con ?? 10, int: fam.int ?? 10, wis: fam.wis ?? 10, cha: fam.cha ?? 10, passive_perception: fam.passive_perception ?? 10, senses: fam.senses || '', abilities: fam.abilities || '', status: fam.status }); setModalType('add_familiar'); }}
+                    onUpdateFamiliarHp={data.handleUpdateFamiliarHp}
                   />
                 )}
 
@@ -437,6 +444,15 @@ export default function App() {
           )}
           {modalType === 'add_spell' && (
             <AddSpellModal newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' }); setModalType(null); }} />
+          )}
+          {modalType === 'add_familiar' && (
+            <AddFamiliarModal
+              newFamiliar={data.newFamiliar}
+              setNewFamiliar={data.setNewFamiliar}
+              onSubmit={async (e) => { await data.handleSaveFamiliar(e); setModalType(null); }}
+              onDelete={data.handleDeleteFamiliar}
+              onClose={() => setModalType(null)}
+            />
           )}
           {modalType === 'add_item' && (
             <AddItemModal

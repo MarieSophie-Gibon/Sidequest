@@ -1,10 +1,12 @@
-import type { Feature, Resource } from '../types/rpg.types';
+import { useState } from 'react';
+import type { Feature, Resource, Familiar } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { Sword, Dna, Zap, CirclePlus, Star } from 'lucide-react';
+import { Sword, Dna, Zap, CirclePlus, Star, PawPrint, Heart, ChevronDown } from 'lucide-react';
 
 interface DnDFeaturesProps {
   features: Feature[];
   resources: Resource[];
+  familiars: Familiar[];
   onShortRest: () => void;
   onLongRest: () => void;
   onOpenEditFeature: (feature: Feature) => void;
@@ -12,18 +14,26 @@ interface DnDFeaturesProps {
   onOpenAddResource: () => void;
   onOpenEditResource: (resource: Resource) => void;
   onUpdateResourceCurrent: (id: string, delta: number) => void;
+  onOpenAddFamiliar: () => void;
+  onOpenEditFamiliar: (familiar: Familiar) => void;
+  onUpdateFamiliarHp: (id: string, delta: number) => void;
 }
 
 export function DnDFeatures({
   features,
   resources,
+  familiars,
   onOpenEditFeature,
   onOpenCreateFeature,
   onOpenAddResource,
   onOpenEditResource,
   onUpdateResourceCurrent,
+  onOpenAddFamiliar,
+  onOpenEditFamiliar,
+  onUpdateFamiliarHp,
 }: DnDFeaturesProps) {
   const t = useThemeClasses();
+  const [expandedFamiliar, setExpandedFamiliar] = useState<string | null>(null);
 
   return (
     <div className="space-y-2">
@@ -118,6 +128,106 @@ export function DnDFeatures({
               </div>
             ))}
         </div>
+      </div>
+      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
+        <div className="flex justify-between items-center mb-3">
+          <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider flex items-center gap-1.5`}><PawPrint size={14} /> Familiers & Compagnons</h4>
+          <button onClick={onOpenAddFamiliar} className={`w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}><CirclePlus size={16} /></button>
+        </div>
+        {familiars.length === 0 ? (
+          <p className={`text-[10px] ${t.textMuted} italic text-center py-2`}>Aucun compagnon pour l'instant.</p>
+        ) : (
+          <div className="space-y-2">
+            {familiars.map(fam => {
+              const hpPct = fam.hp_max > 0 ? Math.round((fam.hp_current / fam.hp_max) * 100) : 0;
+              const hpColor = hpPct > 60 ? 'bg-emerald-500' : hpPct > 30 ? 'bg-amber-500' : 'bg-rose-500';
+              const statusColor: Record<Familiar['status'], string> = {
+                present: 'text-emerald-400',
+                distant: 'text-amber-400',
+                unconscious: 'text-slate-400',
+                dead: 'text-rose-500',
+              };
+              const statusLabel: Record<Familiar['status'], string> = {
+                present: 'Présent',
+                distant: 'Éloigné',
+                unconscious: 'Inconscient',
+                dead: 'Mort',
+              };
+              const isExpanded = expandedFamiliar === fam.id;
+              const statKeys: { key: keyof Familiar; label: string }[] = [
+                { key: 'str', label: 'FOR' }, { key: 'dex', label: 'DEX' }, { key: 'con', label: 'CON' },
+                { key: 'int', label: 'INT' }, { key: 'wis', label: 'SAG' }, { key: 'cha', label: 'CHA' },
+              ];
+              return (
+                <div key={fam.id} className={`${t.inputBg} rounded-xl border ${t.cardBorder} overflow-hidden`}>
+                  {/* Header */}
+                  <div className="p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => setExpandedFamiliar(isExpanded ? null : fam.id)} className="focus:outline-none">
+                          <ChevronDown size={12} className={`${t.textMuted} transition-transform ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
+                        </button>
+                        <span className={`text-xs font-bold ${t.textPrimary} cursor-pointer`} onClick={() => onOpenEditFamiliar(fam)}>{fam.name}</span>
+                        {fam.species && <span className={`text-[9px] ${t.textMuted} font-mono`}>{fam.species}</span>}
+                      </div>
+                      <span className={`text-[9px] font-bold uppercase ${statusColor[fam.status]}`}>{statusLabel[fam.status]}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <button type="button" onClick={() => onUpdateFamiliarHp(fam.id, -1)} className={`w-5 h-5 flex items-center justify-center rounded-md ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-xs font-bold hover:brightness-90 active:scale-90 transition-all`}>−</button>
+                        <span className={`text-[10px] font-mono font-bold ${t.textPrimary} min-w-10 text-center`}>{fam.hp_current}<span className={`${t.textMuted} font-normal`}>/{fam.hp_max}</span></span>
+                        <button type="button" onClick={() => onUpdateFamiliarHp(fam.id, +1)} className={`w-5 h-5 flex items-center justify-center rounded-md ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-xs font-bold hover:brightness-90 active:scale-90 transition-all`}>+</button>
+                      </div>
+                      <div className={`flex-1 h-1.5 rounded-full bg-slate-700/40 overflow-hidden`}>
+                        <div className={`h-full rounded-full transition-all ${hpColor}`} style={{ width: `${hpPct}%` }} />
+                      </div>
+                      {fam.ac && (
+                        <span className={`text-[9px] font-mono font-bold ${t.textMuted} flex items-center gap-0.5`}><Heart size={9} />{fam.ac}</span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Expanded */}
+                  {isExpanded && (
+                    <div className={`px-3 pb-3 space-y-2 border-t ${t.cardBorder} pt-2`}>
+                      {/* Caractéristiques */}
+                      {statKeys.some(s => fam[s.key] != null) && (
+                        <div className="grid grid-cols-6 gap-1 text-center">
+                          {statKeys.map(({ key, label }) => {
+                            const val = (fam[key] as number | undefined) ?? 10;
+                            const mod = Math.floor((val - 10) / 2);
+                            return (
+                              <div key={key} className={`${t.cardBg} rounded-lg py-1 border ${t.cardBorder}`}>
+                                <div className={`text-[8px] font-bold ${t.textMuted} uppercase`}>{label}</div>
+                                <div className={`text-[10px] font-mono font-bold ${t.textPrimary}`}>{val}</div>
+                                <div className={`text-[9px] font-mono ${t.textSecondary}`}>{mod >= 0 ? `+${mod}` : mod}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {/* Vitesse / Perception */}
+                      {(fam.speed || fam.passive_perception || fam.senses) && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {fam.speed && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>👆 {fam.speed}</span>}
+                          {fam.passive_perception && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>👁 {fam.passive_perception}</span>}
+                          {fam.senses && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>{fam.senses}</span>}
+                        </div>
+                      )}
+                      {/* Description */}
+                      {fam.description && (
+                        <p className={`text-[10px] ${t.textSecondary} leading-relaxed ${t.cardBg} p-2 rounded-lg border ${t.cardBorder} italic`}>{fam.description}</p>
+                      )}
+                      {/* Capacités */}
+                      {fam.abilities && (
+                        <p className={`text-[10px] ${t.textSecondary} leading-relaxed ${t.cardBg} p-2 rounded-lg border ${t.cardBorder}`}>{fam.abilities}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
