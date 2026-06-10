@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from './supabaseClient';
 import { useAuth } from './hooks/useAuth';
 import { useCharacterData } from './hooks/useCharacterData';
@@ -37,6 +37,7 @@ import { EditBiographyModal } from './components/modals/EditBiographyModal';
 import { EditBackstoryModal } from './components/modals/EditBackstoryModal';
 import { EditPersonalityModal } from './components/modals/EditPersonalityModal';
 import { AddFamiliarModal } from './components/modals/AddFamiliarModal';
+import { DeathSavingThrowsModal } from './components/modals/DeathSavingThrowsModal';
 
 export default function App() {
   const t = useThemeClasses();
@@ -56,6 +57,17 @@ export default function App() {
   // Tabs & modal state
   const [activeTab, setActiveTab] = useState<'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'settings'>('home');
   const [modalType, setModalType] = useState<string | null>(null);
+
+  // Death saves auto-trigger
+  const deathSaveShownRef = useRef(false);
+  useEffect(() => {
+    if (data.activeChar?.hp_current === 0 && !deathSaveShownRef.current) {
+      deathSaveShownRef.current = true;
+      setModalType('death_saves');
+    } else if ((data.activeChar?.hp_current ?? 0) > 0) {
+      deathSaveShownRef.current = false;
+    }
+  }, [data.activeChar?.hp_current]);
 
   // Auth state listener
   useEffect(() => {
@@ -446,6 +458,16 @@ export default function App() {
           )}
           {modalType === 'add_spell' && (
             <AddSpellModal newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' }); setModalType(null); }} />
+          )}
+          {modalType === 'death_saves' && data.activeChar && (
+            <DeathSavingThrowsModal
+              characterName={data.activeChar.name}
+              onStabilize={() => {
+                data.syncCharacterField('hp_current', 1);
+                setModalType(null);
+              }}
+              onClose={() => setModalType(null)}
+            />
           )}
           {modalType === 'add_familiar' && (
             <AddFamiliarModal
