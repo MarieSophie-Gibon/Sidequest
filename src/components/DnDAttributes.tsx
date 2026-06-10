@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type {
   Feature,
   Item,
@@ -54,6 +55,7 @@ export function DnDAttributes({
 }: DnDAttributesProps) {
   const t = useThemeClasses();
   const { dashboardVisibility } = useAppSettings();
+  const [editingFamiliarHp, setEditingFamiliarHp] = useState<{ id: string; value: string } | null>(null);
 
   const presentFamiliars = familiars.filter(f => f.status === 'present');
 
@@ -252,25 +254,57 @@ export function DnDAttributes({
                     <PawPrint size={12} className="text-emerald-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className={`flex items-center gap-1.5 max-w-max justify-between w-full`}>
-                      <div className={`flex items-center gap-1.5 max-w-max`}>
-                        <span className={`text-xs font-bold ${t.textPrimary} block truncate`}>{fam.name}</span>
-                        {fam.species && <span className={`text-[9px] ${t.textMuted}`}>{fam.species}</span>}
+                    <div className="flex items-center justify-between gap-2 w-full">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className={`text-xs font-bold ${t.textPrimary} truncate`}>{fam.name}</span>
+                        {fam.species && <span className={`text-[9px] ${t.textMuted} shrink-0`}>{fam.species}</span>}
                       </div>
                       {fam.ac && (
-                        <span className={`text-[9px] font-mono font-bold ${t.textMuted} flex items-center gap-0.5`}>CA {fam.ac}</span>
+                        <span className="text-[9px] font-mono font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-1.5 py-0.5 rounded-md shrink-0">CA {fam.ac}</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <div className="flex items-center gap-1">
-                        <button type="button" onClick={() => onUpdateFamiliarHp(fam.id, -1)} className={`w-5 h-5 flex items-center justify-center rounded-md ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-xs font-bold hover:brightness-90 active:scale-90 transition-all`}>−</button>
-                        <span className={`text-[10px] font-mono font-bold ${t.textPrimary} min-w-8 text-center`}>{fam.hp_current}<span className={`${t.textMuted} font-normal`}>/{fam.hp_max}</span></span>
-                        <button type="button" onClick={() => onUpdateFamiliarHp(fam.id, +1)} className={`w-5 h-5 flex items-center justify-center rounded-md ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-xs font-bold hover:brightness-90 active:scale-90 transition-all`}>+</button>
-                      </div>
-                      <div className="flex-1 h-1.5 rounded-full bg-slate-700/40 overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${hpColor}`} style={{ width: `${hpPct}%` }} />
-                      </div>
-
+                    <div className="mt-1.5 space-y-1">
+                      {editingFamiliarHp?.id === fam.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <Heart size={10} className="text-rose-400 shrink-0" />
+                          <input
+                            type="number"
+                            min={0}
+                            max={fam.hp_max}
+                            autoFocus
+                            value={editingFamiliarHp.value}
+                            onChange={e => setEditingFamiliarHp({ id: fam.id, value: e.target.value })}
+                            onBlur={() => {
+                              const next = Math.max(0, Math.min(fam.hp_max, Number(editingFamiliarHp.value) || 0));
+                              onUpdateFamiliarHp(fam.id, next - fam.hp_current);
+                              setEditingFamiliarHp(null);
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                              if (e.key === 'Escape') setEditingFamiliarHp(null);
+                            }}
+                            className={`w-full ${t.inputBg} border ${t.accentBorder} ${t.inputText} rounded-lg px-2 py-1 text-xs font-mono font-bold focus:outline-none text-center`}
+                          />
+                          <span className={`text-[9px] ${t.textMuted} shrink-0`}>/{fam.hp_max}</span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setEditingFamiliarHp({ id: fam.id, value: String(fam.hp_current) })}
+                          className="w-full group"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="flex items-center gap-1">
+                              <Heart size={10} className="text-rose-400" />
+                              <span className={`text-[10px] font-mono font-bold ${t.textPrimary}`}>{fam.hp_current}<span className={`${t.textMuted} font-normal`}>/{fam.hp_max}</span></span>
+                            </span>
+                            <span className={`text-[8px] ${t.textMuted} opacity-0 group-hover:opacity-100 transition-opacity`}>modifier</span>
+                          </div>
+                          <div className="w-full h-2 rounded-full bg-slate-700/40 overflow-hidden border border-slate-600/20">
+                            <div className={`h-full rounded-full transition-all ${hpColor}`} style={{ width: `${hpPct}%` }} />
+                          </div>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
