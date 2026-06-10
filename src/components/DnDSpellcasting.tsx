@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Spell, SpellSlot } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { CirclePlus, ChevronDown, Sword, Sparkles, Shield } from 'lucide-react';
+import { CirclePlus, ChevronDown, Sword, Sparkles, Shield, Funnel } from 'lucide-react';
 
 interface DnDSpellcastingProps {
   spellSlots: SpellSlot[];
@@ -30,6 +30,10 @@ export function DnDSpellcasting({
   const accentHex = t.accent.includes('violet') ? '#a78bfa' : '#3b82f6';
   const accentDimHex = t.accent.includes('violet') ? '#7c3aed' : '#2563eb';
   const [expandedSpell, setExpandedSpell] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterLevel, setFilterLevel] = useState<number | null>(null);
+  const [filterType, setFilterType] = useState<string | null>(null);
+  const hasActiveFilter = filterLevel !== null || filterType !== null;
 
   const castingTypeMeta: Record<NonNullable<Spell['casting_type']>, { label: string; icon: typeof Sword }> = {
     action: { label: 'Action', icon: Sword },
@@ -114,15 +118,68 @@ export function DnDSpellcasting({
       <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
         <div className="flex justify-between items-center mb-3">
           <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider`}>Votre Grimoire</h4>
-          <button
-            onClick={onOpenAddSpell}
-            className={`w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}
-          >
-            <CirclePlus size={16} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowFilters(prev => !prev)}
+              className={`w-6 h-6 flex items-center justify-center rounded-xl border transition-all ${
+                showFilters || hasActiveFilter
+                  ? `${t.accentBg} ${t.accentBorder} ${t.accent}`
+                  : `${t.cardBg} ${t.cardBorder} ${t.textMuted}`
+              } hover:brightness-110 active:scale-90`}
+              aria-label="Filtrer"
+            >
+              <Funnel size={14} />
+            </button>
+            <button
+              onClick={onOpenAddSpell}
+              className={`w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}
+            >
+              <CirclePlus size={16} />
+            </button>
+          </div>
         </div>
+
+        {(showFilters || hasActiveFilter) && (
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {Array.from(new Set(spells.map(s => Number(s.level)))).sort((a, b) => a - b).map(lvl => (
+              <button
+                key={lvl}
+                type="button"
+                onClick={() => setFilterLevel(prev => prev === lvl ? null : lvl)}
+                className={`text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-lg border transition-all ${
+                  filterLevel === lvl
+                    ? `${t.accentBg} ${t.accentBorder} ${t.accent}`
+                    : `${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.btnSecondaryText}`
+                }`}
+              >
+                {lvl === 0 ? 'Mineur' : `Niv ${lvl}`}
+              </button>
+            ))}
+            <span className={`w-px self-stretch ${t.cardBorder} border-l mx-0.5`} />
+            {([{ key: 'action', label: 'Action' }, { key: 'bonus', label: 'Bonus' }, { key: 'reaction', label: 'Réaction' }] as const).map(opt => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setFilterType(prev => prev === opt.key ? null : opt.key)}
+                className={`text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-lg border transition-all ${
+                  filterType === opt.key
+                    ? `${t.accentBg} ${t.accentBorder} ${t.accent}`
+                    : `${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.btnSecondaryText}`
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="space-y-2">
-          {spells.map((spell) => {
+          {[...spells]
+            .sort((a, b) => a.level - b.level)
+            .filter(s => filterLevel === null || Number(s.level) === filterLevel)
+            .filter(s => filterType === null || s.casting_type === filterType)
+            .map((spell) => {
             const isExpanded = expandedSpell === spell.id;
             return (
               <div key={spell.id} className={`${t.inputBg} rounded-xl border ${t.cardBorder} overflow-hidden transition-all`}>
@@ -155,7 +212,7 @@ export function DnDSpellcasting({
                 </div>
                 {isExpanded && (
                   <div className="px-3 pb-3 space-y-2" onClick={() => onEditSpell(spell)}>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
                       {spell.damage && (
                         <span className={`text-[9px] font-mono font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-500/20`}>⚔ {spell.damage}</span>
                       )}
@@ -166,6 +223,16 @@ export function DnDSpellcasting({
                         <span className={`text-[9px] ${t.textMuted} font-mono`}>{spell.range}</span>
                       )}
                     </div>
+                    {(spell.duration || (spell.components && spell.components.length > 0)) && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {spell.duration && (
+                          <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>⏱ {spell.duration}</span>
+                        )}
+                        {spell.components && spell.components.length > 0 && (
+                          <span className={`text-[9px] font-mono font-bold ${t.textSecondary} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>{spell.components.join(' · ')}</span>
+                        )}
+                      </div>
+                    )}
                     {spell.desc && (
                       <p className={`text-[10px] ${t.textSecondary} leading-relaxed ${t.cardBg} p-2 rounded-lg border ${t.cardBorder}`}>
                         {spell.desc}

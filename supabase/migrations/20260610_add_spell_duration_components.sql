@@ -1,0 +1,3 @@
+ALTER TABLE spells
+  ADD COLUMN IF NOT EXISTS duration TEXT,
+  ADD COLUMN IF NOT EXISTS components TEXT[];

@@ -60,6 +60,8 @@ export interface Spell {
   name: string;
   level: number;
   range?: string;
+  duration?: string;
+  components?: string[];
   casting_type?: 'action' | 'bonus' | 'reaction';
   is_aoe?: boolean;
   save_type?: string;

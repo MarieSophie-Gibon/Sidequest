@@ -305,6 +305,8 @@ export default function App() {
                         name: spell.name,
                         level: spell.level,
                         range: spell.range || '',
+                        duration: spell.duration || '',
+                        components: spell.components || [],
                         casting_type: spell.casting_type || 'action',
                         is_aoe: spell.is_aoe || false,
                         save_type: spell.save_type || '',
@@ -434,7 +436,7 @@ export default function App() {
             <EditSpellcastingModal activeChar={data.activeChar} syncCharacterField={data.syncCharacterField} onClose={() => setModalType(null)} />
           )}
           {modalType === 'add_spell' && (
-            <AddSpellModal newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' }); setModalType(null); }} />
+            <AddSpellModal newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' }); setModalType(null); }} />
           )}
           {modalType === 'add_item' && (
             <AddItemModal

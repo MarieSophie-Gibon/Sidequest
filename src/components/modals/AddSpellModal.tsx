@@ -36,6 +36,39 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
+              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Durée</label>
+              <input type="text" placeholder="1 min / 1h / Instantané" value={newSpell.duration} onChange={(e) => setNewSpell(prev => ({ ...prev, duration: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} />
+            </div>
+            <div>
+              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Composantes</label>
+              <div className={`flex gap-1 ${t.inputBg} border ${t.inputBorder} rounded-xl px-2.5 py-2`}>
+                {(['V', 'S', 'M'] as const).map((comp) => {
+                  const active = newSpell.components.includes(comp);
+                  return (
+                    <button
+                      key={comp}
+                      type="button"
+                      onClick={() => setNewSpell(prev => ({
+                        ...prev,
+                        components: active
+                          ? prev.components.filter(c => c !== comp)
+                          : [...prev.components, comp],
+                      }))}
+                      className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-lg border transition-all ${
+                        active
+                          ? `${t.accentBg} ${t.accentBorder} ${t.btnPrimaryText}`
+                          : `${t.textMuted} ${t.cardBorder} hover:brightness-95`
+                      }`}
+                    >
+                      {comp}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Dégâts</label>
               <input type="text" placeholder="1d10 Feu" value={newSpell.damage} onChange={(e) => setNewSpell(prev => ({ ...prev, damage: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
             </div>

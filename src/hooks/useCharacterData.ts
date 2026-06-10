@@ -30,6 +30,8 @@ export interface NewSpellState {
   name: string;
   level: number;
   range: string;
+  duration: string;
+  components: string[];
   casting_type: 'action' | 'bonus' | 'reaction';
   is_aoe: boolean;
   save_type: string;
@@ -74,7 +76,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   // Modal form states
   const [newFeature, setNewFeature] = useState<NewFeatureState>({ name: '', max: 2, recharge: 'LONG_REST', description: '', category: 'active', type: 'classe', resource_id: '', resource_cost: 0 });
   const [newResource, setNewResource] = useState<NewResourceState>({ name: '', max: 10, current: 10, recharge: 'LONG_REST' });
-  const [newSpell, setNewSpell] = useState<NewSpellState>({ name: '', level: 0, range: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' });
+  const [newSpell, setNewSpell] = useState<NewSpellState>({ name: '', level: 0, range: '', duration: '', components: [], casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' });
   const [newItem, setNewItem] = useState<NewItemState>({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
   const [newSpellSlot, setNewSpellSlot] = useState<NewSpellSlotState>({ level: 1, max: 4, current: 4 });
 
@@ -351,6 +353,8 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       name: newSpell.name.trim(),
       level: Number(newSpell.level),
       range: newSpell.range || null,
+      duration: newSpell.duration || null,
+      components: newSpell.components.length > 0 ? newSpell.components : null,
       casting_type: newSpell.casting_type,
       is_aoe: newSpell.is_aoe,
       save_type: newSpell.is_aoe ? newSpell.save_type : null,
@@ -381,7 +385,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       }
     }
 
-    setNewSpell({ name: '', level: 0, range: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' });
+    setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' });
     return true;
   }
 
