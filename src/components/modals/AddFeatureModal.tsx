@@ -70,7 +70,7 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
             <textarea placeholder="Description..." value={newFeature.description} onChange={(e) => setNewFeature(prev => ({ ...prev, description: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-16 focus:outline-none`} />
           </div>
 
-          {resources.length > 0 && (
+          {resources.length > 0 && newFeature.category === 'active' && (
             <div className={`${t.inputBg} border ${t.inputBorder} rounded-xl p-2.5 space-y-2`}>
               <label className={`text-[10px] ${t.textMuted} uppercase block`}>Coût en ressource</label>
               <div className="grid grid-cols-2 gap-2">
