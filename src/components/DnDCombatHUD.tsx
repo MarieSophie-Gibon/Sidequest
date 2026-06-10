@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import type { Character, CoreAttribute } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
 import { DND_CONDITIONS } from './modals/EditConditionsModal';
-import { Heart, Sparkles, Star, AlertTriangle } from 'lucide-react';
+import { Heart, Sparkles, Star, AlertTriangle, HeartPlus } from 'lucide-react';
 
 interface DnDCombatHUDProps {
   activeChar: Character;
@@ -17,6 +18,8 @@ interface DnDCombatHUDProps {
   onOpenCombatEdit: () => void;
   onOpenAttributesEdit: () => void;
   onToggleInspiration: () => void;
+  onSpendHitDie: () => void;
+  onRecoverHitDie: () => void;
   renderAvatar: () => ReactNode;
 }
 
@@ -33,9 +36,15 @@ export function DnDCombatHUD({
   onOpenCombatEdit,
   onOpenAttributesEdit,
   onToggleInspiration,
+  onSpendHitDie,
+  onRecoverHitDie,
   renderAvatar,
 }: DnDCombatHUDProps) {
   const t = useThemeClasses();
+  const [showHitDice, setShowHitDice] = useState(false);
+  const hitDiceMax = activeChar.level;
+  const hitDiceCurrent = activeChar.hit_dice_current ?? hitDiceMax;
+  const hitDieType = activeChar.hit_die_type ?? 'd8';
 
   return (
     <header className={`relative ${t.cardBg} border ${t.cardBorder} rounded-2xl mb-2 shadow-md ${t.cardShadow} overflow-hidden shrink-0`}>
@@ -75,14 +84,39 @@ export function DnDCombatHUD({
                 <Heart size={12} className="text-rose-500 animate-pulse" />
                 <span className={`text-[10px] ${t.textMuted} font-extrabold uppercase tracking-wide`}>PV</span>
               </div>
-              <div className="flex items-baseline gap-0.5 font-mono">
-                <span className="text-sm font-extrabold text-emerald-400">{activeChar.hp_current}</span>
-                {activeChar.hp_temp > 0 && (
-                  <span className="text-cyan-400 text-[10px] font-extrabold">+{activeChar.hp_temp}</span>
-                )}
-                <span className={`text-[10px] ${t.textMuted}`}>/{activeChar.hp_max}</span>
+              <div className="flex items-baseline gap-1.5 font-mono">
+                <div className="flex items-baseline gap-0.5">
+                  <span className="text-sm font-extrabold text-emerald-400">{activeChar.hp_current}</span>
+                  {activeChar.hp_temp > 0 && (
+                    <span className="text-cyan-400 text-[10px] font-extrabold">+{activeChar.hp_temp}</span>
+                  )}
+                  <span className={`text-[10px] ${t.textMuted}`}>/{activeChar.hp_max}</span>
+                </div>
+                {/* Hit dice badge */}
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); setShowHitDice(p => !p); }}
+                  className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border text-[12px] font-bold font-mono transition-all ${
+                    hitDiceCurrent > 0
+                      ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/35 hover:brightness-110'
+                      : `${t.textMuted} ${t.inputBg} ${t.cardBorder} opacity-50`
+                  }`}
+                >
+                  <HeartPlus size={12} />
+                  {hitDiceCurrent}{hitDieType}
+                </button>
               </div>
             </div>
+            {showHitDice && (
+              <div className={`flex items-center justify-between ${t.cardBg} border ${t.cardBorder} rounded-lg px-2 py-1.5 mb-1.5`} onClick={e => e.stopPropagation()}>
+                <span className={`text-[9px] ${t.textMuted} uppercase font-bold`}>Dés de vie</span>
+                <div className="flex items-center gap-1">
+                  <button type="button" onClick={onSpendHitDie} disabled={hitDiceCurrent <= 0} className={`w-5 h-5 flex items-center justify-center rounded-md ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-xs font-bold hover:brightness-90 active:scale-90 transition-all disabled:opacity-40`}>−</button>
+                  <span className={`text-[10px] font-mono font-bold ${t.textPrimary} min-w-10 text-center`}>{hitDiceCurrent}<span className={`${t.textMuted} font-normal`}>/{hitDiceMax}</span></span>
+                  <button type="button" onClick={onRecoverHitDie} disabled={hitDiceCurrent >= hitDiceMax} className={`w-5 h-5 flex items-center justify-center rounded-md ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-xs font-bold hover:brightness-90 active:scale-90 transition-all disabled:opacity-40`}>+</button>
+                </div>
+              </div>
+            )}
             <div className="w-full bg-slate-900/60 h-2 rounded-full overflow-hidden border border-slate-600/30 shadow-inner">
               <div
                 className={`h-full transition-all duration-500 ease-out bg-linear-to-r ${t.hpBar}`}

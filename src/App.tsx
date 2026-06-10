@@ -265,6 +265,8 @@ export default function App() {
                   data.syncCharacterField('heroic_inspiration', nextInspi);
                   showAlert(nextInspi ? 'Inspiration' : 'Inspiration dépensée', nextInspi ? 'Inspiration activée.' : 'Inspiration consommée.');
                 }}
+                onSpendHitDie={data.handleSpendHitDie}
+                onRecoverHitDie={data.handleRecoverHitDie}
                 renderAvatar={() => renderActiveAvatar(data.activeChar!)}
               />
 

@@ -41,6 +41,15 @@ export function EditCombatModal({ activeChar, syncCharacterField, onClose }: Pro
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Maîtrise</label>
               <input type="number" min="1" max="10" value={activeChar.proficiency_bonus || 2} onChange={(e) => syncCharacterField('proficiency_bonus', Number(e.target.value))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`} />
             </div>
+            <div>
+              <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Dé de vie</label>
+              <select value={activeChar.hit_die_type ?? 'd8'} onChange={(e) => syncCharacterField('hit_die_type', e.target.value as 'd6' | 'd8' | 'd10' | 'd12')} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`}>
+                <option value="d6">d6</option>
+                <option value="d8">d8</option>
+                <option value="d10">d10</option>
+                <option value="d12">d12</option>
+              </select>
+            </div>
           </div>
         </div>
         <ModalActions onCancel={onClose} onSave={onClose} saveLabel="Sauvegarder" />

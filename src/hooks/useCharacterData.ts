@@ -597,9 +597,15 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
   async function handleLongRest() {
     if (!activeChar) return;
-    const updatedChar = { ...activeChar, hp_current: activeChar.hp_max, hp_temp: 0 };
+    // Recover half total hit dice (min 1)
+    const hitDiceMax = activeChar.level;
+    const hitDiceCurrent = activeChar.hit_dice_current ?? hitDiceMax;
+    const recovered = Math.max(1, Math.floor(hitDiceMax / 2));
+    const nextHitDice = Math.min(hitDiceMax, hitDiceCurrent + recovered);
+
+    const updatedChar = { ...activeChar, hp_current: activeChar.hp_max, hp_temp: 0, hit_dice_current: nextHitDice };
     setActiveChar(updatedChar);
-    await supabase.from('characters').update({ hp_current: activeChar.hp_max, hp_temp: 0 }).eq('id', activeChar.id);
+    await supabase.from('characters').update({ hp_current: activeChar.hp_max, hp_temp: 0, hit_dice_current: nextHitDice }).eq('id', activeChar.id);
 
     const restoredFeatures = features.map(f => (f.recharge === 'LONG_REST' || f.recharge === 'SHORT_REST') ? { ...f, current: f.max } : f);
     setFeatures(restoredFeatures);
@@ -723,6 +729,22 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     await supabase.from('familiars').update({ hp_current: next }).eq('id', id);
   }
 
+  // Hit dice
+  async function handleSpendHitDie() {
+    if (!activeChar) return;
+    const current = activeChar.hit_dice_current ?? activeChar.level;
+    if (current <= 0) return;
+    const next = current - 1;
+    syncCharacterField('hit_dice_current', next);
+  }
+
+  async function handleRecoverHitDie() {
+    if (!activeChar) return;
+    const current = activeChar.hit_dice_current ?? activeChar.level;
+    if (current >= activeChar.level) return;
+    syncCharacterField('hit_dice_current', current + 1);
+  }
+
   // Biography
   async function saveBiography(fields: Partial<Omit<Biography, 'character_id' | 'updated_at'>>) {
     if (!activeChar) return;
@@ -822,6 +844,8 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     applyDamage,
     applyHealing,
     getModValue,
+    handleSpendHitDie,
+    handleRecoverHitDie,
     handleAvatarUpload
   };
 }

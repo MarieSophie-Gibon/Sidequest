@@ -29,6 +29,8 @@ export interface Character {
   proficiency_bonus: number;
   avatar_key: string;
   avatar_url?: string;
+  hit_die_type?: 'd6' | 'd8' | 'd10' | 'd12';
+  hit_dice_current?: number;
 }
 
 export interface Feature {
