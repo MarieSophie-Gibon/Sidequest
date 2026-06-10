@@ -1,6 +1,6 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { NewItemState } from '../../hooks/useCharacterData';
-import { Package, Sword, Shield, Trash2, FlaskConical, ScrollText, WandSparkles } from 'lucide-react';
+import { Package, Sword, Shield, Trash2, FlaskConical, ScrollText, WandSparkles, Leaf } from 'lucide-react';
 import { ModalActions, ModalHeader } from './ModalControls';
 
 interface Props {
@@ -20,6 +20,7 @@ export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose 
     { key: 'potion' as const, label: 'Potion', icon: FlaskConical },
     { key: 'parchemin' as const, label: 'Parchemin', icon: ScrollText },
     { key: 'objet_magique' as const, label: 'Magique', icon: WandSparkles },
+    { key: 'composant' as const, label: 'Composant', icon: Leaf },
     { key: 'arme' as const, label: 'Arme', icon: Sword },
     { key: 'armure' as const, label: 'Armure', icon: Shield },
   ];

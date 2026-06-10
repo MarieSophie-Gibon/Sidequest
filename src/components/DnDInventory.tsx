@@ -11,6 +11,7 @@ import {
   ScrollText,
   WandSparkles,
   Funnel,
+  Leaf,
 } from "lucide-react";
 
 interface Props {
@@ -36,11 +37,11 @@ export function DnDInventory({
   const t = useThemeClasses();
   const [showTypeFilters, setShowTypeFilters] = useState(false);
   const [objectFilter, setObjectFilter] = useState<
-    "all" | "objet" | "potion" | "parchemin" | "objet_magique"
+    "all" | "objet" | "potion" | "parchemin" | "objet_magique" | "composant"
   >("all");
 
   const objectTypeOptions: Array<{
-    key: "all" | "objet" | "potion" | "parchemin" | "objet_magique";
+    key: "all" | "objet" | "potion" | "parchemin" | "objet_magique" | "composant";
     label: string;
   }> = [
     { key: "all", label: "Tout" },
@@ -48,12 +49,14 @@ export function DnDInventory({
     { key: "potion", label: "Potion" },
     { key: "parchemin", label: "Parchemin" },
     { key: "objet_magique", label: "Magique" },
+    { key: "composant", label: "Composant" },
   ];
 
   const getObjectIcon = (category?: Item["category"]) => {
     if (category === "potion") return FlaskConical;
     if (category === "parchemin") return ScrollText;
     if (category === "objet_magique") return WandSparkles;
+    if (category === "composant") return Leaf;
     return Package;
   };
 
@@ -76,6 +79,12 @@ export function DnDInventory({
         iconTint: "bg-fuchsia-500/18 border-fuchsia-400/40 text-fuchsia-300",
       };
     }
+    if (category === "composant") {
+      return {
+        cardTint: "bg-lime-500/6 border-lime-400/25",
+        iconTint: "bg-lime-500/16 border-lime-400/35 text-lime-300",
+      };
+    }
     return {
       cardTint: "bg-sky-500/5 border-sky-400/22",
       iconTint: "bg-sky-500/14 border-sky-400/30 text-sky-300",
@@ -90,7 +99,8 @@ export function DnDInventory({
       i.category === "objet" ||
       i.category === "potion" ||
       i.category === "parchemin" ||
-      i.category === "objet_magique",
+      i.category === "objet_magique" ||
+      i.category === "composant",
   );
 
   const filteredObjects = objects.filter((item) => {

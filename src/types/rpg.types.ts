@@ -81,7 +81,7 @@ export interface Item {
   quantity: number;
   weight: number;
   equipped: boolean;
-  category?: 'objet' | 'arme' | 'armure' | 'potion' | 'parchemin' | 'objet_magique';
+  category?: 'objet' | 'arme' | 'armure' | 'potion' | 'parchemin' | 'objet_magique' | 'composant';
   damage?: string;
   range?: string;
   defense_bonus?: number;
