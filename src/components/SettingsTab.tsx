@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useAppSettings, useThemeClasses } from '../contexts/AppSettingsContext';
-import type { ThemeName, BgChoice } from '../contexts/AppSettingsContext';
+import type { ThemeName } from '../contexts/AppSettingsContext';
 import { Sword, Sparkles, Shield, GraduationCap, Trash2, AlertTriangle, Check, Upload, X } from 'lucide-react';
 
 interface Props {
