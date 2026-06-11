@@ -85,9 +85,9 @@ export default function App() {
 
   const contentTransitionClass = isTransitioning
     ? transitionDirection === 'left'
-      ? 'opacity-0 translate-x-4'
-      : 'opacity-0 -translate-x-4'
-    : 'opacity-100 translate-x-0';
+      ? 'translate-x-4'
+      : '-translate-x-4'
+    : 'translate-x-0';
 
   // Death saves auto-trigger
   const deathSaveShownRef = useRef(false);
@@ -201,7 +201,7 @@ export default function App() {
           style={{ background: t.glow }}
         />
         <div className="relative z-10 w-52 h-52 sm:w-60 sm:h-60">
-          <img src="/logo.svg" alt="SideQuest" className="w-full h-full object-contain animate-loaderBlink" />
+          <img src="/sidequest.svg" alt="SideQuest" className="w-full h-full object-contain animate-loaderBlink" />
         </div>
         {/* Loading bar */}
         <div className="relative z-10 mt-6 w-48 sm:w-56 flex flex-col items-center gap-2">
@@ -315,7 +315,7 @@ export default function App() {
 
 
 
-              <main className={`flex-1 overflow-y-auto space-y-2 pb-24 pr-1 transition-all duration-300 ease-out will-change-transform ${contentTransitionClass}`}>
+              <main className={`flex-1 overflow-y-auto space-y-2 pb-24 pr-1 transition-transform duration-300 ease-out will-change-transform ${contentTransitionClass}`}>
 
                 {activeTab === 'home' && (
                   <DnDAttributes
