@@ -58,9 +58,36 @@ export default function App() {
 
   // Tabs & modal state
   const [activeTab, setActiveTab] = useState<'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'settings'>('home');
-  const swipe = useSwipeNav(activeTab, setActiveTab);
+  const [transitionDirection, setTransitionDirection] = useState<'left' | 'right'>('left');
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const requestTabChange = (tab: 'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'settings') => {
+    if (tab === activeTab) return;
+    const tabs = ['home', 'spells', 'features', 'attributes', 'inventory', 'biography', 'settings'] as const;
+    const nextIndex = tabs.indexOf(tab);
+    const currentIndex = tabs.indexOf(activeTab);
+    setTransitionDirection(nextIndex > currentIndex ? 'left' : 'right');
+    setActiveTab(tab);
+    setIsTransitioning(true);
+  };
+
+  const swipe = useSwipeNav(activeTab, requestTabChange);
 
   const [modalType, setModalType] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isTransitioning) return;
+    const timeout = window.setTimeout(() => {
+      setIsTransitioning(false);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [isTransitioning]);
+
+  const contentTransitionClass = isTransitioning
+    ? transitionDirection === 'left'
+      ? 'opacity-0 translate-x-4'
+      : 'opacity-0 -translate-x-4'
+    : 'opacity-100 translate-x-0';
 
   // Death saves auto-trigger
   const deathSaveShownRef = useRef(false);
@@ -288,7 +315,7 @@ export default function App() {
 
 
 
-              <main className="flex-1 overflow-y-auto space-y-2 pb-24 pr-1">
+              <main className={`flex-1 overflow-y-auto space-y-2 pb-24 pr-1 transition-all duration-300 ease-out will-change-transform ${contentTransitionClass}`}>
 
                 {activeTab === 'home' && (
                   <DnDAttributes
@@ -304,7 +331,7 @@ export default function App() {
                     onLongRest={data.handleLongRest}
                     onUpdateResourceCurrent={data.handleUpdateResourceCurrent}
                     onUpdateFamiliarHp={data.handleUpdateFamiliarHp}
-                    onNavigateTab={setActiveTab}
+                    onNavigateTab={requestTabChange}
                   />
                 )}
 
@@ -410,7 +437,7 @@ export default function App() {
                 )}
               </main>
 
-              <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} onDashboard={() => data.setView('dashboard')} />
+              <BottomNav activeTab={activeTab} setActiveTab={requestTabChange} onDashboard={() => data.setView('dashboard')} />
             </div>
           )}
 
