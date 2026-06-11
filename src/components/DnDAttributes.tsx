@@ -24,6 +24,15 @@ import {
   Heart,
 } from "lucide-react";
 
+type TabKey =
+  | "home"
+  | "spells"
+  | "features"
+  | "attributes"
+  | "inventory"
+  | "biography"
+  | "settings";
+
 interface DnDAttributesProps {
   features: Feature[];
   items: Item[];
@@ -37,6 +46,7 @@ interface DnDAttributesProps {
   onLongRest: () => void;
   onUpdateResourceCurrent: (id: string, delta: number) => void;
   onUpdateFamiliarHp: (id: string, delta: number) => void;
+  onNavigateTab?: (tab: TabKey) => void;
 }
 
 export function DnDAttributes({
@@ -52,10 +62,12 @@ export function DnDAttributes({
   onLongRest,
   onUpdateResourceCurrent,
   onUpdateFamiliarHp,
+  onNavigateTab,
 }: DnDAttributesProps) {
   const t = useThemeClasses();
   const { dashboardVisibility } = useAppSettings();
   const [editingFamiliarHp, setEditingFamiliarHp] = useState<{ id: string; value: string } | null>(null);
+  const navigateTab = (tab: TabKey) => onNavigateTab?.(tab);
 
   const presentFamiliars = familiars.filter(f => f.status === 'present');
 
@@ -132,11 +144,14 @@ export function DnDAttributes({
             className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow} ${sectionStyles.skills}`}
           >
             <div className="flex items-center justify-between mb-2.5">
-              <h4
-                className={`text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} flex items-center gap-1.5`}
+              <button
+                type="button"
+                onClick={() => navigateTab('attributes')}
+                className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/40`}
+                title="Aller à Attributs"
               >
                 <GraduationCap size={12} /> Maîtrises
-              </h4>
+              </button>
               <span className={`text-[9px] ${t.textMuted} uppercase`}>
                 {proficientSkills.length}
               </span>
@@ -167,11 +182,14 @@ export function DnDAttributes({
             className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow} ${sectionStyles.equipment}`}
           >
             <div className="flex items-center justify-between mb-2.5">
-              <h4
-                className={`text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} flex items-center gap-1.5`}
+              <button
+                type="button"
+                onClick={() => navigateTab('inventory')}
+                className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/40`}
+                title="Aller à Inventaire"
               >
                 <Backpack size={12} /> Équipement porté
-              </h4>
+              </button>
               <span className={`text-[9px] ${t.textMuted} uppercase`}>
                 {equippedWeapons.length + equippedArmors.length}
               </span>
@@ -240,9 +258,14 @@ export function DnDAttributes({
           className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow} border-emerald-400/22 bg-emerald-500/4`}
         >
           <div className="flex items-center justify-between mb-2.5">
-            <h4 className={`text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} flex items-center gap-1.5`}>
+            <button
+              type="button"
+              onClick={() => navigateTab('features')}
+              className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40`}
+              title="Aller à Capacités"
+            >
               <PawPrint size={12} /> Familiers présents
-            </h4>
+            </button>
           </div>
           <div className="space-y-2">
             {presentFamiliars.map(fam => {
@@ -320,11 +343,14 @@ export function DnDAttributes({
             className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow} ${sectionStyles.class}`}
           >
             <div className="flex items-center justify-between mb-2.5">
-              <h4
-                className={`text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} flex items-center gap-1.5`}
+              <button
+                type="button"
+                onClick={() => navigateTab('features')}
+                className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/40`}
+                title="Aller à Capacités"
               >
                 <Sword size={12} /> Capacités de classe
-              </h4>
+              </button>
               <span className={`text-[9px] ${t.textMuted} uppercase`}>
                 {displayedClassFeatures.length}
               </span>
@@ -455,11 +481,14 @@ export function DnDAttributes({
             className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow} ${sectionStyles.species}`}
           >
             <div className="flex items-center justify-between mb-2.5">
-              <h4
-                className={`text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} flex items-center gap-1.5`}
+              <button
+                type="button"
+                onClick={() => navigateTab('features')}
+                className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${t.textPrimary} transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/40`}
+                title="Aller à Capacités"
               >
                 <Sparkles size={12} /> Espèce & dons
-              </h4>
+              </button>
               <span className={`text-[9px] ${t.textMuted} uppercase`}>
                 {speciesFeatures.length + gifts.length}
               </span>

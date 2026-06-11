@@ -304,6 +304,7 @@ export default function App() {
                     onLongRest={data.handleLongRest}
                     onUpdateResourceCurrent={data.handleUpdateResourceCurrent}
                     onUpdateFamiliarHp={data.handleUpdateFamiliarHp}
+                    onNavigateTab={setActiveTab}
                   />
                 )}
 
