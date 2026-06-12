@@ -13,9 +13,9 @@ jobs:
       - name: Ping Supabase
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/characters?select=id&limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+            "https://hyqqurcijrqsxpbduzso.supabase.co/rest/v1/characters?select=id&limit=1" \
+            -H "apikey: ${{ secrets.KEEP_ALIVE }}" \
+            -H "Authorization: Bearer ${{ secrets.KEEP_ALIVE }}")
           echo "HTTP status: $response"
           if [ "$response" -lt 200 ] || [ "$response" -ge 500 ]; then
             echo "Unexpected response: $response"
