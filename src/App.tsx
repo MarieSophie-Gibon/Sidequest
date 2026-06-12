@@ -83,11 +83,11 @@ export default function App() {
     return () => window.clearTimeout(timeout);
   }, [isTransitioning]);
 
-  const contentTransitionClass = isTransitioning
+  const slideClass = isTransitioning
     ? transitionDirection === 'left'
-      ? 'translate-x-4'
-      : '-translate-x-4'
-    : 'translate-x-0';
+      ? 'animate-slideInFromRight'
+      : 'animate-slideInFromLeft'
+    : '';
 
   // Death saves auto-trigger
   const deathSaveShownRef = useRef(false);
@@ -321,7 +321,8 @@ export default function App() {
 
 
 
-              <main className={`flex-1 overflow-y-auto space-y-2 pb-24 pr-1 transition-transform duration-300 ease-out will-change-transform ${contentTransitionClass}`}>
+              <main className="flex-1 min-h-0 overflow-hidden">
+                <div key={activeTab} className={`h-full overflow-y-auto space-y-2 pb-24 pr-1 ${slideClass}`}>
 
                 {activeTab === 'home' && (
                   <DnDAttributes
@@ -441,6 +442,7 @@ export default function App() {
                     onDeleteCharacter={data.handleDeleteCharacter}
                   />
                 )}
+                </div>
               </main>
 
               <BottomNav activeTab={activeTab} setActiveTab={requestTabChange} onDashboard={() => data.setView('dashboard')} />
@@ -564,6 +566,20 @@ export default function App() {
 
       {/* Global styles */}
       <style>{`
+        @keyframes slideInFromRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+        .animate-slideInFromRight {
+          animation: slideInFromRight 280ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        @keyframes slideInFromLeft {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+        .animate-slideInFromLeft {
+          animation: slideInFromLeft 280ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
         @keyframes scaleUp {
           from { transform: scale(0.95); opacity: 0; }
           to { transform: scale(1); opacity: 1; }
