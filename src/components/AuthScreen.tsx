@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useThemeClasses } from "../contexts/AppSettingsContext";
-import { LogIn, Mail, Sparkles } from "lucide-react";
+import { Eye, EyeOff, LogIn, Mail, Sparkles } from "lucide-react";
 
 interface Props {
   authMode: "signin" | "signup";
@@ -31,6 +32,7 @@ export function AuthScreen({
   onBackToSignin,
 }: Props) {
   const t = useThemeClasses();
+  const [showPassword, setShowPassword] = useState(false);
 
   if (emailConfirmationPending) {
     return (
@@ -124,14 +126,25 @@ export function AuthScreen({
             >
               Mot de passe
             </label>
-            <input
-              type="password"
-              placeholder="Min. 6 caractères..."
-              value={authPassword}
-              onChange={(e) => setAuthPassword(e.target.value)}
-              className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-3 w-full text-xs focus:outline-none focus:ring-1 focus:ring-blue-400/50 transition-all`}
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Min. 6 caractères..."
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-3 pr-10 w-full text-xs focus:outline-none focus:ring-1 focus:ring-blue-400/50 transition-all`}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 ${t.textMuted} hover:brightness-125 transition-all`}
+                tabIndex={-1}
+                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+              >
+                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
           </div>
 
           <button
