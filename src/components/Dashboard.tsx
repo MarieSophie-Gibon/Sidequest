@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import type { Character } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { Swords, User } from 'lucide-react';
+import { Mail, Swords, User } from 'lucide-react';
 
 interface Props {
   characters: Character[];
+  emailConfirmed: boolean;
   onLoadCharacter: (charId: string) => void;
   onCreateCharacter: (name: string, race: string) => Promise<Character | null | undefined>;
 }
 
-export function Dashboard({ characters, onLoadCharacter, onCreateCharacter }: Props) {
+export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreateCharacter }: Props) {
   const [isCreateHeroModalOpen, setIsCreateHeroModalOpen] = useState(false);
   const [newHeroNameInput, setNewHeroNameInput] = useState('Nouveau Héros');
   const [newHeroRaceInput, setNewHeroRaceInput] = useState('Humain');
@@ -63,18 +64,27 @@ export function Dashboard({ characters, onLoadCharacter, onCreateCharacter }: Pr
       </div>
 
       <div className="pt-2 pb-1 shrink-0">
-        <button
-          onClick={() => {
-            setNewHeroNameInput('Nouveau Héros');
-            setNewHeroRaceInput('Humain');
-            setIsCreateHeroModalOpen(true);
-          }}
-          className={`w-full flex items-center justify-center gap-2.5 ${t.cardBg} border ${t.accentBorder} ${t.accent} rounded-2xl py-3 text-xs font-bold uppercase tracking-widest shadow-md hover:brightness-110 active:scale-[0.98] transition-all`}
-          style={{ boxShadow: `0 0 18px ${t.glowAccent}` }}
-        >
-          <Swords size={15} />
-          Forger un nouveau héros
-        </button>
+        {emailConfirmed ? (
+          <button
+            onClick={() => {
+              setNewHeroNameInput('Nouveau Héros');
+              setNewHeroRaceInput('Humain');
+              setIsCreateHeroModalOpen(true);
+            }}
+            className={`w-full flex items-center justify-center gap-2.5 ${t.cardBg} border ${t.accentBorder} ${t.accent} rounded-2xl py-3 text-xs font-bold uppercase tracking-widest shadow-md hover:brightness-110 active:scale-[0.98] transition-all`}
+            style={{ boxShadow: `0 0 18px ${t.glowAccent}` }}
+          >
+            <Swords size={15} />
+            Forger un nouveau héros
+          </button>
+        ) : (
+          <div className={`w-full flex items-center gap-3 ${t.cardBg} border ${t.cardBorder} rounded-2xl py-3 px-4 opacity-60`}>
+            <Mail size={15} className={t.textMuted} />
+            <span className={`text-xs ${t.textMuted} italic`}>
+              Confirmez votre email pour créer un personnage.
+            </span>
+          </div>
+        )}
       </div>
 
       {isCreateHeroModalOpen && (

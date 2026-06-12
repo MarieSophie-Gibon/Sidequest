@@ -1,5 +1,5 @@
 import { useThemeClasses } from "../contexts/AppSettingsContext";
-import { LogIn, Sparkles } from "lucide-react";
+import { LogIn, Mail, Sparkles } from "lucide-react";
 
 interface Props {
   authMode: "signin" | "signup";
@@ -7,11 +7,13 @@ interface Props {
   authPassword: string;
   authPseudo: string;
   authLoading: boolean;
+  emailConfirmationPending: boolean;
   setAuthMode: (mode: "signin" | "signup") => void;
   setAuthEmail: (v: string) => void;
   setAuthPassword: (v: string) => void;
   setAuthPseudo: (v: string) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onBackToSignin: () => void;
 }
 
 export function AuthScreen({
@@ -20,13 +22,53 @@ export function AuthScreen({
   authPassword,
   authPseudo,
   authLoading,
+  emailConfirmationPending,
   setAuthMode,
   setAuthEmail,
   setAuthPassword,
   setAuthPseudo,
   onSubmit,
+  onBackToSignin,
 }: Props) {
   const t = useThemeClasses();
+
+  if (emailConfirmationPending) {
+    return (
+      <div className="max-w-md mx-auto h-full flex flex-col justify-center px-6 relative z-10">
+        <div
+          className={`${t.cardBg} border ${t.cardBorder} rounded-3xl p-6 shadow-2xl ${t.cardShadow} space-y-5 text-center`}
+        >
+          <div className="flex justify-center">
+            <img src="/sq-logo.svg" alt="SideQuest" className="w-full h-full" />
+          </div>
+          <div className={`flex flex-col items-center gap-3 ${t.textSecondary}`}>
+            <span className={`flex items-center justify-center w-12 h-12 rounded-2xl ${t.inputBg} border ${t.cardBorder}`}>
+              <Mail size={22} className={t.accent} />
+            </span>
+            <h2 className={`text-sm font-bold ${t.textPrimary} uppercase tracking-widest`}>
+              Confirmez votre email
+            </h2>
+            <p className={`text-xs ${t.textSecondary} leading-relaxed`}>
+              Un lien de confirmation a été envoyé à{" "}
+              <span className={`font-semibold ${t.accent}`}>{authEmail}</span>.
+              <br />
+              Cliquez sur ce lien pour activer votre compte, puis connectez-vous.
+            </p>
+            <p className={`text-[10px] ${t.textMuted} italic`}>
+              Pensez à vérifier vos spams si vous ne trouvez pas l'email.
+            </p>
+          </div>
+          <button
+            onClick={onBackToSignin}
+            className={`w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium uppercase tracking-widest transition-all active:scale-[0.99] bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} border ${t.btnPrimaryBorder} shadow-sm hover:brightness-105`}
+          >
+            <LogIn size={13} />
+            Aller à la connexion
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto h-full flex flex-col justify-center px-6 relative z-10">

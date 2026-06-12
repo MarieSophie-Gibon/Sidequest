@@ -260,11 +260,16 @@ export default function App() {
           authPassword={auth.authPassword}
           authPseudo={auth.authPseudo}
           authLoading={auth.authLoading}
+          emailConfirmationPending={auth.emailConfirmationPending}
           setAuthMode={auth.setAuthMode}
           setAuthEmail={auth.setAuthEmail}
           setAuthPassword={auth.setAuthPassword}
           setAuthPseudo={auth.setAuthPseudo}
           onSubmit={(e) => auth.handleAuthSubmit(e, showAlert)}
+          onBackToSignin={() => {
+            auth.setEmailConfirmationPending(false);
+            auth.setAuthMode('signin');
+          }}
         />
       ) : (
         <div className={`h-full max-h-full relative z-10 flex flex-col p-4 pb-4 overflow-hidden`}>
@@ -283,6 +288,7 @@ export default function App() {
           {data.view === 'dashboard' && (
             <Dashboard
               characters={data.characters}
+              emailConfirmed={!!auth.user.email_confirmed_at}
               onLoadCharacter={(id) => data.loadCharacterData(id)}
               onCreateCharacter={(name, race) => data.handleCreateCharacter(name, race)}
             />

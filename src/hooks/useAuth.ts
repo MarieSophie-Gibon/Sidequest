@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient';
 export interface User {
   id: string;
   email?: string;
+  email_confirmed_at?: string | null;
   user_metadata?: {
     username?: string;
   };
@@ -16,6 +17,7 @@ export function useAuth() {
   const [authPassword, setAuthPassword] = useState('');
   const [authPseudo, setAuthPseudo] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
 
   function getNetworkAwareMessage(rawMessage?: string, fallback = 'Une erreur est survenue.') {
     const message = (rawMessage || '').toLowerCase();
@@ -55,7 +57,11 @@ export function useAuth() {
         });
 
         if (error) throw error;
-        if (data.user) {
+        if (data.user && !data.session) {
+          // Email confirmation required — do not sign in yet
+          setEmailConfirmationPending(true);
+          showAlert("Vérifiez votre messagerie", `Un email de confirmation a été envoyé à ${authEmail}. Cliquez sur le lien pour activer votre compte.`);
+        } else if (data.user) {
           showAlert("Compte créé !", "Bienvenue dans l'aventure. Votre profil est enregistré.");
           setUser(data.user);
         }
@@ -96,6 +102,7 @@ export function useAuth() {
     authPassword, setAuthPassword,
     authPseudo, setAuthPseudo,
     authLoading,
+    emailConfirmationPending, setEmailConfirmationPending,
     handleAuthSubmit,
     handleLogout
   };
