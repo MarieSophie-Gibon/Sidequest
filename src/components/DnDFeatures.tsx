@@ -72,25 +72,39 @@ export function DnDFeatures({
               { key: 'int', label: 'INT' }, { key: 'wis', label: 'SAG' }, { key: 'cha', label: 'CHA' },
             ];
             return (
-              <div key={fam.id} className={`${t.inputBg} rounded-xl border ${t.cardBorder} overflow-hidden`}>
+              <div
+                key={fam.id}
+                onClick={() => onOpenEditFamiliar(fam)}
+                className={`${t.inputBg} rounded-xl border ${t.cardBorder} overflow-hidden cursor-pointer hover:brightness-105 active:scale-[0.99] transition-all`}
+              >
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => setExpandedFamiliar(isExpanded ? null : fam.id)} className="focus:outline-none">
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); setExpandedFamiliar(isExpanded ? null : fam.id); }}
+                        className="focus:outline-none"
+                      >
                         <ChevronDown size={12} className={`${t.textMuted} transition-transform ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
                       </button>
-                      <span className={`text-xs font-bold ${t.textPrimary} cursor-pointer`} onClick={() => onOpenEditFamiliar(fam)}>{fam.name}</span>
+                      {/* Avatar */}
+                      <div className={`w-14 h-14 rounded-xl overflow-hidden border ${t.cardBorder} bg-emerald-500/15 flex items-center justify-center shrink-0`}>
+                        {fam.avatar_url
+                          ? <img src={fam.avatar_url} alt={fam.name} className="w-full h-full object-cover" />
+                          : <PawPrint size={18} className="text-emerald-400" />}
+                      </div>
+                      <span className={`text-xs font-bold ${t.textPrimary}`}>{fam.name}</span>
                       {fam.species && <span className={`text-[9px] ${t.textMuted} font-mono`}>{fam.species}</span>}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      {fam.ac && (
+                      {fam.ac != null && fam.ac > 0 && (
                         <span className="text-[9px] font-mono font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-1.5 py-0.5 rounded-md">CA {fam.ac}</span>
                       )}
                       <span className={`text-[9px] font-bold uppercase ${statusColor[fam.status]}`}>{statusLabel[fam.status]}</span>
                     </div>
                   </div>
                   {editingFamiliarHp?.id === fam.id ? (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                       <Heart size={10} className="text-rose-400 shrink-0" />
                       <input
                         type="number"
@@ -113,7 +127,7 @@ export function DnDFeatures({
                       <span className={`text-[9px] ${t.textMuted} shrink-0`}>/{fam.hp_max}</span>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => setEditingFamiliarHp({ id: fam.id, value: String(fam.hp_current) })} className="w-full group">
+                    <button type="button" onClick={e => { e.stopPropagation(); setEditingFamiliarHp({ id: fam.id, value: String(fam.hp_current) }); }} className="w-full group">
                       <div className="flex items-center justify-between mb-1">
                         <span className="flex items-center gap-1">
                           <Heart size={10} className="text-rose-400" />
@@ -144,18 +158,40 @@ export function DnDFeatures({
                         })}
                       </div>
                     )}
-                    {(fam.speed || fam.passive_perception || fam.senses) && (
+                    {/* Badges VIT / PP / vision */}
+                    {(fam.speed || (fam.passive_perception != null && fam.passive_perception > 0) || fam.darkvision) && (
                       <div className="flex flex-wrap gap-1.5">
-                        {fam.speed && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>👆 {fam.speed}</span>}
-                        {fam.passive_perception && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>👁 {fam.passive_perception}</span>}
-                        {fam.senses && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>{fam.senses}</span>}
+                        {fam.speed && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>VIT {fam.speed}</span>}
+                        {fam.passive_perception != null && fam.passive_perception > 0 && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>PP {fam.passive_perception}</span>}
+                        {fam.darkvision && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>🌑 {fam.darkvision}</span>}
+                      </div>
+                    )}
+                    {fam.senses && (
+                      <div>
+                        <p className={`text-[9px] font-bold uppercase ${t.textMuted} mb-0.5`}>Compétences</p>
+                        <p className={`text-[10px] ${t.textSecondary} ${t.cardBg} p-2 rounded-lg border ${t.cardBorder}`}>{fam.senses}</p>
+                      </div>
+                    )}
+                    {fam.resistances && (
+                      <div>
+                        <p className={`text-[9px] font-bold uppercase ${t.textMuted} mb-0.5`}>Immunités / Résistances</p>
+                        <p className={`text-[10px] ${t.textSecondary} ${t.cardBg} p-2 rounded-lg border ${t.cardBorder}`}>{fam.resistances}</p>
                       </div>
                     )}
                     {fam.description && (
                       <p className={`text-[10px] ${t.textSecondary} leading-relaxed ${t.cardBg} p-2 rounded-lg border ${t.cardBorder} italic`}>{fam.description}</p>
                     )}
                     {fam.abilities && (
-                      <p className={`text-[10px] ${t.textSecondary} leading-relaxed ${t.cardBg} p-2 rounded-lg border ${t.cardBorder}`}>{fam.abilities}</p>
+                      <div>
+                        <p className={`text-[9px] font-bold uppercase ${t.textMuted} mb-0.5`}>Capacités</p>
+                        <p className={`text-[10px] ${t.textSecondary} leading-relaxed ${t.cardBg} p-2 rounded-lg border ${t.cardBorder}`}>{fam.abilities}</p>
+                      </div>
+                    )}
+                    {fam.actions && (
+                      <div>
+                        <p className={`text-[9px] font-bold uppercase ${t.textMuted} mb-0.5`}>Actions</p>
+                        <p className={`text-[10px] ${t.textSecondary} leading-relaxed ${t.cardBg} p-2 rounded-lg border ${t.cardBorder}`}>{fam.actions}</p>
+                      </div>
                     )}
                   </div>
                 )}

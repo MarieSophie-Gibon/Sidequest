@@ -1,5 +1,5 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
-import { Trash2 } from 'lucide-react';
+import { PawPrint, Trash2 } from 'lucide-react';
 import type { NewFamiliarState } from '../../hooks/useCharacterData';
 import { ModalActions, ModalHeader } from './ModalControls';
 
@@ -8,6 +8,7 @@ interface Props {
   setNewFamiliar: React.Dispatch<React.SetStateAction<NewFamiliarState>>;
   onSubmit: (e: React.FormEvent) => void;
   onDelete?: (id: string, name: string) => void;
+  onAvatarUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClose: () => void;
 }
 
@@ -18,7 +19,7 @@ const statusOptions: { key: NewFamiliarState['status']; label: string }[] = [
   { key: 'dead', label: 'Mort' },
 ];
 
-export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDelete, onClose }: Props) {
+export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDelete, onAvatarUpload, onClose }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newFamiliar.id;
   const stats: { key: keyof NewFamiliarState; label: string }[] = [
@@ -31,6 +32,33 @@ export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDele
       <form onSubmit={onSubmit} className={`${t.modalBg} border rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4 animate-scaleUp max-h-[90vh] overflow-y-auto`}>
         <ModalHeader title={isEditing ? 'Modifier le Familier' : 'Ajouter un Familier'} onClose={onClose} />
         <div className="space-y-3">
+
+          {/* Avatar */}
+          <div className="flex items-center gap-3">
+            <div className={`relative w-16 h-16 rounded-xl border ${t.cardBorder} ${t.inputBg} overflow-hidden shrink-0 flex items-center justify-center`}>
+              {newFamiliar.avatar_url
+                ? <img src={newFamiliar.avatar_url} alt="avatar" className="absolute inset-0 w-full h-full object-cover" />
+                : <PawPrint size={22} className={t.textMuted} />}
+              <input
+                type="file" accept="image/*"
+                onChange={onAvatarUpload}
+                className="absolute inset-0 opacity-0 cursor-pointer z-10"
+              />
+            </div>
+            <div className="flex-1">
+              <p className={`text-[10px] ${t.textMuted} uppercase font-bold mb-1`}>Portrait</p>
+              <p className={`text-[10px] ${t.textMuted}`}>Cliquez sur l'image pour importer (max 3 Mo)</p>
+              {newFamiliar.avatar_url && (
+                <button
+                  type="button"
+                  onClick={() => setNewFamiliar(prev => ({ ...prev, avatar_url: '' }))}
+                  className="mt-1 text-[10px] text-rose-400 hover:text-rose-300 transition-colors"
+                >
+                  Supprimer l'image
+                </button>
+              )}
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -86,23 +114,38 @@ export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDele
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Vitesse</label>
+              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>VIT</label>
               <input type="text" placeholder="9m, vol 18m" value={newFamiliar.speed} onChange={e => setNewFamiliar(prev => ({ ...prev, speed: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} />
             </div>
             <div>
-              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Perception passive</label>
+              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>PP</label>
               <input type="number" min="0" value={newFamiliar.passive_perception} onChange={e => setNewFamiliar(prev => ({ ...prev, passive_perception: Number(e.target.value) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
             </div>
           </div>
 
           <div>
-            <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Sens spéciaux</label>
-            <input type="text" placeholder="Vision dans le noir 18m" value={newFamiliar.senses} onChange={e => setNewFamiliar(prev => ({ ...prev, senses: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} />
+            <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Compétences</label>
+            <input type="text" placeholder="Discrétion +5, Perception +3..." value={newFamiliar.senses} onChange={e => setNewFamiliar(prev => ({ ...prev, senses: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} />
           </div>
 
           <div>
-            <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Capacités & Actions</label>
-            <textarea placeholder="Actions, réactions, capacités spéciales..." value={newFamiliar.abilities} onChange={e => setNewFamiliar(prev => ({ ...prev, abilities: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-20 focus:outline-none`} />
+            <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Vision dans le noir</label>
+            <input type="text" placeholder="18m, 36m..." value={newFamiliar.darkvision} onChange={e => setNewFamiliar(prev => ({ ...prev, darkvision: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} />
+          </div>
+
+          <div>
+            <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Immunités / Résistances</label>
+            <textarea placeholder="Immunisé au feu, résistance aux dégâts perforants..." value={newFamiliar.resistances} onChange={e => setNewFamiliar(prev => ({ ...prev, resistances: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-14 focus:outline-none`} />
+          </div>
+
+          <div>
+            <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Capacités</label>
+            <textarea placeholder="Capacités passives, traits spéciaux..." value={newFamiliar.abilities} onChange={e => setNewFamiliar(prev => ({ ...prev, abilities: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-16 focus:outline-none`} />
+          </div>
+
+          <div>
+            <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Actions</label>
+            <textarea placeholder="Morsure, Griffe, Attaque multijet..." value={newFamiliar.actions} onChange={e => setNewFamiliar(prev => ({ ...prev, actions: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-16 focus:outline-none`} />
           </div>
 
           <div>

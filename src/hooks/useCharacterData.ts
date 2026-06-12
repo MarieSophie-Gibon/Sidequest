@@ -71,6 +71,10 @@ export interface NewFamiliarState {
   passive_perception: number;
   senses: string;
   abilities: string;
+  resistances: string;
+  darkvision: string;
+  actions: string;
+  avatar_url: string;
   status: 'present' | 'distant' | 'unconscious' | 'dead';
 }
 
@@ -99,7 +103,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   const [newFeature, setNewFeature] = useState<NewFeatureState>({ name: '', max: 2, recharge: 'LONG_REST', description: '', category: 'active', type: 'classe', resource_id: '', resource_cost: 0 });
   const [newResource, setNewResource] = useState<NewResourceState>({ name: '', max: 10, current: 10, recharge: 'LONG_REST' });
   const [newSpell, setNewSpell] = useState<NewSpellState>({ name: '', level: 0, range: '', duration: '', components: [], casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' });
-  const [newFamiliar, setNewFamiliar] = useState<NewFamiliarState>({ name: '', species: '', description: '', hp_current: 1, hp_max: 1, ac: 10, speed: '', str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, passive_perception: 10, senses: '', abilities: '', status: 'present' });
+  const [newFamiliar, setNewFamiliar] = useState<NewFamiliarState>({ name: '', species: '', description: '', hp_current: 1, hp_max: 1, ac: 10, speed: '', str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, passive_perception: 10, senses: '', abilities: '', resistances: '', darkvision: '', actions: '', avatar_url: '', status: 'present' });
   const [newItem, setNewItem] = useState<NewItemState>({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
   const [newSpellSlot, setNewSpellSlot] = useState<NewSpellSlotState>({ level: 1, max: 4, current: 4 });
 
@@ -694,6 +698,10 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       passive_perception: Number(newFamiliar.passive_perception) || null,
       senses: newFamiliar.senses || null,
       abilities: newFamiliar.abilities || null,
+      resistances: newFamiliar.resistances || null,
+      darkvision: newFamiliar.darkvision || null,
+      actions: newFamiliar.actions || null,
+      avatar_url: newFamiliar.avatar_url || null,
       status: newFamiliar.status,
     };
 
@@ -716,7 +724,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       }
     }
 
-    setNewFamiliar({ name: '', species: '', description: '', hp_current: 1, hp_max: 1, ac: 10, speed: '', str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, passive_perception: 10, senses: '', abilities: '', status: 'present' });
+    setNewFamiliar({ name: '', species: '', description: '', hp_current: 1, hp_max: 1, ac: 10, speed: '', str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, passive_perception: 10, senses: '', abilities: '', resistances: '', darkvision: '', actions: '', avatar_url: '', status: 'present' });
     return true;
   }
 
@@ -726,6 +734,28 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       setFamiliars(prev => prev.filter(f => f.id !== id));
       showAlert('Familier retiré', `${name} a quitté votre troupe.`);
     }
+  }
+
+  async function handleFamiliarAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      showAlert('Fichier trop volumineux', 'Veuillez choisir une image de moins de 3 Mo.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      if (!reader.result) return;
+      const dataUrl = reader.result as string;
+      setNewFamiliar(prev => ({ ...prev, avatar_url: dataUrl }));
+      // If editing an existing familiar, persist immediately
+      if (newFamiliar.id) {
+        const { error } = await supabase.from('familiars').update({ avatar_url: dataUrl }).eq('id', newFamiliar.id);
+        if (error) showAlert('Erreur', "L'image n'a pas pu être sauvegardée.");
+        else setFamiliars(prev => prev.map(f => f.id === newFamiliar.id ? { ...f, avatar_url: dataUrl } : f));
+      }
+    };
+    reader.readAsDataURL(file);
   }
 
   async function handleUpdateFamiliarHp(id: string, delta: number) {
@@ -837,6 +867,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     handleDeleteSpell,
     handleSaveFamiliar,
     handleDeleteFamiliar,
+    handleFamiliarAvatarUpload,
     handleUpdateFamiliarHp,
     handleToggleSkill,
     biography, setBiography,

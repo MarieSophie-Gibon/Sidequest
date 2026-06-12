@@ -513,6 +513,7 @@ export default function App() {
               setNewFamiliar={data.setNewFamiliar}
               onSubmit={async (e) => { await data.handleSaveFamiliar(e); setModalType(null); }}
               onDelete={data.handleDeleteFamiliar}
+              onAvatarUpload={data.handleFamiliarAvatarUpload}
               onClose={() => setModalType(null)}
             />
           )}

@@ -273,8 +273,10 @@ export function DnDAttributes({
               const hpColor = hpPct > 60 ? 'bg-emerald-500' : hpPct > 30 ? 'bg-amber-500' : 'bg-rose-500';
               return (
                 <div key={fam.id} className={`${t.inputBg} rounded-xl px-3 py-2 border ${t.cardBorder} flex items-center gap-3`}>
-                  <div className={`w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-500/15 border border-emerald-500/30 shrink-0`}>
-                    <PawPrint size={12} className="text-emerald-400" />
+                  <div className={`w-14 h-14 flex items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 shrink-0 overflow-hidden`}>
+                    {fam.avatar_url
+                      ? <img src={fam.avatar_url} alt={fam.name} className="w-full h-full object-cover" />
+                      : <PawPrint size={18} className="text-emerald-400" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 w-full">
@@ -282,9 +284,13 @@ export function DnDAttributes({
                         <span className={`text-xs font-bold ${t.textPrimary} truncate`}>{fam.name}</span>
                         {fam.species && <span className={`text-[9px] ${t.textMuted} shrink-0`}>{fam.species}</span>}
                       </div>
-                      {fam.ac && (
-                        <span className="text-[9px] font-mono font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-1.5 py-0.5 rounded-md shrink-0">CA {fam.ac}</span>
-                      )}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {fam.speed && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>VIT {fam.speed}</span>}
+                        {fam.passive_perception != null && fam.passive_perception > 0 && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>PP {fam.passive_perception}</span>}
+                        {fam.ac != null && fam.ac > 0 && (
+                          <span className="text-[9px] font-mono font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-1.5 py-0.5 rounded-md">CA {fam.ac}</span>
+                        )}
+                      </div>
                     </div>
                     <div className="mt-1.5 space-y-1">
                       {editingFamiliarHp?.id === fam.id ? (

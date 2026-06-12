@@ -132,6 +132,10 @@ export interface Familiar {
   passive_perception?: number;
   senses?: string;
   abilities?: string;
+  resistances?: string;
+  darkvision?: string;
+  actions?: string;
+  avatar_url?: string;
   status: 'present' | 'distant' | 'unconscious' | 'dead';
 }
 
