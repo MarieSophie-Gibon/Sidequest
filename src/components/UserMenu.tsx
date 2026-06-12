@@ -12,7 +12,7 @@ interface Props {
 export function UserMenu({ username, onLogout, showAlert }: Props) {
   const t = useThemeClasses();
   const { isDark } = useAppSettings();
-  const dropdownBg = isDark ? 'bg-[#1a0f2e]' : 'bg-white';
+  const dropdownBg = isDark ? 'bg-[#1a0f2e]' : 'bg-[#3d6490]';
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [editMode, setEditMode] = useState<'pseudo' | 'email' | 'password' | null>(null);
@@ -54,7 +54,7 @@ export function UserMenu({ username, onLogout, showAlert }: Props) {
     if (error) {
       showAlert('Erreur', error.message);
     } else {
-      showAlert('Email mis à jour', 'Un lien de confirmation a été envoyé.');
+      showAlert('Confirmation requise', `Un lien de confirmation a été envoyé à ${inputValue.trim()}. Cliquez dessus pour valider le changement.`);
       setEditMode(null);
       setInputValue('');
     }
