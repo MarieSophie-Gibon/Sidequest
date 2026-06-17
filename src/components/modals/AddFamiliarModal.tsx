@@ -1,5 +1,6 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import { PawPrint, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { NewFamiliarState } from '../../hooks/useCharacterData';
 import { ModalActions, ModalHeader } from './ModalControls';
 
@@ -22,6 +23,34 @@ const statusOptions: { key: NewFamiliarState['status']; label: string }[] = [
 export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDelete, onAvatarUpload, onClose }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newFamiliar.id;
+  const [numberInputs, setNumberInputs] = useState({
+    hp_max: String(newFamiliar.hp_max),
+    hp_current: String(newFamiliar.hp_current),
+    ac: String(newFamiliar.ac),
+    str: String(newFamiliar.str),
+    dex: String(newFamiliar.dex),
+    con: String(newFamiliar.con),
+    int: String(newFamiliar.int),
+    wis: String(newFamiliar.wis),
+    cha: String(newFamiliar.cha),
+    passive_perception: String(newFamiliar.passive_perception),
+  });
+
+  useEffect(() => {
+    setNumberInputs({
+      hp_max: String(newFamiliar.hp_max),
+      hp_current: String(newFamiliar.hp_current),
+      ac: String(newFamiliar.ac),
+      str: String(newFamiliar.str),
+      dex: String(newFamiliar.dex),
+      con: String(newFamiliar.con),
+      int: String(newFamiliar.int),
+      wis: String(newFamiliar.wis),
+      cha: String(newFamiliar.cha),
+      passive_perception: String(newFamiliar.passive_perception),
+    });
+  }, [newFamiliar.hp_max, newFamiliar.hp_current, newFamiliar.ac, newFamiliar.str, newFamiliar.dex, newFamiliar.con, newFamiliar.int, newFamiliar.wis, newFamiliar.cha, newFamiliar.passive_perception]);
+
   const stats: { key: keyof NewFamiliarState; label: string }[] = [
     { key: 'str', label: 'FOR' }, { key: 'dex', label: 'DEX' }, { key: 'con', label: 'CON' },
     { key: 'int', label: 'INT' }, { key: 'wis', label: 'SAG' }, { key: 'cha', label: 'CHA' },
@@ -79,15 +108,59 @@ export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDele
           <div className="grid grid-cols-3 gap-2">
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>PV max</label>
-              <input type="number" min="1" value={newFamiliar.hp_max} onChange={e => setNewFamiliar(prev => ({ ...prev, hp_max: Number(e.target.value), hp_current: Math.min(prev.hp_current, Number(e.target.value)) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
+              <input
+                type="number"
+                min="1"
+                value={numberInputs.hp_max}
+                onChange={e => {
+                  const nextValue = e.target.value;
+                  setNumberInputs(prev => ({ ...prev, hp_max: nextValue }));
+                  if (nextValue === '') return;
+                  const nextMax = Math.max(1, Number(nextValue));
+                  setNewFamiliar(prev => ({ ...prev, hp_max: nextMax, hp_current: Math.min(prev.hp_current, nextMax) }));
+                }}
+                onBlur={() => {
+                  if (numberInputs.hp_max === '') setNumberInputs(prev => ({ ...prev, hp_max: String(newFamiliar.hp_max) }));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+              />
             </div>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>PV act.</label>
-              <input type="number" min="0" max={newFamiliar.hp_max} value={newFamiliar.hp_current} onChange={e => setNewFamiliar(prev => ({ ...prev, hp_current: Number(e.target.value) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
+              <input
+                type="number"
+                min="0"
+                max={newFamiliar.hp_max}
+                value={numberInputs.hp_current}
+                onChange={e => {
+                  const nextValue = e.target.value;
+                  setNumberInputs(prev => ({ ...prev, hp_current: nextValue }));
+                  if (nextValue === '') return;
+                  setNewFamiliar(prev => ({ ...prev, hp_current: Math.max(0, Math.min(prev.hp_max, Number(nextValue))) }));
+                }}
+                onBlur={() => {
+                  if (numberInputs.hp_current === '') setNumberInputs(prev => ({ ...prev, hp_current: String(newFamiliar.hp_current) }));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+              />
             </div>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>CA</label>
-              <input type="number" min="0" value={newFamiliar.ac} onChange={e => setNewFamiliar(prev => ({ ...prev, ac: Number(e.target.value) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
+              <input
+                type="number"
+                min="0"
+                value={numberInputs.ac}
+                onChange={e => {
+                  const nextValue = e.target.value;
+                  setNumberInputs(prev => ({ ...prev, ac: nextValue }));
+                  if (nextValue === '') return;
+                  setNewFamiliar(prev => ({ ...prev, ac: Math.max(0, Number(nextValue)) }));
+                }}
+                onBlur={() => {
+                  if (numberInputs.ac === '') setNumberInputs(prev => ({ ...prev, ac: String(newFamiliar.ac) }));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+              />
             </div>
           </div>
 
@@ -100,8 +173,18 @@ export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDele
                   <span className={`text-[9px] font-bold ${t.textMuted} uppercase`}>{label}</span>
                   <input
                     type="number" min="1" max="30"
-                    value={newFamiliar[key] as number}
-                    onChange={e => setNewFamiliar(prev => ({ ...prev, [key]: Number(e.target.value) }))}
+                    value={numberInputs[key as keyof typeof numberInputs] ?? String(newFamiliar[key] as number)}
+                    onChange={e => {
+                      const nextValue = e.target.value;
+                      setNumberInputs(prev => ({ ...prev, [key]: nextValue }));
+                      if (nextValue === '') return;
+                      setNewFamiliar(prev => ({ ...prev, [key]: Math.max(1, Math.min(30, Number(nextValue))) }));
+                    }}
+                    onBlur={() => {
+                      if ((numberInputs[key as keyof typeof numberInputs] ?? '') === '') {
+                        setNumberInputs(prev => ({ ...prev, [key]: String(newFamiliar[key] as number) }));
+                      }
+                    }}
                     className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-lg p-1.5 w-full text-xs text-center focus:outline-none font-mono`}
                   />
                   <span className={`text-[9px] font-mono ${t.textSecondary}`}>
@@ -119,7 +202,23 @@ export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDele
             </div>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>PP</label>
-              <input type="number" min="0" value={newFamiliar.passive_perception} onChange={e => setNewFamiliar(prev => ({ ...prev, passive_perception: Number(e.target.value) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
+              <input
+                type="number"
+                min="0"
+                value={numberInputs.passive_perception}
+                onChange={e => {
+                  const nextValue = e.target.value;
+                  setNumberInputs(prev => ({ ...prev, passive_perception: nextValue }));
+                  if (nextValue === '') return;
+                  setNewFamiliar(prev => ({ ...prev, passive_perception: Math.max(0, Number(nextValue)) }));
+                }}
+                onBlur={() => {
+                  if (numberInputs.passive_perception === '') {
+                    setNumberInputs(prev => ({ ...prev, passive_perception: String(newFamiliar.passive_perception) }));
+                  }
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+              />
             </div>
           </div>
 

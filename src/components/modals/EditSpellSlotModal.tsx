@@ -1,4 +1,5 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
+import { useEffect, useState } from 'react';
 import type { NewSpellSlotState } from '../../hooks/useCharacterData';
 import { Sparkle } from 'lucide-react';
 import { ModalActions, ModalHeader } from './ModalControls';
@@ -12,6 +13,16 @@ interface Props {
 
 export function EditSpellSlotModal({ newSpellSlot, setNewSpellSlot, onSave, onClose }: Props) {
   const t = useThemeClasses();
+  const [maxInput, setMaxInput] = useState(String(newSpellSlot.max));
+  const [currentInput, setCurrentInput] = useState(String(newSpellSlot.current));
+
+  useEffect(() => {
+    setMaxInput(String(newSpellSlot.max));
+  }, [newSpellSlot.max]);
+
+  useEffect(() => {
+    setCurrentInput(String(newSpellSlot.current));
+  }, [newSpellSlot.current]);
 
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
@@ -28,14 +39,20 @@ export function EditSpellSlotModal({ newSpellSlot, setNewSpellSlot, onSave, onCl
               type="number"
               min="0"
               max="12"
-              value={newSpellSlot.max}
+              value={maxInput}
               onChange={(e) => {
-                const nextMax = Math.max(0, Number(e.target.value) || 0);
+                const nextValue = e.target.value;
+                setMaxInput(nextValue);
+                if (nextValue === '') return;
+                const nextMax = Math.max(0, Number(nextValue));
                 setNewSpellSlot(prev => ({
                   ...prev,
                   max: nextMax,
                   current: Math.min(prev.current, nextMax),
                 }));
+              }}
+              onBlur={() => {
+                if (maxInput === '') setMaxInput(String(newSpellSlot.max));
               }}
               className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs font-mono font-bold text-center focus:outline-none`}
             />
@@ -46,8 +63,16 @@ export function EditSpellSlotModal({ newSpellSlot, setNewSpellSlot, onSave, onCl
               type="number"
               min="0"
               max={newSpellSlot.max}
-              value={newSpellSlot.current}
-              onChange={(e) => setNewSpellSlot(prev => ({ ...prev, current: Math.min(prev.max, Math.max(0, Number(e.target.value) || 0)) }))}
+              value={currentInput}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setCurrentInput(nextValue);
+                if (nextValue === '') return;
+                setNewSpellSlot(prev => ({ ...prev, current: Math.min(prev.max, Math.max(0, Number(nextValue))) }));
+              }}
+              onBlur={() => {
+                if (currentInput === '') setCurrentInput(String(newSpellSlot.current));
+              }}
               className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs font-mono font-bold text-center focus:outline-none`}
             />
           </div>

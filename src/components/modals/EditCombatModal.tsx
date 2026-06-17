@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { Character } from '../../types/rpg.types';
 import { ModalActions, ModalHeader } from './ModalControls';
@@ -10,6 +11,23 @@ interface Props {
 
 export function EditCombatModal({ activeChar, syncCharacterField, onClose }: Props) {
   const t = useThemeClasses();
+  const [numberInputs, setNumberInputs] = useState({
+    ac: String(activeChar.ac),
+    initiative: String(activeChar.initiative),
+    passive_perception: String(activeChar.passive_perception),
+    speed: String(activeChar.speed),
+    proficiency_bonus: String(activeChar.proficiency_bonus ?? 2),
+  });
+
+  useEffect(() => {
+    setNumberInputs({
+      ac: String(activeChar.ac),
+      initiative: String(activeChar.initiative),
+      passive_perception: String(activeChar.passive_perception),
+      speed: String(activeChar.speed),
+      proficiency_bonus: String(activeChar.proficiency_bonus ?? 2),
+    });
+  }, [activeChar.ac, activeChar.initiative, activeChar.passive_perception, activeChar.speed, activeChar.proficiency_bonus]);
 
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
@@ -19,27 +37,96 @@ export function EditCombatModal({ activeChar, syncCharacterField, onClose }: Pro
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>CA</label>
-              <input type="number" value={activeChar.ac} onChange={(e) => syncCharacterField('ac', Number(e.target.value))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`} />
+              <input
+                type="number"
+                value={numberInputs.ac}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setNumberInputs(prev => ({ ...prev, ac: nextValue }));
+                  if (nextValue === '') return;
+                  syncCharacterField('ac', Number(nextValue));
+                }}
+                onBlur={() => {
+                  if (numberInputs.ac === '') setNumberInputs(prev => ({ ...prev, ac: String(activeChar.ac) }));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`}
+              />
             </div>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Initiative</label>
-              <input type="number" value={activeChar.initiative} onChange={(e) => syncCharacterField('initiative', Number(e.target.value))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`} />
+              <input
+                type="number"
+                value={numberInputs.initiative}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setNumberInputs(prev => ({ ...prev, initiative: nextValue }));
+                  if (nextValue === '') return;
+                  syncCharacterField('initiative', Number(nextValue));
+                }}
+                onBlur={() => {
+                  if (numberInputs.initiative === '') setNumberInputs(prev => ({ ...prev, initiative: String(activeChar.initiative) }));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Perception P.</label>
-              <input type="number" value={activeChar.passive_perception} onChange={(e) => syncCharacterField('passive_perception', Number(e.target.value))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`} />
+              <input
+                type="number"
+                value={numberInputs.passive_perception}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setNumberInputs(prev => ({ ...prev, passive_perception: nextValue }));
+                  if (nextValue === '') return;
+                  syncCharacterField('passive_perception', Number(nextValue));
+                }}
+                onBlur={() => {
+                  if (numberInputs.passive_perception === '') setNumberInputs(prev => ({ ...prev, passive_perception: String(activeChar.passive_perception) }));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`}
+              />
             </div>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Vitesse (m)</label>
-              <input type="number" value={activeChar.speed} onChange={(e) => syncCharacterField('speed', Number(e.target.value))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`} />
+              <input
+                type="number"
+                value={numberInputs.speed}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setNumberInputs(prev => ({ ...prev, speed: nextValue }));
+                  if (nextValue === '') return;
+                  syncCharacterField('speed', Number(nextValue));
+                }}
+                onBlur={() => {
+                  if (numberInputs.speed === '') setNumberInputs(prev => ({ ...prev, speed: String(activeChar.speed) }));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Maîtrise</label>
-              <input type="number" min="1" max="10" value={activeChar.proficiency_bonus || 2} onChange={(e) => syncCharacterField('proficiency_bonus', Number(e.target.value))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`} />
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={numberInputs.proficiency_bonus}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setNumberInputs(prev => ({ ...prev, proficiency_bonus: nextValue }));
+                  if (nextValue === '') return;
+                  syncCharacterField('proficiency_bonus', Math.max(1, Math.min(10, Number(nextValue))));
+                }}
+                onBlur={() => {
+                  if (numberInputs.proficiency_bonus === '') {
+                    setNumberInputs(prev => ({ ...prev, proficiency_bonus: String(activeChar.proficiency_bonus ?? 2) }));
+                  }
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`}
+              />
             </div>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Dé de vie</label>

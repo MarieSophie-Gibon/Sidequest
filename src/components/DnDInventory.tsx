@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Character, Item } from "../types/rpg.types";
 import { useThemeClasses } from "../contexts/AppSettingsContext";
 import {
@@ -36,9 +36,22 @@ export function DnDInventory({
 }: Props) {
   const t = useThemeClasses();
   const [showTypeFilters, setShowTypeFilters] = useState(false);
+  const [currencyInputs, setCurrencyInputs] = useState({
+    gold: String(activeChar.gold),
+    silver: String(activeChar.silver),
+    copper: String(activeChar.copper),
+  });
   const [objectFilter, setObjectFilter] = useState<
     "all" | "objet" | "potion" | "parchemin" | "objet_magique" | "composant"
   >("all");
+
+  useEffect(() => {
+    setCurrencyInputs({
+      gold: String(activeChar.gold),
+      silver: String(activeChar.silver),
+      copper: String(activeChar.copper),
+    });
+  }, [activeChar.gold, activeChar.silver, activeChar.copper]);
 
   const objectTypeOptions: Array<{
     key: "all" | "objet" | "potion" | "parchemin" | "objet_magique" | "composant";
@@ -130,13 +143,18 @@ export function DnDInventory({
               <input
                 type="number"
                 min="0"
-                value={activeChar.gold}
-                onChange={(e) =>
-                  onUpdateCurrency(
-                    "gold",
-                    Math.max(0, Number(e.target.value) || 0),
-                  )
-                }
+                value={currencyInputs.gold}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setCurrencyInputs((prev) => ({ ...prev, gold: nextValue }));
+                  if (nextValue === "") return;
+                  onUpdateCurrency("gold", Math.max(0, Number(nextValue)));
+                }}
+                onBlur={() => {
+                  if (currencyInputs.gold === "") {
+                    setCurrencyInputs((prev) => ({ ...prev, gold: String(activeChar.gold) }));
+                  }
+                }}
                 className={`${t.inputText} bg-transparent w-full font-mono text-[20px] leading-none focus:outline-none text-end`}
               />
             </div>
@@ -152,13 +170,18 @@ export function DnDInventory({
               <input
                 type="number"
                 min="0"
-                value={activeChar.silver}
-                onChange={(e) =>
-                  onUpdateCurrency(
-                    "silver",
-                    Math.max(0, Number(e.target.value) || 0),
-                  )
-                }
+                value={currencyInputs.silver}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setCurrencyInputs((prev) => ({ ...prev, silver: nextValue }));
+                  if (nextValue === "") return;
+                  onUpdateCurrency("silver", Math.max(0, Number(nextValue)));
+                }}
+                onBlur={() => {
+                  if (currencyInputs.silver === "") {
+                    setCurrencyInputs((prev) => ({ ...prev, silver: String(activeChar.silver) }));
+                  }
+                }}
                 className={`${t.inputText} bg-transparent w-full font-mono text-[20px] leading-none focus:outline-none text-end`}
               />
             </div>
@@ -174,13 +197,18 @@ export function DnDInventory({
               <input
                 type="number"
                 min="0"
-                value={activeChar.copper}
-                onChange={(e) =>
-                  onUpdateCurrency(
-                    "copper",
-                    Math.max(0, Number(e.target.value) || 0),
-                  )
-                }
+                value={currencyInputs.copper}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setCurrencyInputs((prev) => ({ ...prev, copper: nextValue }));
+                  if (nextValue === "") return;
+                  onUpdateCurrency("copper", Math.max(0, Number(nextValue)));
+                }}
+                onBlur={() => {
+                  if (currencyInputs.copper === "") {
+                    setCurrencyInputs((prev) => ({ ...prev, copper: String(activeChar.copper) }));
+                  }
+                }}
                 className={`${t.inputText} bg-transparent w-full font-mono text-[20px] leading-none focus:outline-none text-end`}
               />
             </div>

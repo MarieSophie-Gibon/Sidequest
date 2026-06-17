@@ -13,8 +13,18 @@ interface Props {
 
 export function EditHpModal({ activeChar, syncCharacterField, applyDamage, applyHealing, onClose }: Props) {
   const [hpActionValue, setHpActionValue] = useState('');
+  const [hpCurrentInput, setHpCurrentInput] = useState(String(activeChar.hp_current));
+  const [hpTempInput, setHpTempInput] = useState(String(activeChar.hp_temp));
   const [hpMaxInput, setHpMaxInput] = useState(String(activeChar.hp_max));
   const t = useThemeClasses();
+
+  useEffect(() => {
+    setHpCurrentInput(String(activeChar.hp_current));
+  }, [activeChar.hp_current]);
+
+  useEffect(() => {
+    setHpTempInput(String(activeChar.hp_temp));
+  }, [activeChar.hp_temp]);
 
   useEffect(() => {
     setHpMaxInput(String(activeChar.hp_max));
@@ -27,11 +37,37 @@ export function EditHpModal({ activeChar, syncCharacterField, applyDamage, apply
         <div className={`grid grid-cols-3 gap-2 ${t.inputBg} p-3 rounded-xl border ${t.inputBorder}`}>
           <div className="text-center">
             <label className={`text-[9px] ${t.textMuted} font-bold block mb-1 uppercase`}>Act.</label>
-            <input type="number" value={activeChar.hp_current} onChange={(e) => syncCharacterField('hp_current', Math.min(activeChar.hp_max, Math.max(0, Number(e.target.value))))} className={`${t.cardBg} border ${t.cardBorder} text-emerald-400 rounded-xl p-2 w-full text-center font-mono font-bold focus:outline-none text-sm`} />
+            <input
+              type="number"
+              value={hpCurrentInput}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setHpCurrentInput(nextValue);
+                if (nextValue === '') return;
+                syncCharacterField('hp_current', Math.min(activeChar.hp_max, Math.max(0, Number(nextValue))));
+              }}
+              onBlur={() => {
+                if (hpCurrentInput === '') setHpCurrentInput(String(activeChar.hp_current));
+              }}
+              className={`${t.cardBg} border ${t.cardBorder} text-emerald-400 rounded-xl p-2 w-full text-center font-mono font-bold focus:outline-none text-sm`}
+            />
           </div>
           <div className="text-center">
             <label className={`text-[9px] ${t.textMuted} font-bold block mb-1 uppercase`}>Temp</label>
-            <input type="number" value={activeChar.hp_temp} onChange={(e) => syncCharacterField('hp_temp', Math.max(0, Number(e.target.value)))} className={`${t.cardBg} border ${t.cardBorder} text-cyan-400 rounded-xl p-2 w-full text-center font-mono font-bold focus:outline-none text-sm`} />
+            <input
+              type="number"
+              value={hpTempInput}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setHpTempInput(nextValue);
+                if (nextValue === '') return;
+                syncCharacterField('hp_temp', Math.max(0, Number(nextValue)));
+              }}
+              onBlur={() => {
+                if (hpTempInput === '') setHpTempInput(String(activeChar.hp_temp));
+              }}
+              className={`${t.cardBg} border ${t.cardBorder} text-cyan-400 rounded-xl p-2 w-full text-center font-mono font-bold focus:outline-none text-sm`}
+            />
           </div>
           <div className="text-center">
             <label className={`text-[9px] ${t.textMuted} font-bold block mb-1 uppercase`}>Max</label>

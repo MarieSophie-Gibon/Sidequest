@@ -1,4 +1,5 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
+import { useEffect, useState } from 'react';
 import type { NewFeatureState } from '../../hooks/useCharacterData';
 import type { Resource } from '../../types/rpg.types';
 import { ModalActions, ModalHeader } from './ModalControls';
@@ -14,6 +15,16 @@ interface Props {
 
 export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit, onDelete, onClose }: Props) {
   const t = useThemeClasses();
+  const [maxInput, setMaxInput] = useState(String(newFeature.max));
+  const [resourceCostInput, setResourceCostInput] = useState(String(newFeature.resource_cost));
+
+  useEffect(() => {
+    setMaxInput(String(newFeature.max));
+  }, [newFeature.max]);
+
+  useEffect(() => {
+    setResourceCostInput(String(newFeature.resource_cost));
+  }, [newFeature.resource_cost]);
 
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
@@ -53,7 +64,21 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Max</label>
-                <input type="number" min="1" value={newFeature.max} onChange={(e) => setNewFeature(prev => ({ ...prev, max: Number(e.target.value) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
+                <input
+                  type="number"
+                  min="1"
+                  value={maxInput}
+                  onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setMaxInput(nextValue);
+                    if (nextValue === '') return;
+                    setNewFeature(prev => ({ ...prev, max: Math.max(1, Number(nextValue)) }));
+                  }}
+                  onBlur={() => {
+                    if (maxInput === '') setMaxInput(String(newFeature.max));
+                  }}
+                  className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+                />
               </div>
               <div>
                 <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Récupération</label>
@@ -79,7 +104,22 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
                   {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
                 {newFeature.resource_id && (
-                  <input type="number" min="0" value={newFeature.resource_cost} onChange={(e) => setNewFeature(prev => ({ ...prev, resource_cost: Number(e.target.value) }))} placeholder="Coût" className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2 w-full text-xs focus:outline-none font-mono`} />
+                  <input
+                    type="number"
+                    min="0"
+                    value={resourceCostInput}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      setResourceCostInput(nextValue);
+                      if (nextValue === '') return;
+                      setNewFeature(prev => ({ ...prev, resource_cost: Math.max(0, Number(nextValue)) }));
+                    }}
+                    onBlur={() => {
+                      if (resourceCostInput === '') setResourceCostInput(String(newFeature.resource_cost));
+                    }}
+                    placeholder="Coût"
+                    className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2 w-full text-xs focus:outline-none font-mono`}
+                  />
                 )}
               </div>
             </div>

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { Character, CoreAttribute } from '../../types/rpg.types';
 import { BarChart3 } from 'lucide-react';
@@ -12,6 +13,11 @@ interface Props {
 
 export function EditAttributesModal({ coreAttributes, syncCharacterField, onClose }: Props) {
   const t = useThemeClasses();
+  const [scoreInputs, setScoreInputs] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setScoreInputs(Object.fromEntries(coreAttributes.map((stat) => [stat.key, String(stat.score)])));
+  }, [coreAttributes]);
 
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
@@ -24,8 +30,20 @@ export function EditAttributesModal({ coreAttributes, syncCharacterField, onClos
               <input
                 type="number"
                 min="1" max="30"
-                value={stat.score}
-                onChange={(e) => syncCharacterField(stat.key, Math.max(1, Math.min(30, Number(e.target.value))))}
+                value={scoreInputs[stat.key] ?? String(stat.score)}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setScoreInputs(prev => ({ ...prev, [stat.key]: nextValue }));
+
+                  if (nextValue === '') return;
+
+                  syncCharacterField(stat.key, Math.max(1, Math.min(30, Number(nextValue))));
+                }}
+                onBlur={() => {
+                  if ((scoreInputs[stat.key] ?? '') === '') {
+                    setScoreInputs(prev => ({ ...prev, [stat.key]: String(stat.score) }));
+                  }
+                }}
                 className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-center font-mono font-bold focus:outline-none`}
               />
             </div>

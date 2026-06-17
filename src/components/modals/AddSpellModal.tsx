@@ -1,5 +1,6 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import { Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { NewSpellState } from '../../hooks/useCharacterData';
 import { ModalActions, ModalHeader } from './ModalControls';
 
@@ -14,6 +15,11 @@ interface Props {
 export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClose }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newSpell.id;
+  const [levelInput, setLevelInput] = useState(String(newSpell.level));
+
+  useEffect(() => {
+    setLevelInput(String(newSpell.level));
+  }, [newSpell.level]);
 
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
@@ -27,7 +33,22 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Niveau</label>
-              <input type="number" min="0" max="9" value={newSpell.level} onChange={(e) => setNewSpell(prev => ({ ...prev, level: Number(e.target.value) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
+              <input
+                type="number"
+                min="0"
+                max="9"
+                value={levelInput}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setLevelInput(nextValue);
+                  if (nextValue === '') return;
+                  setNewSpell(prev => ({ ...prev, level: Math.max(0, Math.min(9, Number(nextValue))) }));
+                }}
+                onBlur={() => {
+                  if (levelInput === '') setLevelInput(String(newSpell.level));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+              />
             </div>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Portée</label>

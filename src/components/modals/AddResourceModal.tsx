@@ -1,4 +1,5 @@
 import { Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { NewResourceState } from '../../hooks/useCharacterData';
 import { ModalActions, ModalHeader } from './ModalControls';
@@ -14,6 +15,16 @@ interface Props {
 export function AddResourceModal({ newResource, setNewResource, onSubmit, onDelete, onClose }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newResource.id;
+  const [currentInput, setCurrentInput] = useState(String(newResource.current));
+  const [maxInput, setMaxInput] = useState(String(newResource.max));
+
+  useEffect(() => {
+    setCurrentInput(String(newResource.current));
+  }, [newResource.current]);
+
+  useEffect(() => {
+    setMaxInput(String(newResource.max));
+  }, [newResource.max]);
 
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
@@ -27,11 +38,41 @@ export function AddResourceModal({ newResource, setNewResource, onSubmit, onDele
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Actuel</label>
-              <input type="number" min="0" max={newResource.max} value={newResource.current} onChange={(e) => setNewResource(prev => ({ ...prev, current: Number(e.target.value) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
+              <input
+                type="number"
+                min="0"
+                max={newResource.max}
+                value={currentInput}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setCurrentInput(nextValue);
+                  if (nextValue === '') return;
+                  setNewResource(prev => ({ ...prev, current: Math.max(0, Math.min(prev.max, Number(nextValue))) }));
+                }}
+                onBlur={() => {
+                  if (currentInput === '') setCurrentInput(String(newResource.current));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+              />
             </div>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Maximum</label>
-              <input type="number" min="1" value={newResource.max} onChange={(e) => setNewResource(prev => ({ ...prev, max: Number(e.target.value), current: Math.min(prev.current, Number(e.target.value)) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
+              <input
+                type="number"
+                min="1"
+                value={maxInput}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setMaxInput(nextValue);
+                  if (nextValue === '') return;
+                  const nextMax = Math.max(1, Number(nextValue));
+                  setNewResource(prev => ({ ...prev, max: nextMax, current: Math.min(prev.current, nextMax) }));
+                }}
+                onBlur={() => {
+                  if (maxInput === '') setMaxInput(String(newResource.max));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+              />
             </div>
           </div>
           <div>

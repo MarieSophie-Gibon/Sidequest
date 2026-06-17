@@ -1,5 +1,6 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { NewItemState } from '../../hooks/useCharacterData';
+import { useEffect, useState } from 'react';
 import { Package, Sword, Shield, Trash2, FlaskConical, ScrollText, WandSparkles, Leaf } from 'lucide-react';
 import { ModalActions, ModalHeader } from './ModalControls';
 
@@ -14,6 +15,16 @@ interface Props {
 export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newItem.id;
+  const [quantityInput, setQuantityInput] = useState(String(newItem.quantity));
+  const [defenseInput, setDefenseInput] = useState(String(newItem.defense_bonus));
+
+  useEffect(() => {
+    setQuantityInput(String(newItem.quantity));
+  }, [newItem.quantity]);
+
+  useEffect(() => {
+    setDefenseInput(String(newItem.defense_bonus));
+  }, [newItem.defense_bonus]);
 
   const categories = [
     { key: 'objet' as const, label: 'Objet', icon: Package },
@@ -75,7 +86,21 @@ export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose 
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Quantité</label>
-              <input type="number" min="1" value={newItem.quantity} onChange={(e) => setNewItem(prev => ({ ...prev, quantity: Number(e.target.value) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
+              <input
+                type="number"
+                min="1"
+                value={quantityInput}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setQuantityInput(nextValue);
+                  if (nextValue === '') return;
+                  setNewItem(prev => ({ ...prev, quantity: Math.max(1, Number(nextValue)) }));
+                }}
+                onBlur={() => {
+                  if (quantityInput === '') setQuantityInput(String(newItem.quantity));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+              />
             </div>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Statut</label>
@@ -104,7 +129,21 @@ export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose 
           {newItem.category === 'armure' && (
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Bonus Défense (CA)</label>
-              <input type="number" min="0" value={newItem.defense_bonus} onChange={(e) => setNewItem(prev => ({ ...prev, defense_bonus: Number(e.target.value) }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
+              <input
+                type="number"
+                min="0"
+                value={defenseInput}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setDefenseInput(nextValue);
+                  if (nextValue === '') return;
+                  setNewItem(prev => ({ ...prev, defense_bonus: Math.max(0, Number(nextValue)) }));
+                }}
+                onBlur={() => {
+                  if (defenseInput === '') setDefenseInput(String(newItem.defense_bonus));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+              />
             </div>
           )}
         </div>
