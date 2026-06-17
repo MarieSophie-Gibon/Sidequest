@@ -300,6 +300,7 @@ export default function App() {
               <DnDCombatHUD
                 activeChar={data.activeChar}
                 hpPercent={hpPercent}
+                armorBonus={data.items.filter(it => it.category === 'armure' && it.equipped).reduce((s, it) => s + (it.defense_bonus ?? 0), 0)}
                 activeConditions={data.activeConditions}
                 coreAttributes={coreAttributes}
                 getModValue={data.getModValue}

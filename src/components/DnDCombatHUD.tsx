@@ -3,11 +3,12 @@ import { useState } from 'react';
 import type { Character, CoreAttribute } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
 import { DND_CONDITIONS } from './modals/EditConditionsModal';
-import { Heart, Sparkles, Star, AlertTriangle, HeartPlus } from 'lucide-react';
+import { Heart, Sparkles, Star, AlertTriangle, HeartPlus, Shield } from 'lucide-react';
 
 interface DnDCombatHUDProps {
   activeChar: Character;
   hpPercent: number;
+  armorBonus: number;
   activeConditions: string[];
   coreAttributes: CoreAttribute[];
   getModValue: (score: number) => number;
@@ -26,6 +27,7 @@ interface DnDCombatHUDProps {
 export function DnDCombatHUD({
   activeChar,
   hpPercent,
+  armorBonus,
   activeConditions,
   coreAttributes,
   getModValue,
@@ -182,9 +184,14 @@ export function DnDCombatHUD({
               <span className={`text-[8px] ${t.textMuted} font-extrabold block uppercase leading-none`}>MAÎT</span>
               <span className={`text-sm font-extrabold font-mono ${t.accent} block mt-0.5 leading-none`}>+{activeChar.proficiency_bonus || 2}</span>
             </div>
-            <div className={`${t.inputBg} border ${t.cardBorder} rounded-lg py-1.5 text-center cursor-pointer hover:${t.accentBorder} transition-all`}>
+            <div className={`relative ${t.inputBg} border ${t.cardBorder} rounded-lg py-1.5 text-center cursor-pointer hover:${t.accentBorder} transition-all`}>
               <span className={`text-[8px] ${t.textMuted} font-extrabold block uppercase leading-none`}>CA</span>
               <span className={`text-sm font-extrabold font-mono ${t.accent} block mt-0.5 leading-none`}>{activeChar.ac}</span>
+              {armorBonus > 0 && (
+                <span className="absolute -top-1 -right-1 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-sky-500/30 border border-sky-300 shadow-sm">
+                  <Shield size={9} className="text-white" />
+                </span>
+              )}
             </div>
             <div className={`${t.inputBg} border ${t.cardBorder} rounded-lg py-1.5 text-center cursor-pointer hover:${t.accentBorder} transition-all`}>
               <span className={`text-[8px] ${t.textMuted} font-extrabold block uppercase leading-none`}>INIT</span>

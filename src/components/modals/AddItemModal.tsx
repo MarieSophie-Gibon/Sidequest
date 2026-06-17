@@ -1,6 +1,6 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { NewItemState } from '../../hooks/useCharacterData';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Package, Sword, Shield, Trash2, FlaskConical, ScrollText, WandSparkles, Leaf } from 'lucide-react';
 import { ModalActions, ModalHeader } from './ModalControls';
 
@@ -17,14 +17,6 @@ export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose 
   const isEditing = !!newItem.id;
   const [quantityInput, setQuantityInput] = useState(String(newItem.quantity));
   const [defenseInput, setDefenseInput] = useState(String(newItem.defense_bonus));
-
-  useEffect(() => {
-    setQuantityInput(String(newItem.quantity));
-  }, [newItem.quantity]);
-
-  useEffect(() => {
-    setDefenseInput(String(newItem.defense_bonus));
-  }, [newItem.defense_bonus]);
 
   const categories = [
     { key: 'objet' as const, label: 'Objet', icon: Package },
@@ -104,10 +96,22 @@ export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose 
             </div>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Statut</label>
-              <select value={newItem.equipped ? 'true' : 'false'} onChange={(e) => setNewItem(prev => ({ ...prev, equipped: e.target.value === 'true' }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`}>
-                <option value="false">Dans le Sac</option>
-                <option value="true">Équipé</option>
-              </select>
+              <div className={`flex rounded-xl overflow-hidden border ${t.inputBorder}`}>
+                <button
+                  type="button"
+                  onClick={() => setNewItem(prev => ({ ...prev, equipped: false }))}
+                  className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wide transition-all ${!newItem.equipped ? `${t.accentBg} ${t.accent}` : `${t.inputBg} ${t.textMuted}`}`}
+                >
+                  Dans le Sac
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewItem(prev => ({ ...prev, equipped: true }))}
+                  className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wide transition-all ${newItem.equipped ? `${t.accentBg} ${t.accent}` : `${t.inputBg} ${t.textMuted}`}`}
+                >
+                  Équipé
+                </button>
+              </div>
             </div>
           </div>
 
