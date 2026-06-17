@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { Character } from '../../types/rpg.types';
 import { ModalActions, ModalHeader } from './ModalControls';
@@ -13,7 +13,12 @@ interface Props {
 
 export function EditHpModal({ activeChar, syncCharacterField, applyDamage, applyHealing, onClose }: Props) {
   const [hpActionValue, setHpActionValue] = useState('');
+  const [hpMaxInput, setHpMaxInput] = useState(String(activeChar.hp_max));
   const t = useThemeClasses();
+
+  useEffect(() => {
+    setHpMaxInput(String(activeChar.hp_max));
+  }, [activeChar.hp_max]);
 
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
@@ -30,7 +35,24 @@ export function EditHpModal({ activeChar, syncCharacterField, applyDamage, apply
           </div>
           <div className="text-center">
             <label className={`text-[9px] ${t.textMuted} font-bold block mb-1 uppercase`}>Max</label>
-            <input type="number" value={activeChar.hp_max} onChange={(e) => syncCharacterField('hp_max', Math.max(1, Number(e.target.value)))} className={`${t.cardBg} border ${t.cardBorder} ${t.textSecondary} rounded-xl p-2 w-full text-center font-mono font-bold focus:outline-none text-sm`} />
+            <input
+              type="number"
+              value={hpMaxInput}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setHpMaxInput(nextValue);
+
+                if (nextValue === '') return;
+
+                syncCharacterField('hp_max', Math.max(1, Number(nextValue)));
+              }}
+              onBlur={() => {
+                if (hpMaxInput === '') {
+                  setHpMaxInput(String(activeChar.hp_max));
+                }
+              }}
+              className={`${t.cardBg} border ${t.cardBorder} ${t.textSecondary} rounded-xl p-2 w-full text-center font-mono font-bold focus:outline-none text-sm`}
+            />
           </div>
         </div>
         <div className="space-y-2.5">
