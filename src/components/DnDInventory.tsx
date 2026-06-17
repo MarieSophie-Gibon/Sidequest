@@ -230,7 +230,8 @@ export function DnDInventory({
             {weapons.map((item) => (
               <div
                 key={item.id}
-                className={`${t.inputBg} rounded-xl p-3 border ${t.cardBorder} flex items-center gap-3`}
+                onClick={() => onOpenEditItem(item)}
+                className={`${t.inputBg} rounded-xl p-3 border ${t.cardBorder} flex items-center gap-3 cursor-pointer hover:brightness-105 active:scale-[0.99] transition-all`}
               >
                 <div
                   className={`w-8 h-8 flex items-center justify-center rounded-lg ${t.accentBg} border ${t.accentBorder} shrink-0`}
@@ -263,7 +264,7 @@ export function DnDInventory({
                 </div>
                 <button
                   type="button"
-                  onClick={() => onToggleItemEquip(item.id)}
+                  onClick={(e) => { e.stopPropagation(); onToggleItemEquip(item.id); }}
                   className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-all shrink-0 ${
                     item.equipped
                       ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
@@ -277,7 +278,8 @@ export function DnDInventory({
             {armors.map((item) => (
               <div
                 key={item.id}
-                className={`${t.inputBg} rounded-xl p-3 border ${t.cardBorder} flex items-center gap-3`}
+                onClick={() => onOpenEditItem(item)}
+                className={`${t.inputBg} rounded-xl p-3 border ${t.cardBorder} flex items-center gap-3 cursor-pointer hover:brightness-105 active:scale-[0.99] transition-all`}
               >
                 <div
                   className={`w-8 h-8 flex items-center justify-center rounded-lg ${t.accentBg} border ${t.accentBorder} shrink-0`}
@@ -306,7 +308,7 @@ export function DnDInventory({
                 </div>
                 <button
                   type="button"
-                  onClick={() => onToggleItemEquip(item.id)}
+                  onClick={(e) => { e.stopPropagation(); onToggleItemEquip(item.id); }}
                   className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-all shrink-0 ${
                     item.equipped
                       ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"

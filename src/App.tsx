@@ -400,6 +400,8 @@ export default function App() {
                     skills={data.skills}
                     getModValue={data.getModValue}
                     onToggleSkill={data.handleToggleSkill}
+                    saveThrows={data.saveThrows}
+                    onToggleSave={data.handleToggleSave}
                   />
                 )}
 

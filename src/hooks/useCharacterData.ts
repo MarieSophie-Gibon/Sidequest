@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { DEFAULT_SKILLS_TEMPLATES } from '../constants';
-import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography, Familiar } from '../types/rpg.types';
+import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography, Familiar, CharacterStatKey } from '../types/rpg.types';
 import type { User } from './useAuth';
 
 export interface NewFeatureState {
@@ -93,6 +93,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   const [familiars, setFamiliars] = useState<Familiar[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [saveThrows, setSaveThrows] = useState<{ attr: CharacterStatKey; proficient: boolean }[]>([]);
   const [spellSlots, setSpellSlots] = useState<SpellSlot[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [activeConditions, setActiveConditions] = useState<string[]>([]);
@@ -162,6 +163,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
           setFamiliars([]);
           setItems([]);
           setSkills([]);
+            setSaveThrows([]);
           setSpellSlots([]);
           setResources([]);
           setActiveConditions([]);
@@ -243,6 +245,13 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
         return { ...tmpl, proficient: matchingSkl ? matchingSkl.proficient : false };
       });
       setSkills(mappedSkills);
+
+        const SAVE_ATTRS: CharacterStatKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+        const mappedSaves = SAVE_ATTRS.map(attr => {
+          const matching = skls?.find(s => s.skill_name === `save_${attr}`);
+          return { attr, proficient: matching ? matching.proficient : false };
+        });
+        setSaveThrows(mappedSaves);
 
       if (slts) {
         setSpellSlots((slts as SpellSlot[]).map(s => ({ level: s.level, max: s.max, current: s.current })));
@@ -442,6 +451,20 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   }
 
   // Items
+    async function handleToggleSave(attr: CharacterStatKey) {
+      if (!activeChar) return;
+      const target = saveThrows.find(s => s.attr === attr);
+      if (!target) return;
+      const nextProf = !target.proficient;
+      setSaveThrows(prev => prev.map(s => s.attr === attr ? { ...s, proficient: nextProf } : s));
+      await supabase.from('character_skills').upsert({
+        character_id: activeChar.id,
+        skill_name: `save_${attr}`,
+        proficient: nextProf,
+      }, { onConflict: 'character_id,skill_name' });
+    }
+
+    // Items
   async function handleSaveItem(e: React.FormEvent) {
     e.preventDefault();
     if (!activeChar || !newItem.name.trim()) return;
@@ -462,14 +485,28 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       const { character_id: _, ...updatePayload } = payload;
       const { data, error } = await supabase.from('items').update(updatePayload).eq('id', newItem.id).select().single();
       if (!error && data) {
-        setItems(prev => prev.map(it => it.id === newItem.id ? (data as Item) : it));
+        const savedItem = data as Item;
+        const nextItems = items.map(it => it.id === newItem.id ? savedItem : it);
+        setItems(nextItems);
         showAlert("Objet Modifié", `${payload.name} a été mis à jour.`);
+        if (savedItem.category === 'armure' && activeChar) {
+          const dexMod = Math.floor((activeChar.dex - 10) / 2);
+          const armorBonus = nextItems.filter(it => it.category === 'armure' && it.equipped).reduce((s, it) => s + (it.defense_bonus ?? 0), 0);
+          await syncCharacterField('ac', 10 + dexMod + armorBonus);
+        }
       }
     } else {
       const { data, error } = await supabase.from('items').insert([payload]).select().single();
       if (!error && data) {
-        setItems(prev => [...prev, data as Item]);
+        const savedItem = data as Item;
+        const nextItems = [...items, savedItem];
+        setItems(nextItems);
         showAlert("Objet Ajouté", `${payload.name} est dans le sac.`);
+        if (savedItem.category === 'armure' && activeChar) {
+          const dexMod = Math.floor((activeChar.dex - 10) / 2);
+          const armorBonus = nextItems.filter(it => it.category === 'armure' && it.equipped).reduce((s, it) => s + (it.defense_bonus ?? 0), 0);
+          await syncCharacterField('ac', 10 + dexMod + armorBonus);
+        }
       }
     }
 
@@ -478,10 +515,17 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   }
 
   async function handleDeleteItem(id: string, name: string) {
+    const targetItem = items.find(it => it.id === id);
     const { error } = await supabase.from('items').delete().eq('id', id);
     if (!error) {
-      setItems(prev => prev.filter(it => it.id !== id));
+      const nextItems = items.filter(it => it.id !== id);
+      setItems(nextItems);
       showAlert("Objet Retiré", `${name} a été supprimé de l'inventaire.`);
+      if (targetItem?.category === 'armure' && targetItem.equipped && activeChar) {
+        const dexMod = Math.floor((activeChar.dex - 10) / 2);
+        const armorBonus = nextItems.filter(it => it.category === 'armure' && it.equipped).reduce((s, it) => s + (it.defense_bonus ?? 0), 0);
+        await syncCharacterField('ac', 10 + dexMod + armorBonus);
+      }
     }
   }
 
@@ -489,8 +533,14 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     const targetItem = items.find(it => it.id === itemId);
     if (!targetItem) return;
     const nextEquipped = !targetItem.equipped;
-    setItems(prev => prev.map(it => it.id === itemId ? { ...it, equipped: nextEquipped } : it));
+    const nextItems = items.map(it => it.id === itemId ? { ...it, equipped: nextEquipped } : it);
+    setItems(nextItems);
     await supabase.from('items').update({ equipped: nextEquipped }).eq('id', itemId);
+    if (targetItem.category === 'armure' && activeChar) {
+      const dexMod = Math.floor((activeChar.dex - 10) / 2);
+      const armorBonus = nextItems.filter(it => it.category === 'armure' && it.equipped).reduce((s, it) => s + (it.defense_bonus ?? 0), 0);
+      await syncCharacterField('ac', 10 + dexMod + armorBonus);
+    }
   }
 
   // Character creation
@@ -570,6 +620,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     setFamiliars([]);
     setItems([]);
     setSkills([]);
+      setSaveThrows([]);
     setSpellSlots([]);
     setResources([]);
     setActiveConditions([]);
@@ -870,6 +921,8 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     handleFamiliarAvatarUpload,
     handleUpdateFamiliarHp,
     handleToggleSkill,
+      saveThrows,
+      handleToggleSave,
     biography, setBiography,
     saveBiography,
     handleSaveItem,

@@ -6,6 +6,8 @@ interface DnDSkillsAndSavesProps {
   skills: Skill[];
   getModValue: (score: number) => number;
   onToggleSkill: (skillName: string) => void;
+  saveThrows: { attr: CharacterStatKey; proficient: boolean }[];
+  onToggleSave: (attr: CharacterStatKey) => void;
 }
 
 const ATTR_LABELS: Record<CharacterStatKey, string> = {
@@ -17,6 +19,15 @@ const ATTR_LABELS: Record<CharacterStatKey, string> = {
   cha: 'Charisme',
 };
 
+const ATTR_SHORT: Record<CharacterStatKey, string> = {
+  str: 'FOR',
+  dex: 'DEX',
+  con: 'CON',
+  int: 'INT',
+  wis: 'SAG',
+  cha: 'CHA',
+};
+
 const ATTR_ORDER: CharacterStatKey[] = ['str', 'dex', 'int', 'wis', 'cha'];
 
 export function DnDSkillsAndSaves({
@@ -24,6 +35,8 @@ export function DnDSkillsAndSaves({
   skills,
   getModValue,
   onToggleSkill,
+  saveThrows,
+  onToggleSave,
 }: DnDSkillsAndSavesProps) {
   const t = useThemeClasses();
 
@@ -33,8 +46,51 @@ export function DnDSkillsAndSaves({
     return acc;
   }, [] as { attr: CharacterStatKey; skills: Skill[] }[]);
 
+  const SAVE_ORDER: CharacterStatKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+
   return (
     <div className="space-y-2">
+      {/* Saving Throws */}
+      {saveThrows.length > 0 && (
+        <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>
+          <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider mb-3`}>Jets de Sauvegarde</h4>
+          <div className="grid grid-cols-2 gap-1.5">
+            {SAVE_ORDER.map(attr => {
+              const save = saveThrows.find(s => s.attr === attr);
+              const score = activeChar[attr] || 10;
+              const mod = getModValue(score);
+              const profBonus = activeChar.proficiency_bonus || 2;
+              const finalBonus = mod + (save?.proficient ? profBonus : 0);
+              const finalBonusSign = finalBonus >= 0 ? `+${finalBonus}` : `${finalBonus}`;
+              return (
+                <div key={attr} className={`flex justify-between items-center px-3 py-2 rounded-xl border transition-all ${
+                  save?.proficient
+                    ? `${t.accentBg} ${t.accentBorder}`
+                    : `${t.inputBg} ${t.cardBorder}`
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onToggleSave(attr)}
+                      className={`w-3.5 h-3.5 rounded-sm rotate-45 border transition-colors ${
+                        save?.proficient
+                          ? `${t.accentBg} ${t.accentBorder} shadow-sm`
+                          : `${t.cardBg} ${t.inputBorder}`
+                      }`}
+                    />
+                    <span className={`text-xs font-bold ml-1.5 ${save?.proficient ? t.accent : t.textPrimary}`}>
+                      {ATTR_LABELS[attr]}
+                    </span>
+                    <span className={`text-[9px] font-mono ${t.textMuted}`}>{ATTR_SHORT[attr]}</span>
+                  </div>
+                  <span className={`text-xs font-bold font-mono ${save?.proficient ? t.accent : 'text-emerald-500'}`}>{finalBonusSign}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>
         <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider mb-3`}>Compétences & Maîtrises</h4>
         <div className="space-y-3">
