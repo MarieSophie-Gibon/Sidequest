@@ -203,13 +203,6 @@ export default function App() {
         <div className="relative z-10 w-52 h-52 sm:w-60 sm:h-60">
           <img src="/sidequest.svg" alt="SideQuest" className="w-full h-full object-contain animate-loaderBlink" />
         </div>
-        {/* Loading bar */}
-        <div className="relative z-10 mt-6 w-48 sm:w-56 flex flex-col items-center gap-2">
-          <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'rgba(139,92,246,0.2)' }}>
-            <div className="h-full rounded-full animate-loaderBar" style={{ background: 'linear-gradient(90deg, #a78bfa, #e879f9, #a78bfa)', backgroundSize: '200% 100%' }} />
-          </div>
-          <span className="text-xs tracking-widest uppercase animate-loaderBlink" style={{ color: 'rgba(167,139,250,0.7)' }}>Chargement…</span>
-        </div>
       </div>
     );
   }
