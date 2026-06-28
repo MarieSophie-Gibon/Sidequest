@@ -12,12 +12,14 @@ export interface User {
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+  const [authPasswordConfirm, setAuthPasswordConfirm] = useState('');
   const [authPseudo, setAuthPseudo] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
+  const [passwordResetEmailSent, setPasswordResetEmailSent] = useState(false);
 
   function getNetworkAwareMessage(rawMessage?: string, fallback = 'Une erreur est survenue.') {
     const message = (rawMessage || '').toLowerCase();
@@ -43,6 +45,40 @@ export function useAuth() {
     setAuthLoading(true);
 
     try {
+      if (authMode === 'forgot') {
+        const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+        const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
+          redirectTo,
+        });
+
+        if (error) throw error;
+        setPasswordResetEmailSent(true);
+        showAlert('Email envoye', `Un lien de reinitialisation a ete envoye a ${authEmail}.`);
+        return;
+      }
+
+      if (authMode === 'reset') {
+        if (authPassword.length < 6) {
+          showAlert('Mot de passe invalide', 'Le mot de passe doit contenir au moins 6 caracteres.');
+          return;
+        }
+        if (authPassword !== authPasswordConfirm) {
+          showAlert('Mots de passe differents', 'Les deux mots de passe doivent etre identiques.');
+          return;
+        }
+
+        const { error } = await supabase.auth.updateUser({ password: authPassword });
+        if (error) throw error;
+
+        await supabase.auth.signOut();
+        setUser(null);
+        setAuthMode('signin');
+        setAuthPassword('');
+        setAuthPasswordConfirm('');
+        showAlert('Mot de passe mis a jour', 'Reconnectez-vous avec votre nouveau mot de passe.');
+        return;
+      }
+
       if (authMode === 'signup') {
         if (!authPseudo.trim()) {
           showAlert('Pseudo requis', 'Veuillez renseigner un pseudo pour votre aventurier.');
@@ -95,15 +131,46 @@ export function useAuth() {
     }
   }
 
+  function startForgotPassword() {
+    setEmailConfirmationPending(false);
+    setPasswordResetEmailSent(false);
+    setAuthMode('forgot');
+    setAuthPassword('');
+    setAuthPasswordConfirm('');
+  }
+
+  function backToSignin() {
+    setEmailConfirmationPending(false);
+    setPasswordResetEmailSent(false);
+    setAuthMode('signin');
+    setAuthPassword('');
+    setAuthPasswordConfirm('');
+  }
+
+  function enterPasswordRecovery(email?: string) {
+    setEmailConfirmationPending(false);
+    setPasswordResetEmailSent(false);
+    setAuthMode('reset');
+    setAuthEmail(email || '');
+    setAuthPassword('');
+    setAuthPasswordConfirm('');
+    setUser(null);
+  }
+
   return {
     user, setUser,
     authMode, setAuthMode,
     authEmail, setAuthEmail,
     authPassword, setAuthPassword,
+    authPasswordConfirm, setAuthPasswordConfirm,
     authPseudo, setAuthPseudo,
     authLoading,
     emailConfirmationPending, setEmailConfirmationPending,
+    passwordResetEmailSent,
     handleAuthSubmit,
-    handleLogout
+    handleLogout,
+    startForgotPassword,
+    backToSignin,
+    enterPasswordRecovery,
   };
 }

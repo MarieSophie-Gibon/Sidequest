@@ -102,7 +102,13 @@ export default function App() {
 
   // Auth state listener
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        auth.enterPasswordRecovery(session?.user?.email);
+        data.setLoading(false);
+        return;
+      }
+
       if (session?.user) {
         auth.setUser(session.user);
         data.fetchCharactersList().finally(() => data.setLoading(false));
@@ -251,18 +257,19 @@ export default function App() {
           authMode={auth.authMode}
           authEmail={auth.authEmail}
           authPassword={auth.authPassword}
+          authPasswordConfirm={auth.authPasswordConfirm}
           authPseudo={auth.authPseudo}
           authLoading={auth.authLoading}
           emailConfirmationPending={auth.emailConfirmationPending}
+          passwordResetEmailSent={auth.passwordResetEmailSent}
           setAuthMode={auth.setAuthMode}
           setAuthEmail={auth.setAuthEmail}
           setAuthPassword={auth.setAuthPassword}
+          setAuthPasswordConfirm={auth.setAuthPasswordConfirm}
           setAuthPseudo={auth.setAuthPseudo}
           onSubmit={(e) => auth.handleAuthSubmit(e, showAlert)}
-          onBackToSignin={() => {
-            auth.setEmailConfirmationPending(false);
-            auth.setAuthMode('signin');
-          }}
+          onBackToSignin={auth.backToSignin}
+          onForgotPassword={auth.startForgotPassword}
         />
       ) : (
         <div className={`h-full max-h-full relative z-10 flex flex-col p-4 pb-4 overflow-hidden`}>

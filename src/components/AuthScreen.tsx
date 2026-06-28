@@ -3,36 +3,45 @@ import { useThemeClasses } from "../contexts/AppSettingsContext";
 import { Eye, EyeOff, LogIn, Mail, Sparkles } from "lucide-react";
 
 interface Props {
-  authMode: "signin" | "signup";
+  authMode: "signin" | "signup" | "forgot" | "reset";
   authEmail: string;
   authPassword: string;
+  authPasswordConfirm: string;
   authPseudo: string;
   authLoading: boolean;
   emailConfirmationPending: boolean;
-  setAuthMode: (mode: "signin" | "signup") => void;
+  passwordResetEmailSent: boolean;
+  setAuthMode: (mode: "signin" | "signup" | "forgot" | "reset") => void;
   setAuthEmail: (v: string) => void;
   setAuthPassword: (v: string) => void;
+  setAuthPasswordConfirm: (v: string) => void;
   setAuthPseudo: (v: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onBackToSignin: () => void;
+  onForgotPassword: () => void;
 }
 
 export function AuthScreen({
   authMode,
   authEmail,
   authPassword,
+  authPasswordConfirm,
   authPseudo,
   authLoading,
   emailConfirmationPending,
+  passwordResetEmailSent,
   setAuthMode,
   setAuthEmail,
   setAuthPassword,
+  setAuthPasswordConfirm,
   setAuthPseudo,
   onSubmit,
   onBackToSignin,
+  onForgotPassword,
 }: Props) {
   const t = useThemeClasses();
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
   if (emailConfirmationPending) {
     return (
@@ -120,11 +129,12 @@ export function AuthScreen({
             />
           </div>
 
+          {authMode !== "forgot" && (
           <div className="space-y-1">
             <label
               className={`text-[10px] ${t.textMuted} uppercase font-bold font-mono block`}
             >
-              Mot de passe
+              {authMode === "reset" ? "Nouveau mot de passe" : "Mot de passe"}
             </label>
             <div className="relative">
               <input
@@ -145,7 +155,52 @@ export function AuthScreen({
                 {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
+            {authMode === "signin" && (
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                className={`text-[11px] ${t.accent} hover:brightness-110 transition-colors font-medium mt-1`}
+              >
+                Mot de passe oublié ?
+              </button>
+            )}
           </div>
+          )}
+
+          {authMode === "reset" && (
+            <div className="space-y-1">
+              <label
+                className={`text-[10px] ${t.textMuted} uppercase font-bold font-mono block`}
+              >
+                Confirmer le mot de passe
+              </label>
+              <div className="relative">
+                <input
+                  type={showPasswordConfirm ? "text" : "password"}
+                  placeholder="Retapez le mot de passe..."
+                  value={authPasswordConfirm}
+                  onChange={(e) => setAuthPasswordConfirm(e.target.value)}
+                  className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-3 pr-10 w-full text-xs focus:outline-none focus:ring-1 focus:ring-blue-400/50 transition-all`}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordConfirm((v) => !v)}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 ${t.textMuted} hover:brightness-125 transition-all`}
+                  tabIndex={-1}
+                  aria-label={showPasswordConfirm ? "Masquer la confirmation" : "Afficher la confirmation"}
+                >
+                  {showPasswordConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {authMode === "forgot" && passwordResetEmailSent && (
+            <p className={`text-[11px] ${t.textSecondary} leading-relaxed`}>
+              Un lien de reinitialisation a ete envoye a <span className={`font-semibold ${t.accent}`}>{authEmail}</span>.
+            </p>
+          )}
 
           <button
             type="submit"
@@ -157,7 +212,7 @@ export function AuthScreen({
                 <span className="w-4 h-4 rounded-md flex items-center justify-center bg-white/10 border border-white/15">
                   <Sparkles size={11} className="animate-pulse" />
                 </span>
-                Connexion...
+                Traitement...
               </>
             ) : authMode === "signin" ? (
               <>
@@ -166,6 +221,16 @@ export function AuthScreen({
                 </span>
                 Se connecter
               </>
+            ) : authMode === "forgot" ? (
+              <>
+                <Mail size={14} />
+                Envoyer le lien
+              </>
+            ) : authMode === "reset" ? (
+              <>
+                <Sparkles size={14} />
+                Mettre a jour
+              </>
             ) : (
               <>
                 <Sparkles size={14} />
@@ -173,8 +238,19 @@ export function AuthScreen({
               </>
             )}
           </button>
+
+          {(authMode === "forgot" || authMode === "reset") && (
+            <button
+              type="button"
+              onClick={onBackToSignin}
+              className={`w-full text-xs ${t.accent} hover:brightness-110 transition-colors font-medium`}
+            >
+              Retour a la connexion
+            </button>
+          )}
         </form>
 
+        {(authMode === "signin" || authMode === "signup") && (
         <div className={`text-center pt-2 border-t ${t.cardBorder}`}>
           <button
             onClick={() =>
@@ -187,6 +263,7 @@ export function AuthScreen({
               : "Déjà membre ? Se connecter"}
           </button>
         </div>
+        )}
       </div>
     </div>
   );
