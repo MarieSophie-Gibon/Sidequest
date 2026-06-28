@@ -122,6 +122,20 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // Supabase recovery links may arrive via hash/query before PASSWORD_RECOVERY fires.
+    const searchParams = new URLSearchParams(window.location.search);
+    const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+    const hashParams = new URLSearchParams(hash);
+    const recoveryType = searchParams.get('type') || hashParams.get('type');
+
+    if (recoveryType === 'recovery') {
+      supabase.auth.getSession().then(({ data: sessionData }) => {
+        auth.enterPasswordRecovery(sessionData.session?.user?.email);
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     const showNetworkAlert = (title: string, text: string) => {
       setAlertMsg({ title, text });
       setTimeout(() => setAlertMsg(null), 4000);
@@ -252,7 +266,7 @@ export default function App() {
       )}
 
       {/* AUTH */}
-      {!auth.user ? (
+      {!auth.user || auth.authMode === 'forgot' || auth.authMode === 'reset' ? (
         <AuthScreen
           authMode={auth.authMode}
           authEmail={auth.authEmail}
