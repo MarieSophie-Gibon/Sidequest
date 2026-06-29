@@ -39,6 +39,7 @@ import { EditBackstoryModal } from './components/modals/EditBackstoryModal';
 import { EditPersonalityModal } from './components/modals/EditPersonalityModal';
 import { AddFamiliarModal } from './components/modals/AddFamiliarModal';
 import { DeathSavingThrowsModal } from './components/modals/DeathSavingThrowsModal';
+import { CraftingModal } from './components/modals/CraftingModal';
 
 export default function App() {
   const t = useThemeClasses();
@@ -426,6 +427,7 @@ export default function App() {
                     items={data.items}
                     onToggleItemEquip={data.handleToggleItemEquip}
                     onOpenAddItem={() => setModalType('add_item')}
+                    onOpenCrafting={() => setModalType('crafting')}
                     onOpenEditItem={(item: Item) => {
                       data.setNewItem({
                         id: item.id,
@@ -546,6 +548,13 @@ export default function App() {
                 data.setNewItem({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
                 setModalType(null);
               }}
+            />
+          )}
+          {modalType === 'crafting' && (
+            <CraftingModal
+              items={data.items}
+              onSubmit={data.handleCraftItem}
+              onClose={() => setModalType(null)}
             />
           )}
           {modalType === 'change_avatar' && data.activeChar && (

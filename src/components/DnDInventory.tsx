@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Character, Item } from "../types/rpg.types";
 import { useThemeClasses } from "../contexts/AppSettingsContext";
 import {
@@ -12,6 +12,7 @@ import {
   WandSparkles,
   Funnel,
   Leaf,
+  Hammer,
 } from "lucide-react";
 
 interface Props {
@@ -19,6 +20,7 @@ interface Props {
   items: Item[];
   onToggleItemEquip: (itemId: string) => void;
   onOpenAddItem: () => void;
+  onOpenCrafting: () => void;
   onOpenEditItem: (item: Item) => void;
   onUpdateCurrency: <T extends keyof Character>(
     field: T,
@@ -31,12 +33,14 @@ export function DnDInventory({
   items,
   onToggleItemEquip,
   onOpenAddItem,
+  onOpenCrafting,
   onOpenEditItem,
   onUpdateCurrency,
 }: Props) {
   const t = useThemeClasses();
   const [showTypeFilters, setShowTypeFilters] = useState(false);
   const [currencyInputs, setCurrencyInputs] = useState({
+    charId: activeChar.id,
     gold: String(activeChar.gold),
     silver: String(activeChar.silver),
     copper: String(activeChar.copper),
@@ -45,13 +49,7 @@ export function DnDInventory({
     "all" | "objet" | "potion" | "parchemin" | "objet_magique" | "composant"
   >("all");
 
-  useEffect(() => {
-    setCurrencyInputs({
-      gold: String(activeChar.gold),
-      silver: String(activeChar.silver),
-      copper: String(activeChar.copper),
-    });
-  }, [activeChar.gold, activeChar.silver, activeChar.copper]);
+  const isEditingCurrentCharacter = currencyInputs.charId === activeChar.id;
 
   const objectTypeOptions: Array<{
     key: "all" | "objet" | "potion" | "parchemin" | "objet_magique" | "composant";
@@ -143,16 +141,35 @@ export function DnDInventory({
               <input
                 type="number"
                 min="0"
-                value={currencyInputs.gold}
+                value={
+                  isEditingCurrentCharacter
+                    ? currencyInputs.gold
+                    : String(activeChar.gold)
+                }
                 onChange={(e) => {
                   const nextValue = e.target.value;
-                  setCurrencyInputs((prev) => ({ ...prev, gold: nextValue }));
+                  setCurrencyInputs({
+                    charId: activeChar.id,
+                    gold: nextValue,
+                    silver: isEditingCurrentCharacter
+                      ? currencyInputs.silver
+                      : String(activeChar.silver),
+                    copper: isEditingCurrentCharacter
+                      ? currencyInputs.copper
+                      : String(activeChar.copper),
+                  });
                   if (nextValue === "") return;
                   onUpdateCurrency("gold", Math.max(0, Number(nextValue)));
                 }}
                 onBlur={() => {
-                  if (currencyInputs.gold === "") {
-                    setCurrencyInputs((prev) => ({ ...prev, gold: String(activeChar.gold) }));
+                  if (
+                    isEditingCurrentCharacter &&
+                    currencyInputs.gold === ""
+                  ) {
+                    setCurrencyInputs((prev) => ({
+                      ...prev,
+                      gold: String(activeChar.gold),
+                    }));
                   }
                 }}
                 className={`${t.inputText} bg-transparent w-full font-mono text-[20px] leading-none focus:outline-none text-end`}
@@ -170,16 +187,35 @@ export function DnDInventory({
               <input
                 type="number"
                 min="0"
-                value={currencyInputs.silver}
+                value={
+                  isEditingCurrentCharacter
+                    ? currencyInputs.silver
+                    : String(activeChar.silver)
+                }
                 onChange={(e) => {
                   const nextValue = e.target.value;
-                  setCurrencyInputs((prev) => ({ ...prev, silver: nextValue }));
+                  setCurrencyInputs({
+                    charId: activeChar.id,
+                    gold: isEditingCurrentCharacter
+                      ? currencyInputs.gold
+                      : String(activeChar.gold),
+                    silver: nextValue,
+                    copper: isEditingCurrentCharacter
+                      ? currencyInputs.copper
+                      : String(activeChar.copper),
+                  });
                   if (nextValue === "") return;
                   onUpdateCurrency("silver", Math.max(0, Number(nextValue)));
                 }}
                 onBlur={() => {
-                  if (currencyInputs.silver === "") {
-                    setCurrencyInputs((prev) => ({ ...prev, silver: String(activeChar.silver) }));
+                  if (
+                    isEditingCurrentCharacter &&
+                    currencyInputs.silver === ""
+                  ) {
+                    setCurrencyInputs((prev) => ({
+                      ...prev,
+                      silver: String(activeChar.silver),
+                    }));
                   }
                 }}
                 className={`${t.inputText} bg-transparent w-full font-mono text-[20px] leading-none focus:outline-none text-end`}
@@ -197,16 +233,35 @@ export function DnDInventory({
               <input
                 type="number"
                 min="0"
-                value={currencyInputs.copper}
+                value={
+                  isEditingCurrentCharacter
+                    ? currencyInputs.copper
+                    : String(activeChar.copper)
+                }
                 onChange={(e) => {
                   const nextValue = e.target.value;
-                  setCurrencyInputs((prev) => ({ ...prev, copper: nextValue }));
+                  setCurrencyInputs({
+                    charId: activeChar.id,
+                    gold: isEditingCurrentCharacter
+                      ? currencyInputs.gold
+                      : String(activeChar.gold),
+                    silver: isEditingCurrentCharacter
+                      ? currencyInputs.silver
+                      : String(activeChar.silver),
+                    copper: nextValue,
+                  });
                   if (nextValue === "") return;
                   onUpdateCurrency("copper", Math.max(0, Number(nextValue)));
                 }}
                 onBlur={() => {
-                  if (currencyInputs.copper === "") {
-                    setCurrencyInputs((prev) => ({ ...prev, copper: String(activeChar.copper) }));
+                  if (
+                    isEditingCurrentCharacter &&
+                    currencyInputs.copper === ""
+                  ) {
+                    setCurrencyInputs((prev) => ({
+                      ...prev,
+                      copper: String(activeChar.copper),
+                    }));
                   }
                 }}
                 className={`${t.inputText} bg-transparent w-full font-mono text-[20px] leading-none focus:outline-none text-end`}
@@ -334,6 +389,14 @@ export function DnDInventory({
             <Package size={14} /> Inventaire
           </h4>
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onOpenCrafting}
+              className={`w-6 h-6 flex items-center justify-center rounded-xl border transition-all ${t.cardBg} ${t.cardBorder} ${t.accent} hover:brightness-110 active:scale-90`}
+              aria-label="Ouvrir l'artisanat"
+            >
+              <Hammer size={14} />
+            </button>
             <button
               type="button"
               onClick={() => setShowTypeFilters((prev) => !prev)}

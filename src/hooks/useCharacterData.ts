@@ -53,6 +53,19 @@ export interface NewItemState {
   defense_bonus: number;
 }
 
+export interface CraftingComponentSelection {
+  itemId: string;
+  quantity: number;
+}
+
+export interface CraftingRecipeInput {
+  name: string;
+  description: string;
+  goldValue: number;
+  category: NewItemState['category'];
+  components: CraftingComponentSelection[];
+}
+
 export interface NewFamiliarState {
   id?: string;
   name: string;
@@ -543,6 +556,116 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     }
   }
 
+  async function handleCraftItem(recipe: CraftingRecipeInput) {
+    if (!activeChar) return false;
+
+    const name = recipe.name.trim();
+    if (!name) {
+      showAlert('Craft impossible', 'Le nom de l\'objet est requis.');
+      return false;
+    }
+
+    const normalizedValue = Number(recipe.goldValue);
+    if (Number.isNaN(normalizedValue) || normalizedValue <= 0) {
+      showAlert('Craft impossible', 'La valeur en po doit etre superieure a 0.');
+      return false;
+    }
+
+    const normalizedComponents = recipe.components
+      .map(comp => ({ itemId: comp.itemId, quantity: Math.max(1, Math.floor(Number(comp.quantity) || 0)) }))
+      .filter(comp => !!comp.itemId);
+
+    if (normalizedComponents.length === 0) {
+      showAlert('Craft impossible', 'Ajoutez au moins un composant.');
+      return false;
+    }
+
+    const requiredByItem = new Map<string, number>();
+    for (const component of normalizedComponents) {
+      requiredByItem.set(component.itemId, (requiredByItem.get(component.itemId) || 0) + component.quantity);
+    }
+
+    const missingStock: string[] = [];
+    requiredByItem.forEach((required, itemId) => {
+      const source = items.find(it => it.id === itemId);
+      if (!source || source.quantity < required) {
+        missingStock.push(source ? `${source.name} (${source.quantity}/${required})` : `Composant introuvable (${itemId})`);
+      }
+    });
+
+    if (missingStock.length > 0) {
+      showAlert('Stocks insuffisants', `Composants manquants : ${missingStock.join(', ')}`);
+      return false;
+    }
+
+    for (const [itemId, requiredQty] of requiredByItem.entries()) {
+      const source = items.find(it => it.id === itemId);
+      if (!source) continue;
+      const remainingQty = source.quantity - requiredQty;
+
+      if (remainingQty <= 0) {
+        const { error: deleteErr } = await supabase.from('items').delete().eq('id', itemId);
+        if (deleteErr) {
+          showAlert('Erreur', `Impossible de consommer ${source.name} : ${deleteErr.message}`);
+          return false;
+        }
+      } else {
+        const { error: updateErr } = await supabase.from('items').update({ quantity: remainingQty }).eq('id', itemId);
+        if (updateErr) {
+          showAlert('Erreur', `Impossible de mettre a jour ${source.name} : ${updateErr.message}`);
+          return false;
+        }
+      }
+    }
+
+    const craftedPayload = {
+      character_id: activeChar.id,
+      name,
+      description: recipe.description.trim() || null,
+      quantity: 1,
+      weight: 1,
+      equipped: false,
+      category: recipe.category,
+    };
+
+    const { data: createdCraftedItem, error: craftedErr } = await supabase
+      .from('items')
+      .insert([craftedPayload])
+      .select()
+      .single();
+
+    if (craftedErr || !createdCraftedItem) {
+      showAlert('Erreur', craftedErr?.message || 'Impossible d\'ajouter l\'objet cree.');
+      return false;
+    }
+
+    const nextItems = items
+      .map(it => {
+        const consumed = requiredByItem.get(it.id) || 0;
+        if (!consumed) return it;
+        return { ...it, quantity: it.quantity - consumed };
+      })
+      .filter(it => it.quantity > 0);
+
+    setItems([...nextItems, createdCraftedItem as Item]);
+
+    const consumedEquippedArmor = items.some(it => {
+      const consumed = requiredByItem.get(it.id) || 0;
+      return consumed > 0 && it.category === 'armure' && it.equipped;
+    });
+
+    if (consumedEquippedArmor) {
+      const dexMod = Math.floor((activeChar.dex - 10) / 2);
+      const armorBonus = nextItems
+        .filter(it => it.category === 'armure' && it.equipped)
+        .reduce((sum, it) => sum + (it.defense_bonus ?? 0), 0);
+      await syncCharacterField('ac', 10 + dexMod + armorBonus);
+    }
+
+    showAlert('Artisanat termine', `${name} a ete cree et ajoute a l'inventaire.`);
+    return true;
+  }
+
   // Character creation
   async function handleCreateCharacter(heroName: string, heroRace: string) {
     if (!user) return;
@@ -928,6 +1051,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     handleSaveItem,
     handleDeleteItem,
     handleToggleItemEquip,
+    handleCraftItem,
     handleCreateCharacter,
     handleDeleteCharacter,
     handleShortRest,
