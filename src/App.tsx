@@ -40,6 +40,7 @@ import { EditPersonalityModal } from './components/modals/EditPersonalityModal';
 import { AddFamiliarModal } from './components/modals/AddFamiliarModal';
 import { DeathSavingThrowsModal } from './components/modals/DeathSavingThrowsModal';
 import { CraftingModal } from './components/modals/CraftingModal';
+import { ItemActionModal } from './components/modals/ItemActionModal';
 
 export default function App() {
   const t = useThemeClasses();
@@ -75,6 +76,7 @@ export default function App() {
   const swipe = useSwipeNav(activeTab, requestTabChange);
 
   const [modalType, setModalType] = useState<string | null>(null);
+  const [itemActionTarget, setItemActionTarget] = useState<Item | null>(null);
 
   useEffect(() => {
     if (!isTransitioning) return;
@@ -428,6 +430,10 @@ export default function App() {
                     onToggleItemEquip={data.handleToggleItemEquip}
                     onOpenAddItem={() => setModalType('add_item')}
                     onOpenCrafting={() => setModalType('crafting')}
+                    onOpenItemAction={(item: Item) => {
+                      setItemActionTarget(item);
+                      setModalType('item_action');
+                    }}
                     onOpenEditItem={(item: Item) => {
                       data.setNewItem({
                         id: item.id,
@@ -555,6 +561,17 @@ export default function App() {
               items={data.items}
               onSubmit={data.handleCraftItem}
               onClose={() => setModalType(null)}
+            />
+          )}
+          {modalType === 'item_action' && itemActionTarget && (
+            <ItemActionModal
+              item={itemActionTarget}
+              onUse={data.handleUseItem}
+              onSell={data.handleSellItem}
+              onClose={() => {
+                setItemActionTarget(null);
+                setModalType(null);
+              }}
             />
           )}
           {modalType === 'change_avatar' && data.activeChar && (

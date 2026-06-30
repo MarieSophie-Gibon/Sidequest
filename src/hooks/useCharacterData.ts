@@ -557,6 +557,82 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     }
   }
 
+  async function consumeSingleItem(itemId: string) {
+    const targetItem = items.find(it => it.id === itemId);
+    if (!targetItem) {
+      showAlert('Objet introuvable', 'Impossible de trouver cet objet.');
+      return { ok: false as const, targetItem: null as Item | null };
+    }
+
+    const remainingQty = Math.max(0, targetItem.quantity - 1);
+    if (remainingQty <= 0) {
+      const { error } = await supabase.from('items').delete().eq('id', targetItem.id);
+      if (error) {
+        showAlert('Erreur', `Impossible de retirer ${targetItem.name} : ${error.message}`);
+        return { ok: false as const, targetItem };
+      }
+    } else {
+      const { error } = await supabase.from('items').update({ quantity: remainingQty }).eq('id', targetItem.id);
+      if (error) {
+        showAlert('Erreur', `Impossible de mettre a jour ${targetItem.name} : ${error.message}`);
+        return { ok: false as const, targetItem };
+      }
+    }
+
+    const nextItems = remainingQty <= 0
+      ? items.filter(it => it.id !== targetItem.id)
+      : items.map(it => it.id === targetItem.id ? { ...it, quantity: remainingQty } : it);
+    setItems(nextItems);
+
+    if (targetItem.category === 'armure' && targetItem.equipped && activeChar) {
+      const dexMod = Math.floor((activeChar.dex - 10) / 2);
+      const armorBonus = nextItems
+        .filter(it => it.category === 'armure' && it.equipped)
+        .reduce((s, it) => s + (it.defense_bonus ?? 0), 0);
+      await syncCharacterField('ac', 10 + dexMod + armorBonus);
+    }
+
+    return { ok: true as const, targetItem };
+  }
+
+  async function handleUseItem(itemId: string) {
+    const result = await consumeSingleItem(itemId);
+    if (!result.ok || !result.targetItem) return false;
+
+    showAlert('Objet utilise', `${result.targetItem.name} a ete utilise.`);
+    return true;
+  }
+
+  async function handleSellItem(itemId: string, saleValue: number, currency: 'gold' | 'silver' | 'copper') {
+    if (!activeChar) return false;
+
+    const normalizedSaleValue = Math.max(1, Math.floor(Number(saleValue) || 0));
+    if (!normalizedSaleValue) {
+      showAlert('Vente impossible', 'Le montant recupere doit etre superieur a 0.');
+      return false;
+    }
+
+    const result = await consumeSingleItem(itemId);
+    if (!result.ok || !result.targetItem) return false;
+
+    const nextCurrencyValue = Math.max(0, (activeChar[currency] || 0) + normalizedSaleValue);
+    setActiveChar(prev => (prev ? { ...prev, [currency]: nextCurrencyValue } : prev));
+
+    const { error } = await supabase
+      .from('characters')
+      .update({ [currency]: nextCurrencyValue })
+      .eq('id', activeChar.id);
+
+    if (error) {
+      showAlert('Erreur', `Objet retire mais impossible de crediter la bourse : ${error.message}`);
+      return false;
+    }
+
+    const currencyLabel = currency === 'gold' ? 'PO' : currency === 'silver' ? 'PA' : 'PC';
+    showAlert('Objet vendu', `${result.targetItem.name} vendu pour ${normalizedSaleValue} ${currencyLabel}.`);
+    return true;
+  }
+
   async function handleCraftItem(recipe: CraftingRecipeInput) {
     if (!activeChar) return false;
 
@@ -1080,6 +1156,8 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     handleSaveItem,
     handleDeleteItem,
     handleToggleItemEquip,
+    handleUseItem,
+    handleSellItem,
     handleCraftItem,
     handleCreateCharacter,
     handleDeleteCharacter,

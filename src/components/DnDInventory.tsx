@@ -23,6 +23,7 @@ interface Props {
   onOpenAddItem: () => void;
   onOpenCrafting: () => void;
   onOpenEditItem: (item: Item) => void;
+  onOpenItemAction: (item: Item) => void;
   onUpdateCurrency: <T extends keyof Character>(
     field: T,
     value: Character[T],
@@ -36,16 +37,63 @@ export function DnDInventory({
   onOpenAddItem,
   onOpenCrafting,
   onOpenEditItem,
+  onOpenItemAction,
   onUpdateCurrency,
 }: Props) {
   const t = useThemeClasses();
   const [showTypeFilters, setShowTypeFilters] = useState(false);
+
+  // État de sauvegarde pour détecter les changements de la BDD (remplace le useEffect)
+  const [prevCharData, setPrevCharData] = useState({
+    id: activeChar.id,
+    gold: activeChar.gold,
+    silver: activeChar.silver,
+    copper: activeChar.copper,
+  });
+
   const [currencyInputs, setCurrencyInputs] = useState({
     charId: activeChar.id,
     gold: String(activeChar.gold),
     silver: String(activeChar.silver),
     copper: String(activeChar.copper),
   });
+
+  // Synchronisation "Derived State" (Méthode officielle React pour remplacer useEffect)
+  if (
+    activeChar.id !== prevCharData.id ||
+    activeChar.gold !== prevCharData.gold ||
+    activeChar.silver !== prevCharData.silver ||
+    activeChar.copper !== prevCharData.copper
+  ) {
+    setPrevCharData({
+      id: activeChar.id,
+      gold: activeChar.gold,
+      silver: activeChar.silver,
+      copper: activeChar.copper,
+    });
+
+    setCurrencyInputs((prev) => {
+      // Si on est sur le même personnage, on met à jour les valeurs depuis la BDD.
+      // On ne l'écrase pas si le champ est vide (en cours de frappe).
+      if (prev.charId === activeChar.id) {
+        return {
+          charId: activeChar.id,
+          gold: prev.gold === "" ? "" : String(activeChar.gold),
+          silver: prev.silver === "" ? "" : String(activeChar.silver),
+          copper: prev.copper === "" ? "" : String(activeChar.copper),
+        };
+      }
+      
+      // Si on a changé de personnage
+      return {
+        charId: activeChar.id,
+        gold: String(activeChar.gold),
+        silver: String(activeChar.silver),
+        copper: String(activeChar.copper),
+      };
+    });
+  }
+
   const [objectFilter, setObjectFilter] = useState<
     "all" | "objet" | "potion" | "parchemin" | "objet_magique" | "composant"
   >("all");
@@ -155,7 +203,7 @@ export function DnDInventory({
       <span
         className={`inline-flex items-center leading-none gap-1 rounded-full border ${t.inputBorder} ${t.inputBg} ${t.textPrimary} font-semibold h-5 px-1.5 text-[9px]`}
       >
-        X {quantity}
+        <span className="sr-only">Quantité</span>X {quantity}
       </span>
     );
   };
@@ -330,11 +378,17 @@ export function DnDInventory({
                     onClick={() => onOpenEditItem(item)}
                     className={`${t.inputBg} rounded-xl p-2 border ${t.cardBorder} flex items-center gap-3 cursor-pointer hover:brightness-105 active:scale-[0.99] transition-all`}
                   >
-                    <div
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg ${t.accentBg} border ${t.accentBorder} shrink-0`}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenItemAction(item);
+                      }}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg border shrink-0 ${t.accentBg} ${t.accentBorder} ${t.accent} shadow-[0_0_4px_currentColor] opacity-90 transition-all duration-200 active:scale-90 active:shadow-[0_0_15px_currentColor] active:opacity-100 active:brightness-150`}
+                      aria-label={`Actions pour ${item.name}`}
                     >
                       <Sword size={14} />
-                    </div>
+                    </button>
                     <div className="flex-1 min-w-0">
                       <span
                         className={`text-xs font-bold ${t.textPrimary} block truncate`}
@@ -394,11 +448,17 @@ export function DnDInventory({
                     onClick={() => onOpenEditItem(item)}
                     className={`${t.inputBg} rounded-xl p-2 border ${t.cardBorder} flex items-center gap-3 cursor-pointer hover:brightness-105 active:scale-[0.99] transition-all`}
                   >
-                    <div
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg ${t.accentBg} border ${t.accentBorder} shrink-0`}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenItemAction(item);
+                      }}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg border shrink-0 ${t.accentBg} ${t.accentBorder} ${t.accent} shadow-[0_0_4px_currentColor] opacity-90 transition-all duration-200 active:scale-90 active:shadow-[0_0_15px_currentColor] active:opacity-100 active:brightness-150`}
+                      aria-label={`Actions pour ${item.name}`}
                     >
                       <Shield size={14} />
-                    </div>
+                    </button>
                     <div className="flex-1 min-w-0">
                       <span
                         className={`text-xs font-bold ${t.textPrimary} block truncate`}
@@ -528,11 +588,17 @@ export function DnDInventory({
                   className={`${t.inputBg} ${tone.cardTint} p-2 rounded-xl border ${t.cardBorder} cursor-pointer transition-all hover:brightness-105 active:scale-[0.99]`}
                 >
                   <div className="flex items-start gap-3">
-                    <div
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg border shrink-0 ${tone.iconTint}`}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenItemAction(item);
+                      }}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg border shrink-0 ${tone.iconTint} shadow-[0_0_4px_currentColor] opacity-90 transition-all duration-200 active:scale-90 active:shadow-[0_0_15px_currentColor] active:opacity-100 active:brightness-150`}
+                      aria-label={`Actions pour ${item.name}`}
                     >
                       <Icon size={14} />
-                    </div>
+                    </button>
 
                     <div className="w-full min-w-0">
                       <div className="flex items-center justify-between gap-2">
