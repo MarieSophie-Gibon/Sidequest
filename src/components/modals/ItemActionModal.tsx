@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
 import { Coins, Hand, Package } from "lucide-react";
-import type { Item } from "../../types/rpg.types";
+import { useMemo, useState } from "react";
 import { useThemeClasses } from "../../contexts/AppSettingsContext";
+import type { Item } from "../../types/rpg.types";
 import { ModalHeader } from "./ModalControls";
 
 interface Props {

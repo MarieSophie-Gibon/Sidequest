@@ -148,6 +148,15 @@ export interface CoreAttribute {
   key: CharacterStatKey;
 }
 
+export interface Note {
+  id: string;
+  character_id: string;
+  title: string;
+  content: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface ThemeOption {
   name: string;
   primary: string;

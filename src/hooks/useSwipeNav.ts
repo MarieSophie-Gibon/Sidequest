@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 
-const TABS = ['home', 'spells', 'features', 'attributes', 'inventory', 'biography', 'settings'] as const;
+const TABS = ['home', 'spells', 'features', 'attributes', 'inventory', 'biography', 'notes', 'settings'] as const;
 type TabKey = typeof TABS[number];
 
 const MIN_SWIPE_X = 55;

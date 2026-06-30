@@ -1,7 +1,7 @@
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { ArrowLeft, LayoutDashboard, BookOpen, Star, Backpack, Settings, User, GraduationCap } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, BookOpen, Star, Backpack, Settings, User, GraduationCap, NotebookPen } from 'lucide-react';
 
-type TabKey = 'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'settings';
+type TabKey = 'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'notes' | 'settings';
 
 interface Props {
   activeTab: TabKey;
@@ -16,6 +16,7 @@ const TABS: { key: TabKey; icon: typeof LayoutDashboard }[] = [
   { key: 'attributes', icon: GraduationCap },
   { key: 'inventory', icon: Backpack },
   { key: 'biography', icon: User },
+  { key: 'notes', icon: NotebookPen },
   { key: 'settings', icon: Settings },
 ];
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { DEFAULT_SKILLS_TEMPLATES } from '../constants';
-import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography, Familiar, CharacterStatKey } from '../types/rpg.types';
+import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography, Familiar, CharacterStatKey, Note } from '../types/rpg.types';
 import type { User } from './useAuth';
 
 export interface NewFeatureState {
@@ -98,6 +98,12 @@ export interface NewSpellSlotState {
   current: number;
 }
 
+export interface NewNoteState {
+  id?: string;
+  title: string;
+  content: string;
+}
+
 export function useCharacterData(user: User | null, showAlert: (title: string, text: string) => void) {
   const [view, setView] = useState<'dashboard' | 'sheet'>('dashboard');
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -112,6 +118,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   const [resources, setResources] = useState<Resource[]>([]);
   const [activeConditions, setActiveConditions] = useState<string[]>([]);
   const [biography, setBiography] = useState<Biography | null>(null);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Modal form states
@@ -121,6 +128,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   const [newFamiliar, setNewFamiliar] = useState<NewFamiliarState>({ name: '', species: '', description: '', hp_current: 1, hp_max: 1, ac: 10, speed: '', str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, passive_perception: 10, senses: '', abilities: '', resistances: '', darkvision: '', actions: '', avatar_url: '', status: 'present' });
   const [newItem, setNewItem] = useState<NewItemState>({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
   const [newSpellSlot, setNewSpellSlot] = useState<NewSpellSlotState>({ level: 1, max: 4, current: 4 });
+  const [newNote, setNewNote] = useState<NewNoteState>({ title: '', content: '' });
 
   function getNetworkAwareMessage(rawMessage?: string, fallback = 'Une erreur est survenue.') {
     const message = (rawMessage || '').toLowerCase();
@@ -246,9 +254,11 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       const { data: slts } = await supabase.from('spell_slots').select('*').eq('character_id', charId);
       const { data: rcs } = await supabase.from('resources').select('*').eq('character_id', charId);
       const { data: bio } = await supabase.from('character_biography').select('*').eq('character_id', charId).maybeSingle();
+      const { data: nts } = await supabase.from('character_notes').select('*').eq('character_id', charId).order('created_at', { ascending: false });
 
       setActiveChar(char as Character);
       setBiography(bio as Biography | null);
+      setNotes((nts || []) as Note[]);
       setFeatures(feats || []);
       setSpells(spls || []);
       setFamiliars((fams || []) as Familiar[]);
@@ -1061,6 +1071,52 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     syncCharacterField('hit_dice_current', current + 1);
   }
 
+  // Notes CRUD
+  async function handleSaveNote(e: React.FormEvent): Promise<boolean> {
+    e.preventDefault();
+    if (!activeChar || !newNote.title.trim()) return false;
+    const payload = {
+      character_id: activeChar.id,
+      title: newNote.title.trim(),
+      content: newNote.content,
+      updated_at: new Date().toISOString(),
+    };
+    if (newNote.id) {
+      const { data, error } = await supabase
+        .from('character_notes')
+        .update({ title: payload.title, content: payload.content, updated_at: payload.updated_at })
+        .eq('id', newNote.id)
+        .select()
+        .single();
+      if (error) {
+        showAlert('Erreur', getNetworkAwareMessage(error.message, 'Impossible de modifier la note.'));
+        return false;
+      }
+      if (data) setNotes(prev => prev.map(n => n.id === newNote.id ? (data as Note) : n));
+    } else {
+      const { data, error } = await supabase
+        .from('character_notes')
+        .insert([payload])
+        .select()
+        .single();
+      if (error) {
+        showAlert('Erreur', getNetworkAwareMessage(error.message, 'Impossible de créer la note.'));
+        return false;
+      }
+      if (data) setNotes(prev => [data as Note, ...prev]);
+    }
+    setNewNote({ title: '', content: '' });
+    return true;
+  }
+
+  async function handleDeleteNote(id: string) {
+    const { error } = await supabase.from('character_notes').delete().eq('id', id);
+    if (!error) {
+      setNotes(prev => prev.filter(n => n.id !== id));
+      showAlert('Note supprimée', 'La note a été retirée.');
+    }
+  }
+
   // Biography
   async function saveBiography(fields: Partial<Omit<Biography, 'character_id' | 'updated_at'>>) {
     if (!activeChar) return;
@@ -1153,6 +1209,10 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       handleToggleSave,
     biography, setBiography,
     saveBiography,
+    notes,
+    newNote, setNewNote,
+    handleSaveNote,
+    handleDeleteNote,
     handleSaveItem,
     handleDeleteItem,
     handleToggleItemEquip,

@@ -18,6 +18,7 @@ import { DnDSkillsAndSaves } from './components/DnDSkillsAndSaves';
 import { DnDInventory } from './components/DnDInventory';
 import { DnDBiography } from './components/DnDBiography';
 import { SettingsTab } from './components/SettingsTab';
+import { DnDNotes } from './components/DnDNotes';
 import { BottomNav } from './components/BottomNav';
 import { AppHeader } from './components/AppHeader';
 
@@ -41,6 +42,7 @@ import { AddFamiliarModal } from './components/modals/AddFamiliarModal';
 import { DeathSavingThrowsModal } from './components/modals/DeathSavingThrowsModal';
 import { CraftingModal } from './components/modals/CraftingModal';
 import { ItemActionModal } from './components/modals/ItemActionModal';
+import { AddNoteModal } from './components/modals/AddNoteModal';
 
 export default function App() {
   const t = useThemeClasses();
@@ -59,13 +61,13 @@ export default function App() {
   const data = useCharacterData(auth.user, showAlert);
 
   // Tabs & modal state
-  const [activeTab, setActiveTab] = useState<'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'settings'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'notes' | 'settings'>('home');
   const [transitionDirection, setTransitionDirection] = useState<'left' | 'right'>('left');
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const requestTabChange = (tab: 'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'settings') => {
+  const requestTabChange = (tab: 'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'notes' | 'settings') => {
     if (tab === activeTab) return;
-    const tabs = ['home', 'spells', 'features', 'attributes', 'inventory', 'biography', 'settings'] as const;
+    const tabs = ['home', 'spells', 'features', 'attributes', 'inventory', 'biography', 'notes', 'settings'] as const;
     const nextIndex = tabs.indexOf(tab);
     const currentIndex = tabs.indexOf(activeTab);
     setTransitionDirection(nextIndex > currentIndex ? 'left' : 'right');
@@ -461,6 +463,15 @@ export default function App() {
                   />
                 )}
 
+                {activeTab === 'notes' && (
+                  <DnDNotes
+                    notes={data.notes}
+                    onOpenAddNote={() => { data.setNewNote({ title: '', content: '' }); setModalType('add_note'); }}
+                    onOpenEditNote={(note) => { data.setNewNote({ id: note.id, title: note.title, content: note.content }); setModalType('add_note'); }}
+                    onDeleteNote={data.handleDeleteNote}
+                  />
+                )}
+
                 {activeTab === 'settings' && (
                   <SettingsTab
                     activeCharacterName={data.activeChar?.name}
@@ -602,6 +613,14 @@ export default function App() {
               biography={data.biography}
               onSave={data.saveBiography}
               onClose={() => setModalType(null)}
+            />
+          )}
+          {modalType === 'add_note' && (
+            <AddNoteModal
+              newNote={data.newNote}
+              setNewNote={data.setNewNote}
+              onSubmit={data.handleSaveNote}
+              onClose={() => { data.setNewNote({ title: '', content: '' }); setModalType(null); }}
             />
           )}
         </div>
