@@ -48,6 +48,7 @@ export interface NewItemState {
   quantity: number;
   equipped: boolean;
   category: 'objet' | 'arme' | 'armure' | 'potion' | 'parchemin' | 'objet_magique' | 'composant';
+  crafting_duration_hours?: number | null;
   damage: string;
   range: string;
   defense_bonus: number;
@@ -618,6 +619,8 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       }
     }
 
+    const computedCraftDurationHours = Math.max(8, (normalizedValue / 10) * 4);
+
     const craftedPayload = {
       character_id: activeChar.id,
       name,
@@ -626,13 +629,39 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       weight: 1,
       equipped: false,
       category: recipe.category,
+      crafting_duration_hours: Number(computedCraftDurationHours.toFixed(2)),
     };
 
-    const { data: createdCraftedItem, error: craftedErr } = await supabase
+    let { data: createdCraftedItem, error: craftedErr } = await supabase
       .from('items')
       .insert([craftedPayload])
       .select()
       .single();
+
+    if (craftedErr?.message?.includes("Could not find the 'crafting_duration_hours' column of 'items' in the schema cache")) {
+      const fallbackPayload = {
+        character_id: activeChar.id,
+        name,
+        description: recipe.description.trim() || null,
+        quantity: 1,
+        weight: 1,
+        equipped: false,
+        category: recipe.category,
+      };
+
+      const fallbackInsert = await supabase
+        .from('items')
+        .insert([fallbackPayload])
+        .select()
+        .single();
+
+      createdCraftedItem = fallbackInsert.data;
+      craftedErr = fallbackInsert.error;
+
+      if (!craftedErr) {
+        showAlert('Migration requise', 'Objet cree, mais la duree n\'a pas pu etre enregistree. Appliquez la migration SQL de crafting_duration_hours puis rechargez l\'application.');
+      }
+    }
 
     if (craftedErr || !createdCraftedItem) {
       showAlert('Erreur', craftedErr?.message || 'Impossible d\'ajouter l\'objet cree.');

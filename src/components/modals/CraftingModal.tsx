@@ -169,10 +169,10 @@ export function CraftingModal({ items, onSubmit, onClose }: Props) {
 
   const totalComponents = componentRows.filter(row => row.itemId).length;
 
-  const dropdownTriggerClass = `${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl px-2.5 py-2 w-full text-xs focus:outline-none flex items-center justify-between gap-2`;
-  const dropdownMenuClass = `${t.cardBg} border ${t.cardBorder} rounded-xl mt-1 p-1 shadow-xl max-h-44 overflow-y-auto absolute z-30 w-full`;
-  const dropdownOptionClass = `w-full text-left px-2 py-1.5 rounded-lg text-xs transition-all`;
-  const dropdownActiveClass = `${t.accentBg} ${t.accent} font-semibold`;
+  const dropdownTriggerClass = `${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl px-2.5 py-2 w-full text-xs focus:outline-none flex items-center justify-between gap-2 transition-all shadow-sm hover:brightness-105`;
+  const dropdownMenuClass = `${t.modalBg} border ${t.cardBorder} rounded-xl mt-1 p-1 shadow-2xl max-h-44 overflow-y-auto absolute z-40 w-full backdrop-blur-xl`;
+  const dropdownOptionClass = `w-full text-left px-2 py-1.5 rounded-lg text-xs transition-all ${t.textPrimary} hover:brightness-110`;
+  const dropdownActiveClass = `${t.accentBg} ${t.accent} font-semibold border ${t.accentBorder}`;
   const dropdownDisabledClass = `${t.textMuted} opacity-45 cursor-not-allowed`;
 
   const categoryOptions: DropdownOption[] = ITEM_CATEGORIES.map(option => ({

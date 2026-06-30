@@ -13,6 +13,7 @@ import {
   Funnel,
   Leaf,
   Hammer,
+  Clock3,
 } from "lucide-react";
 
 interface Props {
@@ -52,7 +53,13 @@ export function DnDInventory({
   const isEditingCurrentCharacter = currencyInputs.charId === activeChar.id;
 
   const objectTypeOptions: Array<{
-    key: "all" | "objet" | "potion" | "parchemin" | "objet_magique" | "composant";
+    key:
+      | "all"
+      | "objet"
+      | "potion"
+      | "parchemin"
+      | "objet_magique"
+      | "composant";
     label: string;
   }> = [
     { key: "all", label: "Tout" },
@@ -120,6 +127,39 @@ export function DnDInventory({
     return normalizedCategory === objectFilter;
   });
 
+  const formatCraftingDuration = (hours?: number | string | null) => {
+    if (hours === null || hours === undefined || hours === "") return null;
+    const numericHours = Number(hours);
+    if (!Number.isFinite(numericHours) || numericHours <= 0) return null;
+    const roundedHours = Number(numericHours.toFixed(1));
+    const days = Number((numericHours / 8).toFixed(1));
+    return `${roundedHours}h (${days}j)`;
+  };
+
+  const renderCraftingDurationPill = (hours?: number | string | null) => {
+    const label = formatCraftingDuration(hours);
+    if (!label) return null;
+
+    return (
+      <span
+        className={`inline-flex items-center leading-none gap-1 rounded-full border ${t.accentBorder} ${t.accentBg} ${t.accent} font-semibold h-5 px-1.5 text-[9px]`}
+      >
+        <Clock3 size={10} />
+        {label}
+      </span>
+    );
+  };
+
+  const renderQuantityPill = (quantity: number) => {
+    return (
+      <span
+        className={`inline-flex items-center leading-none gap-1 rounded-full border ${t.inputBorder} ${t.inputBg} ${t.textPrimary} font-semibold h-5 px-1.5 text-[9px]`}
+      >
+        X {quantity}
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-2">
       {/* Purse section */}
@@ -162,10 +202,7 @@ export function DnDInventory({
                   onUpdateCurrency("gold", Math.max(0, Number(nextValue)));
                 }}
                 onBlur={() => {
-                  if (
-                    isEditingCurrentCharacter &&
-                    currencyInputs.gold === ""
-                  ) {
+                  if (isEditingCurrentCharacter && currencyInputs.gold === "") {
                     setCurrencyInputs((prev) => ({
                       ...prev,
                       gold: String(activeChar.gold),
@@ -282,98 +319,133 @@ export function DnDInventory({
             <Sword size={14} /> Équipement
           </h4>
           <div className="space-y-2">
-            {weapons.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => onOpenEditItem(item)}
-                className={`${t.inputBg} rounded-xl p-3 border ${t.cardBorder} flex items-center gap-3 cursor-pointer hover:brightness-105 active:scale-[0.99] transition-all`}
-              >
-                <div
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg ${t.accentBg} border ${t.accentBorder} shrink-0`}
-                >
-                  <Sword size={14} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span
-                    className={`text-xs font-bold ${t.textPrimary} block truncate`}
+            {weapons.map((item) =>
+              (() => {
+                const craftingDurationLabel = formatCraftingDuration(
+                  item.crafting_duration_hours,
+                );
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => onOpenEditItem(item)}
+                    className={`${t.inputBg} rounded-xl p-2 border ${t.cardBorder} flex items-center gap-3 cursor-pointer hover:brightness-105 active:scale-[0.99] transition-all`}
                   >
-                    {item.name}
-                  </span>
-                  {item.description && (
-                    <p className={`text-[10px] ${t.textSecondary} mt-0.5 leading-snug wrap-break-word`}>
-                      {item.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {item.damage && (
-                      <span className={`text-[9px] font-mono ${t.accent}`}>
-                        {item.damage}
-                      </span>
-                    )}
-                    {item.range && (
-                      <span className={`text-[9px] ${t.textMuted}`}>
-                        • {item.range}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onToggleItemEquip(item.id); }}
-                  className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-all shrink-0 ${
-                    item.equipped
-                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
-                      : `${t.btnSecondaryBg} ${t.btnSecondaryText} ${t.btnSecondaryBorder}`
-                  }`}
-                >
-                  {item.equipped ? "ÉQUIPÉ" : "SAC"}
-                </button>
-              </div>
-            ))}
-            {armors.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => onOpenEditItem(item)}
-                className={`${t.inputBg} rounded-xl p-3 border ${t.cardBorder} flex items-center gap-3 cursor-pointer hover:brightness-105 active:scale-[0.99] transition-all`}
-              >
-                <div
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg ${t.accentBg} border ${t.accentBorder} shrink-0`}
-                >
-                  <Shield size={14} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span
-                    className={`text-xs font-bold ${t.textPrimary} block truncate`}
-                  >
-                    {item.name}
-                  </span>
-                  {item.description && (
-                    <p className={`text-[10px] ${t.textSecondary} mt-0.5 leading-snug wrap-break-word`}>
-                      {item.description}
-                    </p>
-                  )}
-                  {item.defense_bonus !== undefined &&
-                    item.defense_bonus > 0 && (
+                    <div
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg ${t.accentBg} border ${t.accentBorder} shrink-0`}
+                    >
+                      <Sword size={14} />
+                    </div>
+                    <div className="flex-1 min-w-0">
                       <span
-                        className={`text-[9px] font-mono ${t.accent} mt-0.5 block`}
+                        className={`text-xs font-bold ${t.textPrimary} block truncate`}
                       >
-                        +{item.defense_bonus} CA
+                        {item.name}
                       </span>
-                    )}
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onToggleItemEquip(item.id); }}
-                  className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-all shrink-0 ${
-                    item.equipped
-                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
-                      : `${t.btnSecondaryBg} ${t.btnSecondaryText} ${t.btnSecondaryBorder}`
-                  }`}
-                >
-                  {item.equipped ? "ÉQUIPÉ" : "SAC"}
-                </button>
-              </div>
-            ))}
+                      {item.description && (
+                        <p
+                          className={`text-[10px] ${t.textSecondary} mt-0.5 leading-snug wrap-break-word`}
+                        >
+                          {item.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {item.damage && (
+                          <span className={`text-[9px] font-mono ${t.accent}`}>
+                            {item.damage}
+                          </span>
+                        )}
+                        {item.range && (
+                          <span className={`text-[9px] ${t.textMuted}`}>
+                            • {item.range}
+                          </span>
+                        )}
+                        {craftingDurationLabel &&
+                          renderCraftingDurationPill(
+                            item.crafting_duration_hours,
+                          )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleItemEquip(item.id);
+                      }}
+                      className={`text-[9px] font-bold px-2 h-5 rounded-xl border transition-all shrink-0 ${
+                        item.equipped
+                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                          : `${t.btnSecondaryBg} ${t.btnSecondaryText} ${t.btnSecondaryBorder}`
+                      }`}
+                    >
+                      {item.equipped ? "Équipé" : "Sac"}
+                    </button>
+                  </div>
+                );
+              })(),
+            )}
+            {armors.map((item) =>
+              (() => {
+                const craftingDurationLabel = formatCraftingDuration(
+                  item.crafting_duration_hours,
+                );
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => onOpenEditItem(item)}
+                    className={`${t.inputBg} rounded-xl p-2 border ${t.cardBorder} flex items-center gap-3 cursor-pointer hover:brightness-105 active:scale-[0.99] transition-all`}
+                  >
+                    <div
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg ${t.accentBg} border ${t.accentBorder} shrink-0`}
+                    >
+                      <Shield size={14} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span
+                        className={`text-xs font-bold ${t.textPrimary} block truncate`}
+                      >
+                        {item.name}
+                      </span>
+                      {item.description && (
+                        <p
+                          className={`text-[10px] ${t.textSecondary} mt-0.5 leading-snug wrap-break-word`}
+                        >
+                          {item.description}
+                        </p>
+                      )}
+                      {item.defense_bonus !== undefined &&
+                        item.defense_bonus > 0 && (
+                          <span
+                            className={`text-[9px] font-mono ${t.accent} mt-0.5 block`}
+                          >
+                            +{item.defense_bonus} CA
+                          </span>
+                        )}
+                      {craftingDurationLabel && (
+                        <div className="mt-1">
+                          {renderCraftingDurationPill(
+                            item.crafting_duration_hours,
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleItemEquip(item.id);
+                      }}
+                      className={`text-[9px] font-bold px-2 h-5 rounded-xl border transition-all shrink-0 ${
+                        item.equipped
+                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                          : `${t.btnSecondaryBg} ${t.btnSecondaryText} ${t.btnSecondaryBorder}`
+                      }`}
+                    >
+                      {item.equipped ? "Équipé" : "Sac"}
+                    </button>
+                  </div>
+                );
+              })(),
+            )}
           </div>
         </div>
       )}
@@ -445,12 +517,15 @@ export function DnDInventory({
             filteredObjects.map((item) => {
               const Icon = getObjectIcon(item.category);
               const tone = getObjectTone(item.category);
+              const craftingDurationLabel = formatCraftingDuration(
+                item.crafting_duration_hours,
+              );
 
               return (
                 <div
                   key={item.id}
                   onClick={() => onOpenEditItem(item)}
-                  className={`${t.inputBg} ${tone.cardTint} p-2.5 rounded-xl border ${t.cardBorder} cursor-pointer transition-all hover:brightness-105 active:scale-[0.99]`}
+                  className={`${t.inputBg} ${tone.cardTint} p-2 rounded-xl border ${t.cardBorder} cursor-pointer transition-all hover:brightness-105 active:scale-[0.99]`}
                 >
                   <div className="flex items-start gap-3">
                     <div
@@ -461,31 +536,28 @@ export function DnDInventory({
 
                     <div className="w-full min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className={`text-xs font-bold ${t.textPrimary} truncate`}>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span
+                            className={`h-6 inline-flex items-center min-w-0 flex-1 text-xs font-bold ${t.textPrimary} truncate leading-none`}
+                          >
                             {item.name}
                           </span>
-                          <span className={`text-[9px] ${t.textMuted} shrink-0`}>
-                            Qté : {item.quantity}
-                          </span>
+                          {craftingDurationLabel && (
+                            <div className="shrink-0">
+                              {renderCraftingDurationPill(
+                                item.crafting_duration_hours,
+                              )}
+                            </div>
+                          )}
+                          <div className="shrink-0">
+                            {renderQuantityPill(item.quantity)}
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleItemEquip(item.id);
-                          }}
-                          className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-all shrink-0 ${
-                            item.equipped
-                              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
-                              : `${t.btnSecondaryBg} ${t.btnSecondaryText} ${t.btnSecondaryBorder}`
-                          }`}
-                        >
-                          {item.equipped ? "ÉQUIPÉ" : "SAC"}
-                        </button>
                       </div>
                       {item.description && (
-                        <p className={`text-[10px] ${t.textSecondary} mt-1 leading-snug wrap-break-word`}>
+                        <p
+                          className={`text-[10px] ${t.textSecondary} mt-1 leading-snug wrap-break-word`}
+                        >
                           {item.description}
                         </p>
                       )}

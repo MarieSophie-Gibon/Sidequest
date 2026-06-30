@@ -82,6 +82,7 @@ export interface Item {
   weight: number;
   equipped: boolean;
   category?: 'objet' | 'arme' | 'armure' | 'potion' | 'parchemin' | 'objet_magique' | 'composant';
+  crafting_duration_hours?: number | null;
   damage?: string;
   range?: string;
   defense_bonus?: number;
