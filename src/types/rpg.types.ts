@@ -64,12 +64,14 @@ export interface Spell {
   range?: string;
   duration?: string;
   components?: string[];
+  material_components?: string;
   casting_type?: 'action' | 'bonus' | 'reaction';
   is_aoe?: boolean;
   save_type?: string;
   save_effect?: string;
   concentration?: boolean;
   damage?: string;
+  upcast_damage?: string;
   desc?: string;
 }
 

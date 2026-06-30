@@ -219,12 +219,20 @@ export function DnDSpellcasting({
                       {spell.damage && (
                         <span className="text-[9px] font-mono font-bold text-rose-300 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-400/50 shadow-[0_0_6px_rgba(251,113,133,0.5)]">⚔ {spell.damage}</span>
                       )}
+                      {spell.upcast_damage && (
+                        <span className="text-[9px] font-mono font-bold text-violet-300 bg-violet-500/10 px-1.5 py-0.5 rounded-md border border-violet-400/50">Niv.sup {spell.upcast_damage}</span>
+                      )}
                       {spell.is_aoe && spell.save_type && (
                         <span className={`text-[9px] font-mono font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20`}>🛡 JS {spell.save_type}{spell.save_effect ? ` · ${spell.save_effect}` : ''}</span>
                       )}
                       {(spell.range || spell.duration) && (
                         <span className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>
                           {[spell.range, spell.duration ? `⏱ ${spell.duration}` : null].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                      {spell.material_components && (
+                        <span className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>
+                          M: {spell.material_components}
                         </span>
                       )}
                     </div>

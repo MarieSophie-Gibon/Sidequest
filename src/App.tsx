@@ -383,12 +383,14 @@ export default function App() {
                         range: spell.range || '',
                         duration: spell.duration || '',
                         components: spell.components || [],
+                        material_components: spell.material_components || '',
                         casting_type: spell.casting_type || 'action',
                         is_aoe: spell.is_aoe || false,
                         save_type: spell.save_type || '',
                         save_effect: spell.save_effect || '',
                         concentration: spell.concentration || false,
                         damage: spell.damage || '',
+                        upcast_damage: spell.upcast_damage || '',
                         desc: spell.desc || '',
                       });
                       setModalType('add_spell');
@@ -533,7 +535,7 @@ export default function App() {
             <EditSpellcastingModal activeChar={data.activeChar} syncCharacterField={data.syncCharacterField} onClose={() => setModalType(null)} />
           )}
           {modalType === 'add_spell' && (
-            <AddSpellModal newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' }); setModalType(null); }} />
+            <AddSpellModal newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], material_components: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', upcast_damage: '', desc: '' }); setModalType(null); }} />
           )}
           {modalType === 'death_saves' && data.activeChar && (
             <DeathSavingThrowsModal

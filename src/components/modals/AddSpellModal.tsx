@@ -16,6 +16,7 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
   const t = useThemeClasses();
   const isEditing = !!newSpell.id;
   const [levelInput, setLevelInput] = useState(String(newSpell.level));
+  const showUpcastDamageInput = Number(levelInput) > 0;
 
   useEffect(() => {
     setLevelInput(String(newSpell.level));
@@ -69,12 +70,17 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
                     <button
                       key={comp}
                       type="button"
-                      onClick={() => setNewSpell(prev => ({
-                        ...prev,
-                        components: active
+                      onClick={() => setNewSpell(prev => {
+                        const nextComponents = active
                           ? prev.components.filter(c => c !== comp)
-                          : [...prev.components, comp],
-                      }))}
+                          : [...prev.components, comp];
+
+                        return {
+                          ...prev,
+                          components: nextComponents,
+                          material_components: nextComponents.includes('M') ? prev.material_components : '',
+                        };
+                      })}
                       className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-lg border transition-all ${
                         active
                           ? `${t.accentBg} ${t.accentBorder} ${t.btnPrimaryText}`
@@ -88,11 +94,37 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
               </div>
             </div>
           </div>
+          {newSpell.components.includes('M') && (
+            <div>
+              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Composants materiels</label>
+              <input
+                type="text"
+                placeholder="ex: Une perle de 100 po"
+                value={newSpell.material_components}
+                onChange={(e) => setNewSpell(prev => ({ ...prev, material_components: e.target.value }))}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Dégâts</label>
               <input type="text" placeholder="1d10 Feu" value={newSpell.damage} onChange={(e) => setNewSpell(prev => ({ ...prev, damage: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
             </div>
+            {showUpcastDamageInput && (
+              <div>
+                <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Dégâts niv. sup</label>
+                <input
+                  type="text"
+                  placeholder="+1d8 / niveau"
+                  value={newSpell.upcast_damage}
+                  onChange={(e) => setNewSpell(prev => ({ ...prev, upcast_damage: e.target.value }))}
+                  className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+                />
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Type</label>
               <div className={`flex ${t.inputBg} border ${t.inputBorder} rounded-xl overflow-hidden`}>

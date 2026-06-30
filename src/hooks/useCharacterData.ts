@@ -32,12 +32,14 @@ export interface NewSpellState {
   range: string;
   duration: string;
   components: string[];
+  material_components: string;
   casting_type: 'action' | 'bonus' | 'reaction';
   is_aoe: boolean;
   save_type: string;
   save_effect: string;
   concentration: boolean;
   damage: string;
+  upcast_damage: string;
   desc: string;
 }
 
@@ -124,7 +126,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   // Modal form states
   const [newFeature, setNewFeature] = useState<NewFeatureState>({ name: '', max: 2, recharge: 'LONG_REST', description: '', category: 'active', type: 'classe', resource_id: '', resource_cost: 0 });
   const [newResource, setNewResource] = useState<NewResourceState>({ name: '', max: 10, current: 10, recharge: 'LONG_REST' });
-  const [newSpell, setNewSpell] = useState<NewSpellState>({ name: '', level: 0, range: '', duration: '', components: [], casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' });
+  const [newSpell, setNewSpell] = useState<NewSpellState>({ name: '', level: 0, range: '', duration: '', components: [], material_components: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', upcast_damage: '', desc: '' });
   const [newFamiliar, setNewFamiliar] = useState<NewFamiliarState>({ name: '', species: '', description: '', hp_current: 1, hp_max: 1, ac: 10, speed: '', str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, passive_perception: 10, senses: '', abilities: '', resistances: '', darkvision: '', actions: '', avatar_url: '', status: 'present' });
   const [newItem, setNewItem] = useState<NewItemState>({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
   const [newSpellSlot, setNewSpellSlot] = useState<NewSpellSlotState>({ level: 1, max: 4, current: 4 });
@@ -418,12 +420,14 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       range: newSpell.range || null,
       duration: newSpell.duration || null,
       components: newSpell.components.length > 0 ? newSpell.components : null,
+      material_components: newSpell.components.includes('M') ? (newSpell.material_components.trim() || null) : null,
       casting_type: newSpell.casting_type,
       is_aoe: newSpell.is_aoe,
       save_type: newSpell.is_aoe ? newSpell.save_type : null,
       save_effect: newSpell.is_aoe ? newSpell.save_effect : null,
       concentration: newSpell.concentration,
       damage: newSpell.damage,
+      upcast_damage: newSpell.upcast_damage || null,
       desc: newSpell.desc || ''
     };
 
@@ -448,7 +452,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       }
     }
 
-    setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', desc: '' });
+    setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], material_components: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', upcast_damage: '', desc: '' });
     return true;
   }
 
