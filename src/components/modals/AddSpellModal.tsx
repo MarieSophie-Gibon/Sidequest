@@ -1,6 +1,6 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import { Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { NewSpellState } from '../../hooks/useCharacterData';
 import { ModalActions, ModalHeader } from './ModalControls';
 
@@ -17,10 +17,6 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
   const isEditing = !!newSpell.id;
   const [levelInput, setLevelInput] = useState(String(newSpell.level));
   const showUpcastDamageInput = Number(levelInput) > 0;
-
-  useEffect(() => {
-    setLevelInput(String(newSpell.level));
-  }, [newSpell.level]);
 
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>

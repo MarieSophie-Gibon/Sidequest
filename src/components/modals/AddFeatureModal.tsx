@@ -1,5 +1,5 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { NewFeatureState } from '../../hooks/useCharacterData';
 import type { Resource } from '../../types/rpg.types';
 import { ModalActions, ModalHeader } from './ModalControls';
@@ -17,14 +17,7 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
   const t = useThemeClasses();
   const [maxInput, setMaxInput] = useState(String(newFeature.max));
   const [resourceCostInput, setResourceCostInput] = useState(String(newFeature.resource_cost));
-
-  useEffect(() => {
-    setMaxInput(String(newFeature.max));
-  }, [newFeature.max]);
-
-  useEffect(() => {
-    setResourceCostInput(String(newFeature.resource_cost));
-  }, [newFeature.resource_cost]);
+  const minMax = newFeature.resource_id ? 0 : 1;
 
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
@@ -66,13 +59,13 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
                 <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Max</label>
                 <input
                   type="number"
-                  min="1"
+                  min={minMax}
                   value={maxInput}
                   onChange={(e) => {
                     const nextValue = e.target.value;
                     setMaxInput(nextValue);
                     if (nextValue === '') return;
-                    setNewFeature(prev => ({ ...prev, max: Math.max(1, Number(nextValue)) }));
+                    setNewFeature(prev => ({ ...prev, max: Math.max(minMax, Number(nextValue)) }));
                   }}
                   onBlur={() => {
                     if (maxInput === '') setMaxInput(String(newFeature.max));
@@ -99,7 +92,14 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
             <div className={`${t.inputBg} border ${t.inputBorder} rounded-xl p-2.5 space-y-2`}>
               <label className={`text-[10px] ${t.textMuted} uppercase block`}>Coût en ressource</label>
               <div className="grid grid-cols-2 gap-2">
-                <select value={newFeature.resource_id} onChange={(e) => setNewFeature(prev => ({ ...prev, resource_id: e.target.value }))} className={`border ${t.inputBorder} rounded-xl p-2 w-full text-xs ${t.inputBg} ${t.textSecondary} focus:outline-none`}>
+                <select value={newFeature.resource_id} onChange={(e) => {
+                    const nextResourceId = e.target.value;
+                    setNewFeature(prev => {
+                      const nextMax = !nextResourceId && prev.max === 0 ? 1 : prev.max;
+                      if (nextMax !== prev.max) setMaxInput(String(nextMax));
+                      return { ...prev, resource_id: nextResourceId, max: nextMax };
+                    });
+                  }} className={`border ${t.inputBorder} rounded-xl p-2 w-full text-xs ${t.inputBg} ${t.textSecondary} focus:outline-none`}>
                   <option value="">— Aucune —</option>
                   {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
