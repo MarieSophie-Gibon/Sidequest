@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { DEFAULT_SKILLS_TEMPLATES } from '../constants';
-import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography, Familiar, CharacterStatKey, Note } from '../types/rpg.types';
+import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography, Familiar, CharacterStatKey, Note, GameSystem } from '../types/rpg.types';
+import { createPf1Data, normalizePf1Data } from '../systems/pf1e/defaults';
+import { computePf1Sheet } from '../systems/pf1e/rules';
+import type { Pf1Data } from '../systems/pf1e/types';
 import type { User } from './useAuth';
 
 export interface NewFeatureState {
@@ -206,7 +209,8 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
   // Spell slots sync
   useEffect(() => {
-    if (!activeChar) return;
+    // Pathfinder 1e calcule ses sorts par jour à partir de la table de classe (system_data).
+    if (!activeChar || activeChar.system === 'pf1e') return;
 
     const activeSpellLevels = [...new Set(spells.map(s => Number(s.level)).filter(lvl => lvl > 0))];
 
@@ -295,6 +299,8 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
   async function syncCharacterField<T extends keyof Character>(field: T, value: Character[T]) {
     if (!activeChar) return;
+    // En Pathfinder 1e, la CA est calculée par le moteur de règles (voir syncPf1Data).
+    if (activeChar.system === 'pf1e' && field === 'ac') return;
     const charId = activeChar.id;
     setActiveChar(prev => (prev ? { ...prev, [field]: value } : prev));
 
@@ -305,6 +311,24 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
     if (error) {
       console.error("Erreur de sauvegarde persistante :", error.message);
+      showAlert('Erreur', getNetworkAwareMessage(error.message, 'La sauvegarde n\'a pas pu etre effectuee.'));
+    }
+  }
+
+  // Pathfinder 1e : enregistre les choix du joueur et met à jour les colonnes affichées
+  // dans la liste des personnages (CA, initiative).
+  async function syncPf1Data(next: Pf1Data, levelOverride?: number) {
+    if (!activeChar) return;
+    const charId = activeChar.id;
+    const level = levelOverride ?? activeChar.level;
+    const sheet = computePf1Sheet(next, level);
+    const patch = { system_data: next, ac: sheet.ac.total, initiative: sheet.initiative.total };
+    setActiveChar(prev => (prev ? { ...prev, ...patch } : prev));
+    setCharacters(prev => prev.map(c => (c.id === charId ? { ...c, ...patch } : c)));
+
+    const { error } = await supabase.from('characters').update(patch).eq('id', charId);
+    if (error) {
+      console.error('Erreur de sauvegarde Pathfinder :', error.message);
       showAlert('Erreur', getNetworkAwareMessage(error.message, 'La sauvegarde n\'a pas pu etre effectuee.'));
     }
   }
@@ -786,7 +810,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   }
 
   // Character creation
-  async function handleCreateCharacter(heroName: string, heroRace: string) {
+  async function handleCreateCharacter(heroName: string, heroRace: string, system: GameSystem = 'dnd5e') {
     if (!user) return;
     if (!heroName.trim()) {
       showAlert("Nom requis", "Veuillez saisir un nom valide.");
@@ -820,7 +844,15 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       silver: 0,
       copper: 0,
       proficiency_bonus: 2,
-      avatar_key: 'horns'
+      avatar_key: 'horns',
+      // Les colonnes de système ne sont envoyées que pour Pathfinder : la création D&D reste identique.
+      ...(system === 'pf1e' && {
+        system,
+        system_data: createPf1Data('guerrier'),
+        house_rules: [],
+        hp_max: 10,
+        hp_current: 10,
+      }),
     };
 
     const { data: createdCharacter, error } = await supabase
@@ -929,6 +961,10 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     setResources(restoredResources);
     for (const r of restoredResources) {
       await supabase.from('resources').update({ current: r.max }).eq('id', r.id);
+    }
+
+    if (activeChar.system === 'pf1e') {
+      await syncPf1Data({ ...normalizePf1Data(activeChar.system_data), spellsUsed: [] });
     }
 
     setActiveConditions([]);
@@ -1195,6 +1231,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     fetchCharactersList,
     loadCharacterData,
     syncCharacterField,
+    syncPf1Data,
     handleSaveFeature,
     handleDeleteFeature,
     handleSaveResource,

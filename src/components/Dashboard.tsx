@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { Character } from '../types/rpg.types';
+import type { Character, GameSystem } from '../types/rpg.types';
+import { GAME_SYSTEM_LABELS } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
 import { Mail, Swords, User } from 'lucide-react';
 
@@ -7,13 +8,14 @@ interface Props {
   characters: Character[];
   emailConfirmed: boolean;
   onLoadCharacter: (charId: string) => void;
-  onCreateCharacter: (name: string, race: string) => Promise<Character | null | undefined>;
+  onCreateCharacter: (name: string, race: string, system: GameSystem) => Promise<Character | null | undefined>;
 }
 
 export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreateCharacter }: Props) {
   const [isCreateHeroModalOpen, setIsCreateHeroModalOpen] = useState(false);
   const [newHeroNameInput, setNewHeroNameInput] = useState('Nouveau Héros');
   const [newHeroRaceInput, setNewHeroRaceInput] = useState('Humain');
+  const [newHeroSystem, setNewHeroSystem] = useState<GameSystem>('dnd5e');
   const t = useThemeClasses();
 
   return (
@@ -50,6 +52,7 @@ export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreat
                 <div className={`text-[9px] font-mono ${t.textMuted} mt-1.5 flex gap-2 uppercase`}>
                   <span>HP: {char.hp_current}/{char.hp_max}</span>
                   <span>CA: {char.ac}</span>
+                  {char.system === 'pf1e' && <span className={t.accent}>PF1</span>}
                 </div>
               </div>
 
@@ -69,6 +72,7 @@ export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreat
             onClick={() => {
               setNewHeroNameInput('Nouveau Héros');
               setNewHeroRaceInput('Humain');
+              setNewHeroSystem('dnd5e');
               setIsCreateHeroModalOpen(true);
             }}
             className={`w-full flex items-center justify-center gap-2.5 ${t.cardBg} border ${t.accentBorder} ${t.accent} rounded-2xl py-3 text-xs font-bold uppercase tracking-widest shadow-md hover:brightness-110 active:scale-[0.98] transition-all`}
@@ -92,7 +96,7 @@ export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreat
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              const created = await onCreateCharacter(newHeroNameInput, newHeroRaceInput);
+              const created = await onCreateCharacter(newHeroNameInput, newHeroRaceInput, newHeroSystem);
               if (created) {
                 setIsCreateHeroModalOpen(false);
                 setNewHeroNameInput('Nouveau Héros');
@@ -102,6 +106,21 @@ export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreat
             className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-5 w-full max-w-sm shadow-2xl ${t.cardShadow} space-y-4 animate-scaleUp`}
           >
             <h3 className={`font-bold ${t.textPrimary} text-sm tracking-wide uppercase`}>Forger un nouveau héros</h3>
+            <div>
+              <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Système de jeu</label>
+              <div className="grid grid-cols-2 gap-2">
+                {(Object.keys(GAME_SYSTEM_LABELS) as GameSystem[]).map(sys => (
+                  <button
+                    key={sys}
+                    type="button"
+                    onClick={() => setNewHeroSystem(sys)}
+                    className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all active:scale-95 ${newHeroSystem === sys ? `bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} ${t.btnPrimaryBorder} shadow-sm` : `${t.inputBg} ${t.inputBorder} ${t.textMuted}`}`}
+                  >
+                    {GAME_SYSTEM_LABELS[sys]}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Nom du héros</label>
               <input
