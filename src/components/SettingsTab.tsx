@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react';
 import { useAppSettings, useThemeClasses } from '../contexts/AppSettingsContext';
 import type { CharacterTheme, ThemeName } from '../contexts/AppSettingsContext';
-import { Sword, Sparkles, Shield, GraduationCap, Trash2, AlertTriangle, Check, Upload, X, Palette } from 'lucide-react';
+import { Sword, Sparkles, Shield, GraduationCap, Trash2, AlertTriangle, Check, Upload, X, Palette, MessageSquare, Coffee } from 'lucide-react';
+import { ContactAdminModal } from './modals/ContactAdminModal';
+import { KOFI_URL } from '../config';
 
 interface Props {
   activeCharacterName?: string;
@@ -44,6 +46,8 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter, characterT
   const { dashboardVisibility, setDashboardVisibility } = settings;
   const t = useThemeClasses();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [contactSent, setContactSent] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Portée des réglages de thème. Sur une fiche, on modifie le personnage par défaut :
@@ -243,6 +247,46 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter, characterT
           ))}
         </div>
       </div>
+
+      {/* Aide et soutien */}
+      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
+        <h4 className={`text-xs font-bold ${t.textSecondary} uppercase tracking-wider mb-3`}>Aide et soutien</h4>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => { setContactSent(false); setContactOpen(true); }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all active:scale-[0.98] ${t.btnSecondaryBg} ${t.btnSecondaryBorder} hover:brightness-105`}
+          >
+            <MessageSquare size={16} className={t.accent} />
+            <span className="min-w-0">
+              <span className={`block text-xs font-semibold ${t.textPrimary}`}>Signaler un bug ou proposer une idée</span>
+              <span className={`block text-[10px] ${t.textMuted}`}>Le message m’arrive directement par e-mail.</span>
+            </span>
+          </button>
+          {contactSent && <p className="text-[11px] text-emerald-400 px-1">Message envoyé, merci ! Je te réponds par e-mail si besoin.</p>}
+          {KOFI_URL && (
+            <a
+              href={KOFI_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all active:scale-[0.98] bg-amber-500/15 border-amber-400/40 hover:bg-amber-500/25"
+            >
+              <Coffee size={16} className="text-amber-300" />
+              <span className="min-w-0">
+                <span className={`block text-xs font-semibold ${t.textPrimary}`}>Soutenir SideQuest sur Ko-fi</span>
+                <span className={`block text-[10px] ${t.textMuted}`}>Un café pour aider à faire vivre l’app.</span>
+              </span>
+            </a>
+          )}
+        </div>
+      </div>
+      {contactOpen && (
+        <ContactAdminModal
+          context={activeCharacterName ? `Personnage affiché : ${activeCharacterName}` : undefined}
+          onSent={() => { setContactOpen(false); setContactSent(true); }}
+          onClose={() => setContactOpen(false)}
+        />
+      )}
 
       {/* Danger zone */}
       {onDeleteCharacter && (

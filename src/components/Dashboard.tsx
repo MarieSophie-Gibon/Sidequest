@@ -8,7 +8,9 @@ const SYSTEM_BADGE: Record<GameSystem, string> = {
   pf1e: 'text-amber-300 bg-amber-500/12 border-amber-400/35',
 };
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { Mail, Swords, User } from 'lucide-react';
+import { Coffee, Mail, MessageSquare, Swords, User } from 'lucide-react';
+import { ContactAdminModal } from './modals/ContactAdminModal';
+import { KOFI_URL } from '../config';
 
 interface Props {
   characters: Character[];
@@ -22,6 +24,8 @@ export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreat
   const [newHeroNameInput, setNewHeroNameInput] = useState('Nouveau Héros');
   const [newHeroRaceInput, setNewHeroRaceInput] = useState('Humain');
   const [newHeroSystem, setNewHeroSystem] = useState<GameSystem>('dnd5e');
+  const [contactOpen, setContactOpen] = useState(false);
+  const [contactSent, setContactSent] = useState(false);
   const t = useThemeClasses();
 
   return (
@@ -106,7 +110,35 @@ export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreat
             </span>
           </div>
         )}
+
+        {/* Aide et soutien : discret, sous l'action principale */}
+        <div className="flex items-center justify-center gap-2 mt-2">
+          <button
+            type="button"
+            onClick={() => { setContactSent(false); setContactOpen(true); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-medium transition-all active:scale-95 ${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.textMuted} hover:${t.accent} hover:brightness-110`}
+          >
+            <MessageSquare size={11} /> {contactSent ? 'Message envoyé, merci !' : 'Bug ou idée ?'}
+          </button>
+          {KOFI_URL && (
+            <a
+              href={KOFI_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-medium transition-all active:scale-95 bg-amber-500/10 border-amber-400/30 ${t.textMuted} hover:text-amber-300 hover:bg-amber-500/20`}
+            >
+              <Coffee size={11} className="text-amber-300" /> Soutenir sur Ko-fi
+            </a>
+          )}
+        </div>
       </div>
+
+      {contactOpen && (
+        <ContactAdminModal
+          onSent={() => { setContactOpen(false); setContactSent(true); }}
+          onClose={() => setContactOpen(false)}
+        />
+      )}
 
       {isCreateHeroModalOpen && (
         <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
