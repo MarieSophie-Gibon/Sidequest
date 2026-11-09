@@ -8,18 +8,22 @@ const SYSTEM_BADGE: Record<GameSystem, string> = {
   pf1e: 'text-amber-300 bg-amber-500/12 border-amber-400/35',
 };
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { Coffee, Mail, MessageSquare, Swords, User } from 'lucide-react';
+import { Coffee, Eye, Mail, MessageSquare, Swords, User, X } from 'lucide-react';
+import type { SharedCharacter } from '../hooks/useCharacterData';
 import { ContactAdminModal } from './modals/ContactAdminModal';
 import { KOFI_URL } from '../config';
 
 interface Props {
   characters: Character[];
+  /** Fiches partagées avec moi par d'autres joueurs (lecture seule). */
+  sharedCharacters: SharedCharacter[];
+  onLeaveShare: (characterId: string) => void;
   emailConfirmed: boolean;
   onLoadCharacter: (charId: string) => void;
   onCreateCharacter: (name: string, race: string, system: GameSystem) => Promise<Character | null | undefined>;
 }
 
-export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreateCharacter }: Props) {
+export function Dashboard({ characters, sharedCharacters, onLeaveShare, emailConfirmed, onLoadCharacter, onCreateCharacter }: Props) {
   const [isCreateHeroModalOpen, setIsCreateHeroModalOpen] = useState(false);
   const [newHeroNameInput, setNewHeroNameInput] = useState('Nouveau Héros');
   const [newHeroRaceInput, setNewHeroRaceInput] = useState('Humain');
@@ -84,6 +88,46 @@ export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreat
           <div className={`tablet:col-span-2 border-2 border-dashed ${t.cardBorder} rounded-2xl p-8 text-center ${t.cardBg}/70`}>
             <p className={`text-sm ${t.textSecondary} italic`}>Aucun aventurier n'est encore enregistré.</p>
           </div>
+        )}
+
+        {/* Fiches que des joueurs ont partagées avec moi (je suis leur MJ) */}
+        {sharedCharacters.length > 0 && (
+          <>
+            <h3 className={`tablet:col-span-2 pt-3 text-[10px] font-bold uppercase tracking-wider ${t.textMuted} flex items-center gap-1.5`}>
+              <Eye size={12} /> Partagées avec moi
+            </h3>
+            {sharedCharacters.map(({ character: char, ownerName }) => (
+              <div
+                key={char.id}
+                onClick={() => onLoadCharacter(char.id)}
+                className={`${t.cardBg} border border-sky-300/30 rounded-2xl flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all shadow-sm ${t.cardShadow}`}
+              >
+                <div className={`w-10 h-10 shrink-0 rounded-xl overflow-hidden ${t.inputBg} flex items-center justify-center`}>
+                  {char.avatar_url
+                    ? <img src={char.avatar_url} alt={char.name} className="w-full h-full object-cover object-top" />
+                    : <User size={18} className={t.textMuted} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`text-xs font-bold ${t.textPrimary} truncate`}>{char.name}</span>
+                    <span className={`shrink-0 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md border leading-none ${SYSTEM_BADGE[char.system ?? 'dnd5e']}`}>
+                      {GAME_SYSTEM_LABELS[char.system ?? 'dnd5e']}
+                    </span>
+                  </div>
+                  <p className={`text-[10px] ${t.textMuted} truncate`}>Fiche de {ownerName} · Niv. {char.level} · PV {char.hp_current}/{char.hp_max}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onLeaveShare(char.id); }}
+                  className={`shrink-0 ${t.textMuted} hover:text-rose-300 transition-colors`}
+                  aria-label={`Ne plus suivre la fiche de ${char.name}`}
+                  title="Ne plus suivre cette fiche"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </>
         )}
       </div>
 

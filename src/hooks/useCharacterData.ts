@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { DEFAULT_SKILLS_TEMPLATES } from '../constants';
 import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography, Familiar, CharacterStatKey, Note, GameSystem } from '../types/rpg.types';
@@ -65,6 +65,19 @@ export interface CraftingComponentSelection {
   quantity: number;
 }
 
+/** Fiche partagée avec l'utilisateur par un autre joueur (lecture seule). */
+export interface SharedCharacter {
+  character: Character;
+  ownerName: string;
+}
+
+/** MJ ayant accès à une fiche. */
+export interface CharacterViewer {
+  viewer_id: string;
+  viewer_name: string | null;
+  created_at: string;
+}
+
 export interface CraftingRecipeInput {
   name: string;
   description: string;
@@ -113,6 +126,7 @@ export interface NewNoteState {
 export function useCharacterData(user: User | null, showAlert: (title: string, text: string) => void) {
   const [view, setView] = useState<'dashboard' | 'sheet'>('dashboard');
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [sharedCharacters, setSharedCharacters] = useState<SharedCharacter[]>([]);
   const [activeChar, setActiveChar] = useState<Character | null>(null);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [spells, setSpells] = useState<Spell[]>([]);
@@ -173,6 +187,67 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     } else {
       setCharacters(data || []);
     }
+    await fetchSharedCharacters();
+  }
+
+  // ── Partage avec un MJ (lecture seule) ────────────────────────────────────
+
+  /** Fiches que d'autres joueurs ont partagées avec l'utilisateur (il en est le MJ). */
+  async function fetchSharedCharacters() {
+    if (!user?.id) { setSharedCharacters([]); return; }
+    const { data, error } = await supabase
+      .from('character_viewers')
+      .select('owner_name, characters(*)')
+      .eq('viewer_id', user.id)
+      .order('created_at', { ascending: false });
+    // Table absente (migration non appliquée) : on ignore, la liste reste vide.
+    if (error) { setSharedCharacters([]); return; }
+    setSharedCharacters(
+      (data as unknown as { owner_name: string | null; characters: Character | null }[])
+        .filter(row => row.characters)
+        .map(row => ({ character: row.characters as Character, ownerName: row.owner_name ?? 'un joueur' })),
+    );
+  }
+
+  /** Crée un lien d'invitation (7 jours) pour la fiche ; renvoie l'URL à envoyer au MJ. */
+  async function createShareLink(characterId: string): Promise<string | null> {
+    const { data, error } = await supabase.from('share_invites').insert([{ character_id: characterId }]).select('token').single();
+    if (error || !data) {
+      showAlert('Erreur', getNetworkAwareMessage(error?.message, 'Impossible de créer le lien de partage.'));
+      return null;
+    }
+    return `${window.location.origin}/?share=${data.token}`;
+  }
+
+  async function fetchCharacterViewers(characterId: string): Promise<CharacterViewer[]> {
+    const { data } = await supabase
+      .from('character_viewers')
+      .select('viewer_id, viewer_name, created_at')
+      .eq('character_id', characterId)
+      .order('created_at');
+    return (data || []) as CharacterViewer[];
+  }
+
+  /** Retire l'accès d'un MJ (par le propriétaire) ou quitte un partage (par le MJ). */
+  async function removeCharacterViewer(characterId: string, viewerId: string) {
+    const { error } = await supabase.from('character_viewers').delete().eq('character_id', characterId).eq('viewer_id', viewerId);
+    if (error) {
+      showAlert('Erreur', getNetworkAwareMessage(error.message, 'Impossible de retirer cet accès.'));
+      return false;
+    }
+    await fetchSharedCharacters();
+    return true;
+  }
+
+  /** Le MJ ouvre un lien de partage : accès rattaché à son compte, puis ouverture de la fiche. */
+  async function acceptShare(token: string) {
+    const { data: characterId, error } = await supabase.rpc('accept_share', { p_token: token });
+    if (error || !characterId) {
+      showAlert('Partage', error?.message || 'Ce lien de partage est invalide ou a expiré.');
+      return;
+    }
+    await fetchSharedCharacters();
+    await loadCharacterData(characterId as string);
   }
 
   // Init: check session
@@ -247,8 +322,9 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     updateSlots();
   }, [spells, activeChar]);
 
-  async function loadCharacterData(charId: string) {
-    setLoading(true);
+  /** `silent` : rechargement en arrière-plan (temps réel), sans écran de chargement. */
+  async function loadCharacterData(charId: string, opts: { silent?: boolean } = {}) {
+    if (!opts.silent) setLoading(true);
     try {
       const { data: char, error: charErr } = await supabase.from('characters').select('*').eq('id', charId).single();
       if (charErr) throw charErr;
@@ -289,12 +365,12 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       }
       setResources((rcs || []) as Resource[]);
 
-      setView('sheet');
+      if (!opts.silent) setView('sheet');
     } catch (e: unknown) {
       console.error("Erreur de chargement :", (e as Error).message);
-      showAlert('Erreur', getNetworkAwareMessage((e as Error)?.message, 'Impossible de charger la fiche.'));
+      if (!opts.silent) showAlert('Erreur', getNetworkAwareMessage((e as Error)?.message, 'Impossible de charger la fiche.'));
     } finally {
-      setLoading(false);
+      if (!opts.silent) setLoading(false);
     }
   }
 
@@ -1360,6 +1436,48 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     reader.readAsDataURL(file);
   }
 
+  // ── Lecture seule et temps réel ───────────────────────────────────────────
+
+  /** Fiche d'un autre joueur, consultée par son MJ : aucune modification possible. */
+  const readOnly = !!activeChar && !!user && activeChar.user_id !== user.id;
+
+  // Le MJ voit les changements du joueur en direct : à chaque modification d'une table
+  // de la fiche, rechargement silencieux (regroupé sur 300 ms).
+  const reloadRef = useRef(loadCharacterData);
+  reloadRef.current = loadCharacterData;
+  const liveCharId = view === 'sheet' && readOnly ? activeChar?.id : undefined;
+  useEffect(() => {
+    if (!liveCharId) return;
+    let timer: number | undefined;
+    const reload = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => reloadRef.current(liveCharId, { silent: true }), 300);
+    };
+    const channel = supabase
+      .channel(`fiche-${liveCharId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'characters', filter: `id=eq.${liveCharId}` }, reload);
+    for (const table of ['resources', 'features', 'spells', 'items', 'familiars', 'character_skills', 'spell_slots', 'character_biography']) {
+      channel.on('postgres_changes', { event: '*', schema: 'public', table, filter: `character_id=eq.${liveCharId}` }, reload);
+    }
+    channel.subscribe();
+    return () => {
+      window.clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [liveCharId]);
+
+  /** En lecture seule, toute action d'écriture est bloquée (la base le refuse aussi, via la RLS). */
+  function guard<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R {
+    return (...args: A): R => {
+      if (readOnly) {
+        showAlert('Lecture seule', 'Cette fiche appartient à un autre joueur : tu peux la consulter, pas la modifier.');
+        // Promesse résolue « vide » : compatible avec les appels attendus (await, .then, if (ok)).
+        return Promise.resolve(undefined) as unknown as R;
+      }
+      return fn(...args);
+    };
+  }
+
   return {
     // State
     view, setView,
@@ -1383,51 +1501,58 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     newSpellSlot, setNewSpellSlot,
     // Actions
     fetchCharactersList,
+    // Partage MJ
+    readOnly,
+    sharedCharacters,
+    createShareLink,
+    fetchCharacterViewers,
+    removeCharacterViewer,
+    acceptShare,
     loadCharacterData,
-    syncCharacterField,
-    syncPf1Data,
-    handleSaveFeature,
-    handleDeleteFeature,
-    handleSaveResource,
-    handleDeleteResource,
-    handleUpdateResourceCurrent,
-    toggleFeatureUse,
-    handleToggleSpellSlot,
-    handleAddSpell,
-    handleDeleteSpell,
-    handleSaveFamiliar,
-    handleDeleteFamiliar,
-    handleFamiliarAvatarUpload,
-    handleUpdateFamiliarHp,
-    handleToggleSkill,
+    syncCharacterField: guard(syncCharacterField),
+    syncPf1Data: guard(syncPf1Data),
+    handleSaveFeature: guard(handleSaveFeature),
+    handleDeleteFeature: guard(handleDeleteFeature),
+    handleSaveResource: guard(handleSaveResource),
+    handleDeleteResource: guard(handleDeleteResource),
+    handleUpdateResourceCurrent: guard(handleUpdateResourceCurrent),
+    toggleFeatureUse: guard(toggleFeatureUse),
+    handleToggleSpellSlot: guard(handleToggleSpellSlot),
+    handleAddSpell: guard(handleAddSpell),
+    handleDeleteSpell: guard(handleDeleteSpell),
+    handleSaveFamiliar: guard(handleSaveFamiliar),
+    handleDeleteFamiliar: guard(handleDeleteFamiliar),
+    handleFamiliarAvatarUpload: guard(handleFamiliarAvatarUpload),
+    handleUpdateFamiliarHp: guard(handleUpdateFamiliarHp),
+    handleToggleSkill: guard(handleToggleSkill),
       saveThrows,
-      handleToggleSave,
+      handleToggleSave: guard(handleToggleSave),
     biography, setBiography,
-    saveBiography,
+    saveBiography: guard(saveBiography),
     notes,
     newNote, setNewNote,
-    handleSaveNote,
-    handleDeleteNote,
-    handleSaveItem,
-    handleDeleteItem,
-    handleToggleItemEquip,
-    handleUseItem,
-    handleSellItem,
-    handleCraftItem,
+    handleSaveNote: guard(handleSaveNote),
+    handleDeleteNote: guard(handleDeleteNote),
+    handleSaveItem: guard(handleSaveItem),
+    handleDeleteItem: guard(handleDeleteItem),
+    handleToggleItemEquip: guard(handleToggleItemEquip),
+    handleUseItem: guard(handleUseItem),
+    handleSellItem: guard(handleSellItem),
+    handleCraftItem: guard(handleCraftItem),
     handleCreateCharacter,
-    handleDeleteCharacter,
-    handleShortRest,
-    handleLongRest,
-    handlePf1NightRest,
-    handlePf1StartCraftProject,
-    handlePf1CraftCheck,
-    handlePf1AbandonCraftProject,
-    handlePf1CraftMagicItem,
-    applyDamage,
-    applyHealing,
+    handleDeleteCharacter: guard(handleDeleteCharacter),
+    handleShortRest: guard(handleShortRest),
+    handleLongRest: guard(handleLongRest),
+    handlePf1NightRest: guard(handlePf1NightRest),
+    handlePf1StartCraftProject: guard(handlePf1StartCraftProject),
+    handlePf1CraftCheck: guard(handlePf1CraftCheck),
+    handlePf1AbandonCraftProject: guard(handlePf1AbandonCraftProject),
+    handlePf1CraftMagicItem: guard(handlePf1CraftMagicItem),
+    applyDamage: guard(applyDamage),
+    applyHealing: guard(applyHealing),
     getModValue,
-    handleSpendHitDie,
-    handleRecoverHitDie,
-    handleAvatarUpload
+    handleSpendHitDie: guard(handleSpendHitDie),
+    handleRecoverHitDie: guard(handleRecoverHitDie),
+    handleAvatarUpload: guard(handleAvatarUpload)
   };
 }

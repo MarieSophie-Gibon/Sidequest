@@ -6,7 +6,7 @@ import { useSwipeNav } from './hooks/useSwipeNav';
 import { useThemeClasses, useAppSettings } from './contexts/AppSettingsContext';
 import type { CharacterTheme } from './contexts/AppSettingsContext';
 import type { Character, CoreAttribute, Feature, Item, Familiar, Spell } from './types/rpg.types';
-import { Swords, User } from 'lucide-react';
+import { Eye, Swords, User } from 'lucide-react';
 
 // Components
 import { AuthScreen } from './components/AuthScreen';
@@ -19,6 +19,7 @@ import { DnDSkillsAndSaves } from './components/DnDSkillsAndSaves';
 import { DnDInventory } from './components/DnDInventory';
 import { DnDBiography } from './components/DnDBiography';
 import { SettingsTab } from './components/SettingsTab';
+import { CharacterShareCard } from './components/CharacterShareCard';
 import { DnDNotes } from './components/DnDNotes';
 import { BottomNav } from './components/BottomNav';
 import { AppHeader } from './components/AppHeader';
@@ -60,6 +61,10 @@ import type { Pf1Attack } from './systems/pf1e/types';
 /** Thème fixe de l'accueil : violet, fond clair flouté (le voile d'étoiles est toujours affiché). */
 const HOME_THEME: CharacterTheme = { themeName: 'violet', bgChoice: 'light', bgOverlay: true };
 
+/** Fenêtres de pure consultation, autorisées sur une fiche en lecture seule. */
+const READ_ONLY_MODALS = new Set(['pf1_help']);
+const PENDING_SHARE_KEY = 'sidequest_pending_share';
+
 export default function App() {
   const t = useThemeClasses();
   const settings = useAppSettings();
@@ -93,9 +98,38 @@ export default function App() {
 
   const swipe = useSwipeNav(activeTab, requestTabChange);
 
-  const [modalType, setModalType] = useState<string | null>(null);
+  const [modalType, setModalTypeState] = useState<string | null>(null);
+  // Fiche en lecture seule (MJ) : seules les fenêtres de consultation s'ouvrent.
+  const setModalType = (next: string | null) => {
+    if (data.readOnly && next !== null && !READ_ONLY_MODALS.has(next)) {
+      showAlert('Lecture seule', 'Cette fiche appartient à un autre joueur : tu peux la consulter, pas la modifier.');
+      return;
+    }
+    setModalTypeState(next);
+  };
   const [itemActionTarget, setItemActionTarget] = useState<Item | null>(null);
   const [pf1AttackTarget, setPf1AttackTarget] = useState<Pf1Attack | null>(null);
+
+  // Lien de partage MJ (?share=<jeton>) : mis de côté jusqu'à la connexion, puis accepté.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('share');
+    if (!token) return;
+    try { sessionStorage.setItem(PENDING_SHARE_KEY, token); } catch { /* stockage indisponible */ }
+    params.delete('share');
+    const query = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+  }, []);
+  const userId = auth.user?.id;
+  const { acceptShare } = data;
+  useEffect(() => {
+    if (!userId) return;
+    let token: string | null = null;
+    try { token = sessionStorage.getItem(PENDING_SHARE_KEY); sessionStorage.removeItem(PENDING_SHARE_KEY); } catch { /* stockage indisponible */ }
+    if (token) acceptShare(token);
+    // acceptShare change d'identité à chaque rendu : on ne réagit qu'à la connexion.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   // Thème : sur une fiche, celui du personnage (ou le thème de l'app s'il n'en a pas) ;
   // hors fiche (accueil, sélection du PJ, connexion), toujours le thème d'accueil fixe.
@@ -373,6 +407,8 @@ export default function App() {
           {data.view === 'dashboard' && (
             <Dashboard
               characters={data.characters}
+              sharedCharacters={data.sharedCharacters}
+              onLeaveShare={(id) => { if (auth.user) data.removeCharacterViewer(id, auth.user.id); }}
               emailConfirmed={!!auth.user.email_confirmed_at}
               onLoadCharacter={(id) => data.loadCharacterData(id)}
               onCreateCharacter={(name, race, system) => data.handleCreateCharacter(name, race, system)}
@@ -382,6 +418,15 @@ export default function App() {
           {/* CHARACTER SHEET */}
           {data.view === 'sheet' && data.activeChar && (
             <div className="flex flex-col flex-1 overflow-hidden" onTouchStart={swipe.onTouchStart} onTouchEnd={swipe.onTouchEnd}>
+              {data.readOnly && (
+                <div className="mb-2 flex items-center justify-center gap-2 rounded-xl border border-sky-300/40 bg-sky-500/15 px-3 py-1.5 text-[10px] font-semibold text-sky-100 shrink-0">
+                  <Eye size={12} />
+                  <span className="truncate">
+                    Lecture seule · fiche de {data.sharedCharacters.find(s => s.character.id === data.activeChar!.id)?.ownerName ?? 'un joueur'}
+                  </span>
+                  <span className="flex items-center gap-1 shrink-0 text-emerald-300"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> en direct</span>
+                </div>
+              )}
               {pf1Data && pf1Sheet ? (
                 <Pf1CombatHUD
                   activeChar={data.activeChar}
@@ -577,9 +622,18 @@ export default function App() {
                 {activeTab === 'settings' && (
                   <SettingsTab
                     activeCharacterName={data.activeChar?.name}
-                    characterTheme={data.activeChar.theme ?? null}
-                    onChangeCharacterTheme={(theme) => data.syncCharacterField('theme', theme)}
-                    onDeleteCharacter={data.handleDeleteCharacter}
+                    // Fiche d'un autre joueur : ni thème de fiche, ni suppression, ni partage.
+                    characterTheme={data.readOnly ? undefined : data.activeChar.theme ?? null}
+                    onChangeCharacterTheme={data.readOnly ? undefined : (theme) => data.syncCharacterField('theme', theme)}
+                    onDeleteCharacter={data.readOnly ? undefined : data.handleDeleteCharacter}
+                    shareSection={!data.readOnly && (
+                      <CharacterShareCard
+                        characterId={data.activeChar.id}
+                        createShareLink={data.createShareLink}
+                        fetchCharacterViewers={data.fetchCharacterViewers}
+                        removeCharacterViewer={data.removeCharacterViewer}
+                      />
+                    )}
                   />
                 )}
                 </div>
