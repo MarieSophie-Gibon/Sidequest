@@ -19,6 +19,8 @@ interface DnDSpellcastingProps {
   /** Remplace le titre et l'indication du bloc d'emplacements. */
   slotsTitle?: string;
   slotsHint?: string;
+  /** Bouton supplémentaire sur chaque ligne de sort (ex. « Préparer » en Pathfinder). */
+  renderSpellAction?: (spell: Spell) => ReactNode;
 }
 
 export function DnDSpellcasting({
@@ -34,6 +36,7 @@ export function DnDSpellcasting({
   header,
   slotsTitle = 'Emplacements de Sorts',
   slotsHint = 'Cliquer un niveau pour ajuster',
+  renderSpellAction,
 }: DnDSpellcastingProps) {
   const t = useThemeClasses();
   const accentHex = t.accent.includes('violet') ? '#a78bfa' : '#3b82f6';
@@ -220,6 +223,7 @@ export function DnDSpellcasting({
                     <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-lg border ${getLevelBadgeClass(spell.level)}`}>
                       {spell.level === 0 ? 'Mineur' : `Niv ${spell.level}`}
                     </span>
+                    {renderSpellAction && <span onClick={(e) => e.stopPropagation()}>{renderSpellAction(spell)}</span>}
                   </div>
                 </div>
                 {isExpanded && (

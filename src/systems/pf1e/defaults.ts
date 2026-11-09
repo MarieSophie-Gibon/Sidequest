@@ -20,6 +20,9 @@ export function createPf1Data(classId = 'guerrier'): Pf1Data {
     castingStat: cls.castingStat,
     spellsPerDayBase: classSpellsPerDay(cls.id, 1) ?? [],
     spellsUsed: [],
+    prepared: [],
+    maneuvers: {},
+    craftProjects: [],
     favoredClassBonus: 'hp',
     armor: null,
     shield: null,
@@ -54,6 +57,9 @@ export function normalizePf1Data(raw: unknown): Pf1Data {
     classSkills: Array.isArray(r.classSkills) ? r.classSkills : base.classSkills,
     spellsPerDayBase: Array.isArray(r.spellsPerDayBase) ? r.spellsPerDayBase : base.spellsPerDayBase,
     spellsUsed: Array.isArray(r.spellsUsed) ? r.spellsUsed : [],
+    prepared: Array.isArray(r.prepared) ? r.prepared : [],
+    maneuvers: { ...(r.maneuvers ?? {}) },
+    craftProjects: Array.isArray(r.craftProjects) ? r.craftProjects : [],
   };
 }
 

@@ -4,7 +4,8 @@ import { DEFAULT_SKILLS_TEMPLATES } from '../constants';
 import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography, Familiar, CharacterStatKey, Note, GameSystem } from '../types/rpg.types';
 import { createPf1Data, normalizePf1Data } from '../systems/pf1e/defaults';
 import { computePf1Sheet } from '../systems/pf1e/rules';
-import type { Pf1Data } from '../systems/pf1e/types';
+import type { Pf1CraftProject, Pf1Data } from '../systems/pf1e/types';
+import { formatCp, magicCheck, magicCostCp, mundaneCheck, mundaneMaterialsCp, payFromPurse } from '../systems/pf1e/crafting';
 import type { User } from './useAuth';
 
 export interface NewFeatureState {
@@ -863,6 +864,14 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
     if (error || !createdCharacter) {
       console.error('Erreur creation personnage :', error?.message);
+      const rawMessage = (error?.message || '').toLowerCase();
+      const missingColumn = error?.code === '42703' || error?.code === 'PGRST204'
+        || (rawMessage.includes('column') && (rawMessage.includes('does not exist') || rawMessage.includes('schema cache')));
+      if (missingColumn) {
+        showAlert('Migration requise', 'La base de donnees n\'est pas a jour pour ce systeme de jeu. Appliquez la migration SQL add_game_system puis reessayez.');
+        setLoading(false);
+        return null;
+      }
       const baseMessage = getNetworkAwareMessage(error?.message, 'Erreur lors de la creation du personnage.');
       showAlert('Erreur', baseMessage === error?.message ? 'Impossible de creer le personnage pour le moment. Reessayez dans quelques instants.' : baseMessage);
       setLoading(false);
@@ -964,11 +973,156 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     }
 
     if (activeChar.system === 'pf1e') {
-      await syncPf1Data({ ...normalizePf1Data(activeChar.system_data), spellsUsed: [] });
+      const pf1 = normalizePf1Data(activeChar.system_data);
+      await syncPf1Data({ ...pf1, spellsUsed: [], prepared: pf1.prepared.map(p => ({ ...p, cast: false })) });
     }
 
     setActiveConditions([]);
     showAlert("Repos Long", "Tout est réinitialisé et prêt.");
+  }
+
+  /**
+   * Pathfinder 1e : nuit de repos (8 h). Pas de repos court ni de dés de vie.
+   * Rend niveau PV (2 × niveau pour une journée entière d'alitement), recharge les capacités
+   * quotidiennes et les sorts. Les états ne sont pas effacés : chacun a sa propre durée.
+   */
+  async function handlePf1NightRest(bedRest = false) {
+    if (!activeChar || activeChar.system !== 'pf1e') return;
+    const healed = activeChar.level * (bedRest ? 2 : 1);
+    const nextHp = Math.min(activeChar.hp_max, activeChar.hp_current + healed);
+    setActiveChar(prev => (prev ? { ...prev, hp_current: nextHp } : prev));
+    await supabase.from('characters').update({ hp_current: nextHp }).eq('id', activeChar.id);
+
+    // Toutes les capacités actives sont quotidiennes en PF1 (quel que soit le réglage de recharge).
+    const { data: currentFeats } = await supabase.from('features').select('*').eq('character_id', activeChar.id);
+    if (currentFeats && currentFeats.length > 0) {
+      const toRestore = (currentFeats as Feature[]).filter(f => f.category === 'active');
+      await Promise.all(toRestore.map(f => supabase.from('features').update({ current: f.max }).eq('id', f.id)));
+      setFeatures((currentFeats as Feature[]).map(f => (f.category === 'active' ? { ...f, current: f.max } : f)));
+    }
+
+    setResources(prev => prev.map(r => ({ ...r, current: r.max })));
+    await Promise.all(resources.map(r => supabase.from('resources').update({ current: r.max }).eq('id', r.id)));
+
+    const pf1 = normalizePf1Data(activeChar.system_data);
+    await syncPf1Data({ ...pf1, spellsUsed: [], prepared: pf1.prepared.map(p => ({ ...p, cast: false })) });
+
+    showAlert(
+      bedRest ? 'Journée d’alitement' : 'Nuit de repos',
+      `+${nextHp - activeChar.hp_current} PV, capacités quotidiennes et sorts rechargés. Pense à préparer tes sorts.`,
+    );
+  }
+
+  // ── Artisanat Pathfinder 1e ────────────────────────────────────────────────
+
+  /** Retire un montant (en pc) de la bourse en rendant la monnaie. false si la bourse ne suffit pas. */
+  async function spendFromPurse(costCp: number): Promise<boolean> {
+    if (!activeChar) return false;
+    const next = payFromPurse({ gold: activeChar.gold, silver: activeChar.silver, copper: activeChar.copper }, costCp);
+    if (!next) return false;
+    setActiveChar(prev => (prev ? { ...prev, ...next } : prev));
+    const { error } = await supabase.from('characters').update(next).eq('id', activeChar.id);
+    if (error) {
+      showAlert('Erreur', getNetworkAwareMessage(error.message, 'La bourse n\'a pas pu etre mise a jour.'));
+      return false;
+    }
+    return true;
+  }
+
+  async function addCraftedItem(fields: { name: string; description?: string; category: Item['category']; crafting_duration_hours?: number }) {
+    if (!activeChar) return false;
+    const { data: created, error } = await supabase
+      .from('items')
+      .insert([{ character_id: activeChar.id, quantity: 1, weight: 1, equipped: false, ...fields, description: fields.description || null }])
+      .select()
+      .single();
+    if (error || !created) {
+      showAlert('Erreur', error?.message || 'Impossible d\'ajouter l\'objet a l\'inventaire.');
+      return false;
+    }
+    setItems(prev => [...prev, created as Item]);
+    return true;
+  }
+
+  /** Lance un projet d'artisanat ordinaire : paie les matières premières (1/3 du prix). */
+  async function handlePf1StartCraftProject(project: Omit<Pf1CraftProject, 'id' | 'progressSp' | 'log' | 'materialsCp'>) {
+    if (!activeChar || activeChar.system !== 'pf1e') return false;
+    const materialsCp = mundaneMaterialsCp(project.priceGp);
+    if (!(await spendFromPurse(materialsCp))) {
+      showAlert('Bourse insuffisante', `Les matières premières coûtent ${formatCp(materialsCp)}.`);
+      return false;
+    }
+    const pf1 = normalizePf1Data(activeChar.system_data);
+    await syncPf1Data({ ...pf1, craftProjects: [...pf1.craftProjects, { ...project, id: crypto.randomUUID(), materialsCp, progressSp: 0, log: [] }] });
+    showAlert('Projet lancé', `${project.name} : ${formatCp(materialsCp)} de matières premières payés.`);
+    return true;
+  }
+
+  /** Enregistre un test d'Artisanat (semaine ou jour) sur un projet ; crée l'objet une fois terminé. */
+  async function handlePf1CraftCheck(projectId: string, total: number, period: 'week' | 'day') {
+    if (!activeChar || activeChar.system !== 'pf1e') return;
+    const pf1 = normalizePf1Data(activeChar.system_data);
+    const project = pf1.craftProjects.find(p => p.id === projectId);
+    if (!project) return;
+
+    const result = mundaneCheck(total, project.dc, period);
+    const progressSp = project.progressSp + result.progressSp;
+    const entry = { date: new Date().toISOString(), period, total, progressSp: result.progressSp, outcome: result.outcome };
+    const others = pf1.craftProjects.filter(p => p.id !== projectId);
+
+    if (result.outcome === 'ruined') {
+      const halfCp = Math.round(project.materialsCp / 2);
+      const repaid = await spendFromPurse(halfCp);
+      showAlert('Matières gâchées', repaid
+        ? `Échec de 5 ou plus : la moitié des matières est perdue, ${formatCp(halfCp)} rachetés.`
+        : `Échec de 5 ou plus : il faut racheter ${formatCp(halfCp)} de matières, mais la bourse ne suffit pas.`);
+    } else if (result.outcome === 'no-progress') {
+      showAlert('Pas de progrès', `${total} contre DD ${project.dc} : échec de 4 ou moins, aucune progression.`);
+    }
+
+    if (progressSp >= project.priceGp * 10) {
+      const ok = await addCraftedItem({ name: project.name, description: project.description, category: project.category });
+      if (ok) {
+        await syncPf1Data({ ...pf1, craftProjects: others });
+        showAlert('Objet terminé', `${project.name} rejoint l'inventaire.`);
+      }
+      return;
+    }
+
+    await syncPf1Data({ ...pf1, craftProjects: [...others, { ...project, progressSp, log: [...project.log, entry].slice(-20) }] });
+  }
+
+  async function handlePf1AbandonCraftProject(projectId: string) {
+    if (!activeChar || activeChar.system !== 'pf1e') return;
+    const pf1 = normalizePf1Data(activeChar.system_data);
+    await syncPf1Data({ ...pf1, craftProjects: pf1.craftProjects.filter(p => p.id !== projectId) });
+  }
+
+  /** Crée un objet magique : paie la moitié du prix de base, puis applique le test d'Art de la magie. */
+  async function handlePf1CraftMagicItem(input: {
+    name: string; description: string; category: Item['category']; basePriceGp: number; dc: number; total: number; hours: number;
+  }) {
+    if (!activeChar || activeChar.system !== 'pf1e') return false;
+    const costCp = magicCostCp(input.basePriceGp);
+    if (!(await spendFromPurse(costCp))) {
+      showAlert('Bourse insuffisante', `La création coûte ${formatCp(costCp)}.`);
+      return false;
+    }
+    const outcome = magicCheck(input.total, input.dc);
+    if (outcome === 'failure') {
+      showAlert('Création ratée', `${input.total} contre DD ${input.dc} : les matériaux (${formatCp(costCp)}) sont perdus.`);
+      return true;
+    }
+    const description = outcome === 'cursed'
+      ? `${input.description ? `${input.description}\n` : ''}⚠ Échec de 5 ou plus au test de création : objet maudit (voir avec le MJ).`
+      : input.description;
+    const ok = await addCraftedItem({ name: input.name, description, category: input.category, crafting_duration_hours: input.hours });
+    if (ok) {
+      showAlert(outcome === 'cursed' ? 'Objet maudit' : 'Objet créé', outcome === 'cursed'
+        ? `${input.name} est créé, mais maudit (échec de 5 ou plus). Voir avec le MJ.`
+        : `${input.name} rejoint l'inventaire (${formatCp(costCp)} dépensés).`);
+    }
+    return ok;
   }
 
   // HP management
@@ -1264,6 +1418,11 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     handleDeleteCharacter,
     handleShortRest,
     handleLongRest,
+    handlePf1NightRest,
+    handlePf1StartCraftProject,
+    handlePf1CraftCheck,
+    handlePf1AbandonCraftProject,
+    handlePf1CraftMagicItem,
     applyDamage,
     applyHealing,
     getModValue,

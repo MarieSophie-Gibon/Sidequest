@@ -4,8 +4,9 @@ import { useAuth } from './hooks/useAuth';
 import { useCharacterData } from './hooks/useCharacterData';
 import { useSwipeNav } from './hooks/useSwipeNav';
 import { useThemeClasses, useAppSettings } from './contexts/AppSettingsContext';
-import type { Character, CoreAttribute, Feature, Item, Familiar } from './types/rpg.types';
-import { User } from 'lucide-react';
+import type { CharacterTheme } from './contexts/AppSettingsContext';
+import type { Character, CoreAttribute, Feature, Item, Familiar, Spell } from './types/rpg.types';
+import { Swords, User } from 'lucide-react';
 
 // Components
 import { AuthScreen } from './components/AuthScreen';
@@ -47,11 +48,17 @@ import { AddNoteModal } from './components/modals/AddNoteModal';
 // Pathfinder 1e
 import { Pf1CombatHUD } from './components/pf1e/Pf1CombatHUD';
 import { Pf1SheetTab } from './components/pf1e/Pf1SheetTab';
-import { Pf1SpellHeader } from './components/pf1e/Pf1SpellHeader';
+import { Pf1DefenseSection } from './components/pf1e/Pf1DefenseSection';
+import { Pf1ActionsTab } from './components/pf1e/Pf1ActionsTab';
+import { Pf1CraftingModal } from './components/pf1e/Pf1CraftingModal';
+import { Pf1CraftProjectsCard } from './components/pf1e/Pf1CraftProjectsCard';
 import { Pf1AttackModal, Pf1BuildModal, Pf1DefenseModal, Pf1HelpModal, Pf1MagicModal } from './components/pf1e/Pf1Modals';
 import { HOUSE_RULE_ELEPHANT, normalizePf1Data } from './systems/pf1e/defaults';
 import { computePf1Sheet } from './systems/pf1e/rules';
 import type { Pf1Attack } from './systems/pf1e/types';
+
+/** Thème fixe de l'accueil : violet, fond clair flouté (le voile d'étoiles est toujours affiché). */
+const HOME_THEME: CharacterTheme = { themeName: 'violet', bgChoice: 'light', bgOverlay: true };
 
 export default function App() {
   const t = useThemeClasses();
@@ -89,6 +96,14 @@ export default function App() {
   const [modalType, setModalType] = useState<string | null>(null);
   const [itemActionTarget, setItemActionTarget] = useState<Item | null>(null);
   const [pf1AttackTarget, setPf1AttackTarget] = useState<Pf1Attack | null>(null);
+
+  // Thème : sur une fiche, celui du personnage (ou le thème de l'app s'il n'en a pas) ;
+  // hors fiche (accueil, sélection du PJ, connexion), toujours le thème d'accueil fixe.
+  const { setCharacterTheme } = settings;
+  const sheetTheme = data.view === 'sheet' ? (data.activeChar?.theme ?? null) : HOME_THEME;
+  useEffect(() => {
+    setCharacterTheme(sheetTheme);
+  }, [sheetTheme, setCharacterTheme]);
 
   useEffect(() => {
     if (!isTransitioning) return;
@@ -207,6 +222,27 @@ export default function App() {
     for (let i = 0; i <= level; i++) spellsUsed[i] = spellsUsed[i] ?? 0;
     spellsUsed[level] = slot.max - nextCurrent;
     data.syncPf1Data({ ...pf1Data, spellsUsed });
+  };
+
+  const openEditSpell = (spell: Spell) => {
+    data.setNewSpell({
+      id: spell.id,
+      name: spell.name,
+      level: spell.level,
+      range: spell.range || '',
+      duration: spell.duration || '',
+      components: spell.components || [],
+      material_components: spell.material_components || '',
+      casting_type: spell.casting_type || 'action',
+      is_aoe: spell.is_aoe || false,
+      save_type: spell.save_type || '',
+      save_effect: spell.save_effect || '',
+      concentration: spell.concentration || false,
+      damage: spell.damage || '',
+      upcast_damage: spell.upcast_damage || '',
+      desc: spell.desc || '',
+    });
+    setModalType('add_spell');
   };
 
   const renderActiveAvatar = (character: Character) => {
@@ -404,51 +440,45 @@ export default function App() {
                     onToggleFeatureUse={data.toggleFeatureUse}
                     onShortRest={data.handleShortRest}
                     onLongRest={data.handleLongRest}
+                    onPf1Rest={pf1Data ? data.handlePf1NightRest : undefined}
                     onUpdateResourceCurrent={data.handleUpdateResourceCurrent}
                     onUpdateFamiliarHp={data.handleUpdateFamiliarHp}
                     onNavigateTab={requestTabChange}
+                    systemSections={pf1Data && pf1Sheet && (
+                      <Pf1DefenseSection data={pf1Data} sheet={pf1Sheet} onOpenDefense={() => setModalType('pf1_defense')} />
+                    )}
                   />
                 )}
 
-                {activeTab === 'spells' && (
+                {activeTab === 'spells' && pf1Data && pf1Sheet && (
+                  <Pf1ActionsTab
+                    data={pf1Data}
+                    sheet={pf1Sheet}
+                    spells={data.spells}
+                    slots={pf1Slots}
+                    onChange={data.syncPf1Data}
+                    onToggleSlot={togglePf1Slot}
+                    onOpenAttack={(attack) => { setPf1AttackTarget(attack); setModalType('pf1_attack'); }}
+                    onOpenMagic={() => setModalType('pf1_magic')}
+                    onOpenAddSpell={() => setModalType('add_spell')}
+                    onEditSpell={openEditSpell}
+                  />
+                )}
+
+                {activeTab === 'spells' && !pf1Data && (
                   <DnDSpellcasting
-                    {...(pf1Sheet && {
-                      header: <Pf1SpellHeader sheet={pf1Sheet} onEdit={() => setModalType('pf1_magic')} />,
-                      slotsTitle: 'Sorts par jour',
-                      slotsHint: 'Toucher pour dépenser',
-                    })}
-                    spellSlots={pf1Data ? pf1Slots : data.spellSlots}
+                    spellSlots={data.spellSlots}
                     spells={data.spells}
                     spellDc={data.activeChar.spell_dc}
                     spellAttack={data.activeChar.spell_attack}
                     onOpenEditSpellSlot={(slot) => {
-                      if (pf1Data) { setModalType('pf1_magic'); return; }
                       data.setNewSpellSlot({ level: slot.level, max: slot.max, current: slot.current });
                       setModalType('edit_spell_slot');
                     }}
-                    onToggleSpellSlot={pf1Data ? togglePf1Slot : data.handleToggleSpellSlot}
+                    onToggleSpellSlot={data.handleToggleSpellSlot}
                     onOpenAddSpell={() => setModalType('add_spell')}
                     onEditSpellcasting={() => setModalType('edit_spellcasting')}
-                    onEditSpell={(spell) => {
-                      data.setNewSpell({
-                        id: spell.id,
-                        name: spell.name,
-                        level: spell.level,
-                        range: spell.range || '',
-                        duration: spell.duration || '',
-                        components: spell.components || [],
-                        material_components: spell.material_components || '',
-                        casting_type: spell.casting_type || 'action',
-                        is_aoe: spell.is_aoe || false,
-                        save_type: spell.save_type || '',
-                        save_effect: spell.save_effect || '',
-                        concentration: spell.concentration || false,
-                        damage: spell.damage || '',
-                        upcast_damage: spell.upcast_damage || '',
-                        desc: spell.desc || '',
-                      });
-                      setModalType('add_spell');
-                    }}
+                    onEditSpell={openEditSpell}
                   />
                 )}
 
@@ -475,8 +505,6 @@ export default function App() {
                     data={pf1Data}
                     sheet={pf1Sheet}
                     onChange={data.syncPf1Data}
-                    onOpenDefense={() => setModalType('pf1_defense')}
-                    onOpenAttack={(attack) => { setPf1AttackTarget(attack); setModalType('pf1_attack'); }}
                   />
                 )}
 
@@ -497,7 +525,15 @@ export default function App() {
                     items={data.items}
                     onToggleItemEquip={data.handleToggleItemEquip}
                     onOpenAddItem={() => setModalType('add_item')}
-                    onOpenCrafting={() => setModalType('crafting')}
+                    onOpenCrafting={() => setModalType(pf1Data ? 'pf1_crafting' : 'crafting')}
+                    extraSections={pf1Data && pf1Sheet && (
+                      <Pf1CraftProjectsCard
+                        projects={pf1Data.craftProjects}
+                        sheet={pf1Sheet}
+                        onCheck={data.handlePf1CraftCheck}
+                        onAbandon={data.handlePf1AbandonCraftProject}
+                      />
+                    )}
                     onOpenItemAction={(item: Item) => {
                       setItemActionTarget(item);
                       setModalType('item_action');
@@ -541,13 +577,15 @@ export default function App() {
                 {activeTab === 'settings' && (
                   <SettingsTab
                     activeCharacterName={data.activeChar?.name}
+                    characterTheme={data.activeChar.theme ?? null}
+                    onChangeCharacterTheme={(theme) => data.syncCharacterField('theme', theme)}
                     onDeleteCharacter={data.handleDeleteCharacter}
                   />
                 )}
                 </div>
               </main>
 
-              <BottomNav activeTab={activeTab} setActiveTab={requestTabChange} onDashboard={() => data.setView('dashboard')} />
+              <BottomNav activeTab={activeTab} setActiveTab={requestTabChange} onDashboard={() => data.setView('dashboard')} iconOverrides={pf1Data ? { spells: Swords } : undefined} />
             </div>
           )}
 
@@ -568,10 +606,10 @@ export default function App() {
             <EditConditionsModal activeConditions={data.activeConditions} setActiveConditions={data.setActiveConditions} onClose={() => setModalType(null)} />
           )}
           {modalType === 'add_feature' && (
-            <AddFeatureModal newFeature={data.newFeature} setNewFeature={data.setNewFeature} resources={data.resources} onSubmit={(e) => { data.handleSaveFeature(e); setModalType(null); }} onDelete={data.handleDeleteFeature} onClose={() => setModalType(null)} />
+            <AddFeatureModal perDayOnly={!!pf1Data} newFeature={data.newFeature} setNewFeature={data.setNewFeature} resources={data.resources} onSubmit={(e) => { data.handleSaveFeature(e); setModalType(null); }} onDelete={data.handleDeleteFeature} onClose={() => setModalType(null)} />
           )}
           {modalType === 'add_resource' && (
-            <AddResourceModal newResource={data.newResource} setNewResource={data.setNewResource} onSubmit={async (e) => { const ok = await data.handleSaveResource(e); if (ok) setModalType(null); }} onDelete={async (id) => { await data.handleDeleteResource(id); setModalType(null); }} onClose={() => setModalType(null)} />
+            <AddResourceModal perDayOnly={!!pf1Data} newResource={data.newResource} setNewResource={data.setNewResource} onSubmit={async (e) => { const ok = await data.handleSaveResource(e); if (ok) setModalType(null); }} onDelete={async (id) => { await data.handleDeleteResource(id); setModalType(null); }} onClose={() => setModalType(null)} />
           )}
           {modalType === 'edit_spell_slot' && (
             <EditSpellSlotModal
@@ -631,6 +669,15 @@ export default function App() {
                 data.setNewItem({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
                 setModalType(null);
               }}
+            />
+          )}
+          {modalType === 'pf1_crafting' && pf1Sheet && data.activeChar && (
+            <Pf1CraftingModal
+              sheet={pf1Sheet}
+              purseCp={data.activeChar.gold * 100 + data.activeChar.silver * 10 + data.activeChar.copper}
+              onStartProject={data.handlePf1StartCraftProject}
+              onCraftMagic={data.handlePf1CraftMagicItem}
+              onClose={() => setModalType(null)}
             />
           )}
           {modalType === 'crafting' && (

@@ -37,6 +37,38 @@ export interface Pf1Attack {
   notes?: string;
 }
 
+export interface Pf1CraftProject {
+  id: string;
+  name: string;
+  description?: string;
+  category: 'objet' | 'arme' | 'armure' | 'composant';
+  /** Prix de l'objet en po. */
+  priceGp: number;
+  /** DD du test d'Artisanat (déjà augmenté de 10 si le joueur accélère). */
+  dc: number;
+  /** Coût des matières premières payé, en pc. */
+  materialsCp: number;
+  /** Progression accumulée, en pa. */
+  progressSp: number;
+  /** Historique des tests (le plus récent en dernier). */
+  log: { date: string; period: 'week' | 'day'; total: number; progressSp: number; outcome: 'progress' | 'no-progress' | 'ruined' }[];
+}
+
+export interface Pf1ManeuverSettings {
+  /** Don « Science de… » : +2 BMO, +2 DMD contre cette manœuvre, pas d’attaque d’opportunité. */
+  improved: boolean;
+  /** Autres bonus au BMO (don supérieur, objet…). */
+  misc: number;
+}
+
+export interface Pf1PreparedSpell {
+  id: string;
+  /** Id du sort dans le grimoire (table spells). */
+  spellId: string;
+  /** Lancé depuis le dernier repos long. */
+  cast: boolean;
+}
+
 /** Choix du joueur pour un perso Pathfinder 1e, stockés dans characters.system_data. */
 export interface Pf1Data {
   version: 1;
@@ -55,6 +87,12 @@ export interface Pf1Data {
   /** Sorts par jour de la table de classe, index = niveau de sort (null = pas encore accessible). */
   spellsPerDayBase: (number | null)[];
   spellsUsed: number[];
+  /** Sorts préparés du jour : un même sort peut occuper plusieurs emplacements. */
+  prepared: Pf1PreparedSpell[];
+  /** Réglages par manœuvre de combat (don « Science de… », bonus divers). */
+  maneuvers: Record<string, Pf1ManeuverSettings>;
+  /** Objets ordinaires en cours de fabrication (compétence Artisanat). */
+  craftProjects: Pf1CraftProject[];
   favoredClassBonus: 'hp' | 'skill';
   armor: Pf1Armor | null;
   shield: Pf1Armor | null;

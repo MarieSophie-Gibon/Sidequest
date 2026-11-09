@@ -12,6 +12,15 @@ export type BgChoice = 'auto' | 'dark' | 'light' | 'none' | 'custom';
 
 const CUSTOM_BG_KEY = 'sidequest_custom_bg';
 
+/** Thème propre à un personnage (colonne characters.theme). */
+export interface CharacterTheme {
+  themeName: ThemeName;
+  bgChoice: BgChoice;
+  bgOverlay: boolean;
+  /** Image de fond personnalisée (data URL), utilisée quand bgChoice = 'custom'. */
+  customBg?: string;
+}
+
 export interface ThemeTokens {
   pageBg: string; cardBg: string; cardBorder: string; cardShadow: string;
   textPrimary: string; textSecondary: string; textMuted: string;
@@ -28,7 +37,9 @@ export interface ThemeTokens {
 
 interface AppSettings {
   isDark: boolean;
+  /** Valeurs effectives : thème du personnage s'il en a un, sinon thème par défaut de l'app. */
   themeName: ThemeName;
+  /** Les setters ci-dessous modifient toujours le thème par défaut de l'app. */
   setThemeName: (v: ThemeName) => void;
   bgChoice: BgChoice;
   setBgChoice: (v: BgChoice) => void;
@@ -38,6 +49,11 @@ interface AppSettings {
   setBgOverlay: (v: boolean) => void;
   dashboardVisibility: DashboardVisibility;
   setDashboardVisibility: React.Dispatch<React.SetStateAction<DashboardVisibility>>;
+  /** Thème par défaut de l'app (sert de point de départ quand on donne un thème à un personnage). */
+  defaultTheme: CharacterTheme;
+  /** Thème du personnage affiché ; null = thème par défaut. */
+  characterTheme: CharacterTheme | null;
+  setCharacterTheme: (v: CharacterTheme | null) => void;
 }
 
 const AppSettingsContext = createContext<AppSettings | null>(null);
@@ -82,6 +98,7 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
     try { return localStorage.getItem(CUSTOM_BG_KEY) ?? ''; } catch { return ''; }
   });
   const [dashboardVisibility, setDashboardVisibility] = useState<DashboardVisibility>(saved.dashboardVisibility);
+  const [characterTheme, setCharacterTheme] = useState<CharacterTheme | null>(null);
 
   function setCustomBgImage(v: string) {
     setCustomBgImageState(v);
@@ -95,22 +112,33 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ themeName, bgChoice, bgOverlay, dashboardVisibility }));
   }, [themeName, bgChoice, bgOverlay, dashboardVisibility]);
 
+  const defaultTheme: CharacterTheme = { themeName, bgChoice, bgOverlay, customBg: customBgImage };
+  const effective: CharacterTheme = characterTheme ?? defaultTheme;
+
   useEffect(() => {
     const ROOT_BG: Record<ThemeName, string> = {
       violet: '#1a1130', ocean: '#081a20', forest: '#0d1f18',
       crimson: '#1f0d12', amber: '#1f1508', azure: '#5f7fa6',
     };
-    const bgColor = ROOT_BG[themeName];
+    const bgColor = ROOT_BG[effective.themeName];
     document.documentElement.style.backgroundColor = bgColor;
     document.body.style.backgroundColor = bgColor;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', bgColor);
-  }, [themeName]);
+  }, [effective.themeName]);
 
-  const isDark = themeName !== 'azure';
+  const isDark = effective.themeName !== 'azure';
 
   return (
-    <AppSettingsContext.Provider value={{ isDark, themeName, setThemeName, bgChoice, setBgChoice, customBgImage, setCustomBgImage, bgOverlay, setBgOverlay, dashboardVisibility, setDashboardVisibility }}>
+    <AppSettingsContext.Provider value={{
+      isDark,
+      themeName: effective.themeName, setThemeName,
+      bgChoice: effective.bgChoice, setBgChoice,
+      customBgImage: effective.customBg ?? '', setCustomBgImage,
+      bgOverlay: effective.bgOverlay, setBgOverlay,
+      dashboardVisibility, setDashboardVisibility,
+      defaultTheme, characterTheme, setCharacterTheme,
+    }}>
       {children}
     </AppSettingsContext.Provider>
   );

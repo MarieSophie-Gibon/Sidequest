@@ -11,9 +11,11 @@ interface Props {
   onSubmit: (e: React.FormEvent) => void;
   onDelete: (id: string, name: string) => void;
   onClose: () => void;
+  /** Pathfinder 1e : pas de repos court, tout se recharge à la nuit de repos. */
+  perDayOnly?: boolean;
 }
 
-export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit, onDelete, onClose }: Props) {
+export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit, onDelete, onClose, perDayOnly }: Props) {
   const t = useThemeClasses();
   const [maxInput, setMaxInput] = useState(String(newFeature.max));
   const [resourceCostInput, setResourceCostInput] = useState(String(newFeature.resource_cost));
@@ -75,10 +77,14 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
               </div>
               <div>
                 <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Récupération</label>
+                {perDayOnly ? (
+                  <p className={`border ${t.inputBorder} rounded-xl p-2.5 w-full text-xs ${t.inputBg} ${t.textSecondary} font-bold`}>Par jour</p>
+                ) : (
                 <select value={newFeature.recharge} onChange={(e) => setNewFeature(prev => ({ ...prev, recharge: e.target.value }))} className={`border ${t.inputBorder} rounded-xl p-2.5 w-full text-xs ${t.inputBg} ${t.textSecondary} font-bold focus:outline-none`}>
                   <option value="LONG_REST">Repos Long</option>
                   <option value="SHORT_REST">Repos Court</option>
                 </select>
+                )}
               </div>
             </div>
           )}

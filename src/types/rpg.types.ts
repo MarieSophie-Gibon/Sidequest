@@ -1,3 +1,5 @@
+import type { CharacterTheme } from '../contexts/AppSettingsContext';
+
 export type GameSystem = 'dnd5e' | 'pf1e';
 
 export const GAME_SYSTEM_LABELS: Record<GameSystem, string> = {
@@ -12,6 +14,8 @@ export interface Character {
   /** Choix propres au système (ex. Pf1Data pour Pathfinder 1e). */
   system_data?: unknown;
   house_rules?: string[];
+  /** Thème visuel propre au personnage ; null/absent = thème par défaut de l'app. */
+  theme?: CharacterTheme | null;
   user_id: string;
   name: string;
   race: string;

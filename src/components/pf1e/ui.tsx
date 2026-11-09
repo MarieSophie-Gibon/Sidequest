@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
+import { ChevronDown } from 'lucide-react';
 import { ModalActions, ModalHeader } from '../modals/ModalControls';
 import type { Breakdown } from '../../systems/pf1e/types';
 import { signed } from '../../systems/pf1e/rules';
@@ -96,5 +97,26 @@ export function BreakdownText({ breakdown }: { breakdown: Breakdown }) {
         </span>
       ))}
     </span>
+  );
+}
+
+/**
+ * Encart repliable (fermé par défaut), même rendu que les sections de l'onglet Capacités.
+ * `aside` reste visible fermé : bouton d'ajout, résumé chiffré…
+ */
+export function Pf1Collapsible({ title, aside, defaultOpen = false, children }: { title: ReactNode; aside?: ReactNode; defaultOpen?: boolean; children: ReactNode }) {
+  const t = useThemeClasses();
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
+      <div className={`flex justify-between items-center gap-2 ${open ? 'mb-3' : ''}`}>
+        <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} className="flex items-center gap-1.5 flex-1 min-w-0 text-left">
+          <ChevronDown size={12} className={`${t.textMuted} transition-transform shrink-0 ${open ? 'rotate-0' : '-rotate-90'}`} />
+          <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider truncate`}>{title}</h4>
+        </button>
+        {aside && <div className="flex items-center gap-2 shrink-0">{aside}</div>}
+      </div>
+      {open && children}
+    </div>
   );
 }
