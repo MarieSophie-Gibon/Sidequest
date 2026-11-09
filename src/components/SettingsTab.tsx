@@ -4,6 +4,7 @@ import type { CharacterTheme, ThemeName } from '../contexts/AppSettingsContext';
 import { Sword, Sparkles, Shield, GraduationCap, Trash2, AlertTriangle, Check, Upload, X, Palette, MessageSquare, Coffee } from 'lucide-react';
 import { ContactAdminModal } from './modals/ContactAdminModal';
 import { KOFI_URL } from '../config';
+import { KofiModal } from './modals/KofiModal';
 
 interface Props {
   activeCharacterName?: string;
@@ -50,6 +51,7 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter, characterT
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [contactSent, setContactSent] = useState(false);
+  const [kofiOpen, setKofiOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Portée des réglages de thème. Sur une fiche, on modifie le personnage par défaut :
@@ -269,10 +271,9 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter, characterT
           </button>
           {contactSent && <p className="text-[11px] text-emerald-400 px-1">Message envoyé, merci ! Je te réponds par e-mail si besoin.</p>}
           {KOFI_URL && (
-            <a
-              href={KOFI_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => setKofiOpen(true)}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all active:scale-[0.98] bg-amber-500/15 border-amber-400/40 hover:bg-amber-500/25"
             >
               <Coffee size={16} className="text-amber-300" />
@@ -280,10 +281,11 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter, characterT
                 <span className={`block text-xs font-semibold ${t.textPrimary}`}>Soutenir SideQuest sur Ko-fi</span>
                 <span className={`block text-[10px] ${t.textMuted}`}>Un café pour aider à faire vivre l’app.</span>
               </span>
-            </a>
+            </button>
           )}
         </div>
       </div>
+      {kofiOpen && <KofiModal onClose={() => setKofiOpen(false)} />}
       {contactOpen && (
         <ContactAdminModal
           context={activeCharacterName ? `Personnage affiché : ${activeCharacterName}` : undefined}
