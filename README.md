@@ -1,4 +1,45 @@
-# React + TypeScript + Vite
+# SideQuest
+
+Fiche de personnage pour D&D 5e et Pathfinder 1e.
+
+## Installer l'application
+
+SideQuest s'installe comme une application : elle s'ouvre dans sa propre fenêtre, sans onglets ni barre d'adresse, avec son icône sur l'écran d'accueil ou dans le menu Démarrer.
+
+### Version desktop
+
+L'installation fonctionne avec **Chrome** et **Edge**. Firefox ne permet pas d'installer un site comme application : utilisez Chrome ou Edge uniquement pour SideQuest.
+
+- **Chrome** : menu **⋮** → **Caster, enregistrer et partager** → **Installer la page en tant qu'application…**
+  (ou l'icône d'installation à droite de la barre d'adresse). Si seul **Créer un raccourci…** est proposé, choisissez-le et cochez **Ouvrir dans une fenêtre**.
+- **Edge** : menu **⋯** → **Applications** → **Installer ce site en tant qu'application**.
+
+La fenêtre de l'application prend automatiquement le format d'un téléphone (430 × 900). Si vous la redimensionnez, la nouvelle taille est conservée.
+
+**Sans installation**, un raccourci Windows donne le même résultat. Créez un raccourci avec comme emplacement :
+
+```
+"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --app=https://ADRESSE-DE-SIDEQUEST --window-size=430,932
+```
+
+### Version mobile
+
+- **iPhone / iPad (Safari)** : ouvrir SideQuest, toucher **Partager** puis **Sur l'écran d'accueil**.
+- **Android (Chrome)** : ouvrir SideQuest, menu **⋮** puis **Installer l'application** (ou **Ajouter à l'écran d'accueil**).
+
+L'application s'ouvre en plein écran, comme une application native.
+
+## Développement
+
+```bash
+npm install
+npm run dev        # serveur local sur http://localhost:5173
+npm test           # tests (règles Pathfinder, artisanat…)
+npm run db:new nom # nouvelle migration Supabase
+npm run db:push    # applique les migrations sur la base distante
+```
+
+## Template Vite (React + TypeScript)
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
