@@ -70,7 +70,7 @@ export function Pf1CombatHUD({
                 <span className={`text-[10px] ${t.textMuted}`}>/{activeChar.hp_max}</span>
               </div>
             </div>
-            <div className="w-full bg-slate-900/60 h-2 rounded-full overflow-hidden border border-slate-600/30 shadow-inner">
+            <div className="w-full bg-slate-900/60 h-2 rounded-full overflow-hidden">
               <div className={`h-full transition-all duration-500 ease-out bg-linear-to-r ${t.hpBar}`} style={{ width: `${Math.max(0, hpPercent)}%` }} />
             </div>
           </div>

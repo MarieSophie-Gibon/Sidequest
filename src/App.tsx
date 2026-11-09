@@ -300,7 +300,7 @@ export default function App() {
 
   return (
     <div className="h-dvh max-h-dvh flex justify-center bg-black overflow-hidden">
-      <div className={`${t.pageBg} w-full max-w-md h-full max-h-dvh ${t.textPrimary} font-sans overflow-hidden relative ${t.selectionBg}`}>
+      <div className={`${t.pageBg} w-full max-w-md tablet:max-w-3xl h-full max-h-dvh ${t.textPrimary} font-sans overflow-hidden relative ${t.selectionBg}`}>
 
       {/* Background image */}
       <div

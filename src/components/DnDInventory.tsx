@@ -369,7 +369,7 @@ export function DnDInventory({
           >
             <Sword size={14} /> Équipement
           </h4>
-          <div className="space-y-2">
+          <div className="space-y-2 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-2 tablet:items-start">
             {weapons.map((item) =>
               (() => {
                 const craftingDurationLabel = formatCraftingDuration(
@@ -577,7 +577,7 @@ export function DnDInventory({
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-2 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-2 tablet:items-start">
           {filteredObjects.length > 0 ? (
             filteredObjects.map((item) => {
               const Icon = getObjectIcon(item.category);
@@ -638,7 +638,7 @@ export function DnDInventory({
               );
             })
           ) : (
-            <p className={`text-xs ${t.textMuted} italic text-center p-4`}>
+            <p className={`tablet:col-span-2 text-xs ${t.textMuted} italic text-center p-4`}>
               {objectFilter === "all"
                 ? "Votre inventaire est vide."
                 : "Aucun objet dans ce type."}

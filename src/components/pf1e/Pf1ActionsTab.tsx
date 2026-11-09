@@ -101,7 +101,7 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
   ])).sort((a, b) => a - b);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 tab-grid">
       <Pf1Collapsible
         title={`Attaques${sheet.attacks.length ? ` (${sheet.attacks.length})` : ''}`}
         aside={

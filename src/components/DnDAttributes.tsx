@@ -120,9 +120,9 @@ export function DnDAttributes({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 tab-grid">
       <div
-        className={`sticky top-0 z-10 ${t.cardBg} ${sectionStyles.rest} border ${t.cardBorder} rounded-2xl px-3 py-2 shadow-sm ${t.cardShadow} flex items-center justify-between backdrop-blur-xl`}
+        className={`tab-full sticky top-0 z-10 ${t.cardBg} ${sectionStyles.rest} border ${t.cardBorder} rounded-2xl px-3 py-2 shadow-sm ${t.cardShadow} flex items-center justify-between backdrop-blur-xl`}
       >
         <span
           className={`text-[10px] font-semibold ${t.textMuted} uppercase tracking-wider`}

@@ -54,7 +54,7 @@ export function DnDSkillsAndSaves({
       {saveThrows.length > 0 && (
         <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>
           <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider mb-3`}>Jets de Sauvegarde</h4>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-2 tablet:grid-cols-3 gap-1.5">
             {SAVE_ORDER.map(attr => {
               const save = saveThrows.find(s => s.attr === attr);
               const score = activeChar[attr] || 10;
@@ -93,7 +93,7 @@ export function DnDSkillsAndSaves({
 
       <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-4 shadow-sm ${t.cardShadow}`}>
         <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider mb-3`}>Compétences & Maîtrises</h4>
-        <div className="space-y-3">
+        <div className="space-y-3 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-x-3 tablet:gap-y-3 tablet:items-start">
           {skillsByAttr.map(({ attr, skills: groupSkills }) => (
             <div key={attr}>
               <p className={`text-[10px] font-semibold ${t.textSecondary} uppercase tracking-wider mb-1.5 pl-1`}>

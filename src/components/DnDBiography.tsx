@@ -83,7 +83,7 @@ export function DnDBiography({
   return (
     <div className="space-y-3 pt-2">
       {/* Personality fields */}
-      <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-2">
         {BIO_FIELDS.map(({ key, label, icon: Icon, color, placeholder }) => {
           const value = biography?.[key];
           const openModal = key === 'traits_principaux' || key === 'defauts'

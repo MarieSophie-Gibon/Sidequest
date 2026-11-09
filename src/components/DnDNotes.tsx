@@ -105,7 +105,7 @@ export function DnDNotes({
             Aucune note pour l'instant.
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-2 tablet:items-start">
             {notes.map((note) => (
               <NoteCard
                 key={note.id}
