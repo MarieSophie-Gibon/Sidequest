@@ -7,6 +7,8 @@ interface Props {
   activeTab: TabKey;
   setActiveTab: (tab: TabKey) => void;
   onDashboard?: () => void;
+  /** Remplace l'icône de certains onglets (ex. « Actions » en Pathfinder). */
+  iconOverrides?: Partial<Record<TabKey, typeof LayoutDashboard>>;
 }
 
 const TABS: { key: TabKey; icon: typeof LayoutDashboard }[] = [
@@ -20,7 +22,7 @@ const TABS: { key: TabKey; icon: typeof LayoutDashboard }[] = [
   { key: 'settings', icon: Settings },
 ];
 
-export function BottomNav({ activeTab, setActiveTab, onDashboard }: Props) {
+export function BottomNav({ activeTab, setActiveTab, onDashboard, iconOverrides }: Props) {
   const t = useThemeClasses();
 
   return (
@@ -37,7 +39,7 @@ export function BottomNav({ activeTab, setActiveTab, onDashboard }: Props) {
         </button>
       )}
       {TABS.map(tab => {
-        const Icon = tab.icon;
+        const Icon = iconOverrides?.[tab.key] ?? tab.icon;
         return (
           <button
             key={tab.key}

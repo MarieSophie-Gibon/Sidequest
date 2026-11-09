@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { Spell, SpellSlot } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
 import { CirclePlus, ChevronDown, Sword, Sparkles, Shield, Funnel } from 'lucide-react';
@@ -13,6 +14,13 @@ interface DnDSpellcastingProps {
   onOpenAddSpell: () => void;
   onEditSpell: (spell: Spell) => void;
   onEditSpellcasting: () => void;
+  /** Remplace l'en-tête « Incantation » (utilisé par Pathfinder 1e). */
+  header?: ReactNode;
+  /** Remplace le titre et l'indication du bloc d'emplacements. */
+  slotsTitle?: string;
+  slotsHint?: string;
+  /** Bouton supplémentaire sur chaque ligne de sort (ex. « Préparer » en Pathfinder). */
+  renderSpellAction?: (spell: Spell) => ReactNode;
 }
 
 export function DnDSpellcasting({
@@ -25,6 +33,10 @@ export function DnDSpellcasting({
   onOpenAddSpell,
   onEditSpell,
   onEditSpellcasting,
+  header,
+  slotsTitle = 'Emplacements de Sorts',
+  slotsHint = 'Cliquer un niveau pour ajuster',
+  renderSpellAction,
 }: DnDSpellcastingProps) {
   const t = useThemeClasses();
   const accentHex = t.accent.includes('violet') ? '#a78bfa' : '#3b82f6';
@@ -56,19 +68,19 @@ export function DnDSpellcasting({
 
   return (
     <div className="space-y-2">
-      <div onClick={onEditSpellcasting} className={`${t.cardBg} border ${t.cardBorder} rounded-2xl px-3 py-2 shadow-sm ${t.cardShadow} cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex items-center justify-between`}>
+      {header ?? <div onClick={onEditSpellcasting} className={`${t.cardBg} border ${t.cardBorder} rounded-2xl px-3 py-2 shadow-sm ${t.cardShadow} cursor-pointer hover:brightness-95 active:scale-[0.98] transition-all flex items-center justify-between`}>
         <h4 className={`text-[10px] font-semibold ${t.textPrimary} uppercase tracking-wider`}>Incantation</h4>
         <div className="flex items-center gap-3">
           <span className={`text-[11px] ${t.textMuted} font-semibold`}>DD <span className={`font-mono font-bold ${t.textPrimary}`}>{spellDc}</span></span>
           <span className={`text-[11px] ${t.textMuted} font-semibold`}>Mod.Sort <span className="font-mono font-bold text-emerald-500">{spellAttack >= 0 ? `+${spellAttack}` : spellAttack}</span></span>
         </div>
-      </div>
+      </div>}
 
       {spellSlots.length > 0 && (
       <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
         <div className="flex justify-between items-center mb-3">
-          <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider`}>Emplacements de Sorts</h4>
-          <span className={`text-[9px] ${t.textMuted} uppercase`}>Cliquer un niveau pour ajuster</span>
+          <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider`}>{slotsTitle}</h4>
+          <span className={`text-[9px] ${t.textMuted} uppercase`}>{slotsHint}</span>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
             {spellSlots.map((slot) => (
@@ -211,6 +223,7 @@ export function DnDSpellcasting({
                     <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-lg border ${getLevelBadgeClass(spell.level)}`}>
                       {spell.level === 0 ? 'Mineur' : `Niv ${spell.level}`}
                     </span>
+                    {renderSpellAction && <span onClick={(e) => e.stopPropagation()}>{renderSpellAction(spell)}</span>}
                   </div>
                 </div>
                 {isExpanded && (

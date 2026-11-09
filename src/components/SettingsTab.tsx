@@ -1,11 +1,33 @@
 import { useState, useRef } from 'react';
 import { useAppSettings, useThemeClasses } from '../contexts/AppSettingsContext';
-import type { ThemeName } from '../contexts/AppSettingsContext';
-import { Sword, Sparkles, Shield, GraduationCap, Trash2, AlertTriangle, Check, Upload, X } from 'lucide-react';
+import type { CharacterTheme, ThemeName } from '../contexts/AppSettingsContext';
+import { Sword, Sparkles, Shield, GraduationCap, Trash2, AlertTriangle, Check, Upload, X, Palette } from 'lucide-react';
 
 interface Props {
   activeCharacterName?: string;
   onDeleteCharacter?: () => Promise<boolean>;
+  /** Thème propre au personnage ; null = il suit le thème par défaut de l'app. */
+  characterTheme?: CharacterTheme | null;
+  onChangeCharacterTheme?: (theme: CharacterTheme | null) => void;
+}
+
+/** Réduit l'image (côté max 1600 px, JPEG) pour qu'elle tienne en base et en localStorage. */
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image illisible')); };
+    img.src = url;
+  });
 }
 
 const THEME_OPTIONS: { name: ThemeName; label: string; color: string }[] = [
@@ -17,24 +39,43 @@ const THEME_OPTIONS: { name: ThemeName; label: string; color: string }[] = [
   { name: 'azure',   label: 'Azur',     color: '#60a5fa' },
 ];
 
-export function SettingsTab({ activeCharacterName, onDeleteCharacter }: Props) {
-  const { themeName, setThemeName, bgChoice, setBgChoice, customBgImage, setCustomBgImage, bgOverlay, setBgOverlay, dashboardVisibility, setDashboardVisibility } = useAppSettings();
+export function SettingsTab({ activeCharacterName, onDeleteCharacter, characterTheme, onChangeCharacterTheme }: Props) {
+  const settings = useAppSettings();
+  const { dashboardVisibility, setDashboardVisibility } = settings;
   const t = useThemeClasses();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function handleBgUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  // Portée des réglages de thème. Sur une fiche, on modifie le personnage par défaut :
+  // le thème de l'app ne change que si on le choisit explicitement.
+  const canHaveOwnTheme = !!onChangeCharacterTheme;
+  const [scope, setScope] = useState<'character' | 'app'>(canHaveOwnTheme ? 'character' : 'app');
+  const editingCharacter = canHaveOwnTheme && scope === 'character';
+  const ownTheme = canHaveOwnTheme && characterTheme ? characterTheme : null;
+  // Un personnage sans thème propre affiche le thème de l'app : c'est le point de départ de sa première modification.
+  const current: CharacterTheme = editingCharacter ? (ownTheme ?? settings.defaultTheme) : settings.defaultTheme;
+  const { themeName, bgChoice, bgOverlay } = current;
+  const customBgImage = current.customBg ?? '';
+
+  function apply(patch: Partial<CharacterTheme>) {
+    if (editingCharacter) {
+      onChangeCharacterTheme!({ ...(ownTheme ?? settings.defaultTheme), ...patch });
+      return;
+    }
+    if (patch.themeName !== undefined) settings.setThemeName(patch.themeName);
+    if (patch.bgChoice !== undefined) settings.setBgChoice(patch.bgChoice);
+    if (patch.bgOverlay !== undefined) settings.setBgOverlay(patch.bgOverlay);
+    if (patch.customBg !== undefined) settings.setCustomBgImage(patch.customBg);
+  }
+
+  async function handleBgUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      setCustomBgImage(result);
-      setBgChoice('custom');
-    };
-    reader.readAsDataURL(file);
     // reset so same file can be re-picked
     e.target.value = '';
+    if (!file) return;
+    try {
+      apply({ customBg: await compressImage(file), bgChoice: 'custom' });
+    } catch { /* image illisible : on ignore */ }
   }
 
   const toggleItems: { key: keyof typeof dashboardVisibility; label: string; icon: typeof Sword }[] = [
@@ -46,6 +87,45 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter }: Props) {
 
   return (
     <div className="space-y-2">
+      {/* Portée du thème : ce personnage ou l'app entière */}
+      {canHaveOwnTheme && (
+        <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow} space-y-2`}>
+          <span className={`text-xs font-bold ${t.textPrimary} flex items-center gap-1.5`}><Palette size={14} /> Thème à modifier</span>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              ['character', activeCharacterName ? `« ${activeCharacterName} »` : 'Ce personnage'],
+              ['app', 'Thème de l’app'],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setScope(key)}
+                className={`py-2 px-2 rounded-xl border text-[11px] font-semibold truncate transition-all ${scope === key ? `${t.accentBg} ${t.accentBorder} ${t.accent}` : `${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.textMuted} hover:opacity-100`}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className={`text-[10px] ${t.textMuted}`}>
+            {editingCharacter
+              ? (ownTheme
+                ? 'Ce personnage a son propre thème, appliqué uniquement sur sa fiche.'
+                : 'Ce personnage suit le thème de l’app. Le modifier ci-dessous lui crée son propre thème.')
+              : 'Thème des personnages qui n’ont pas leur propre thème. L’accueil garde toujours son thème violet.'
+                + (ownTheme ? ' Ce personnage ayant son propre thème, les changements ne seront pas visibles ici.' : '')}
+          </p>
+          {editingCharacter && ownTheme && (
+            <button
+              type="button"
+              onClick={() => onChangeCharacterTheme!(null)}
+              className={`w-full py-1.5 rounded-xl border text-[10px] font-semibold transition-all active:scale-95 ${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.textSecondary}`}
+            >
+              Revenir au thème de l’app
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Couleur de thème */}
       <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
         <h4 className={`text-xs font-bold ${t.textSecondary} uppercase tracking-wider mb-3`}>Couleur du Thème</h4>
@@ -53,7 +133,7 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter }: Props) {
           {THEME_OPTIONS.map(opt => (
             <button
               key={opt.name}
-              onClick={() => setThemeName(opt.name)}
+              onClick={() => apply({ themeName: opt.name })}
               className="flex flex-col items-center gap-1 group"
               title={opt.label}
             >
@@ -76,9 +156,9 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter }: Props) {
         {/* Ligne 1 : affichage */}
         <div className="grid grid-cols-3 gap-2 mb-2">
           {[
-            { label: 'Par défaut', sub: 'Avec flou',   active: bgChoice !== 'none' && bgOverlay,  onClick: () => { setBgOverlay(true);  if (bgChoice === 'none') setBgChoice('auto'); } },
-            { label: 'Sans flou',   sub: 'Image nette', active: bgChoice !== 'none' && !bgOverlay, onClick: () => { setBgOverlay(false); if (bgChoice === 'none') setBgChoice('auto'); } },
-            { label: 'Aucun',       sub: 'Couleur unie', active: bgChoice === 'none',               onClick: () => setBgChoice('none') },
+            { label: 'Par défaut', sub: 'Avec flou',   active: bgChoice !== 'none' && bgOverlay,  onClick: () => apply({ bgOverlay: true, ...(bgChoice === 'none' && { bgChoice: 'auto' as const }) }) },
+            { label: 'Sans flou',   sub: 'Image nette', active: bgChoice !== 'none' && !bgOverlay, onClick: () => apply({ bgOverlay: false, ...(bgChoice === 'none' && { bgChoice: 'auto' as const }) }) },
+            { label: 'Aucun',       sub: 'Couleur unie', active: bgChoice === 'none',               onClick: () => apply({ bgChoice: 'none' }) },
           ].map(opt => (
             <button
               key={opt.label}
@@ -97,7 +177,7 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter }: Props) {
         <div className={`grid grid-cols-2 gap-2 transition-opacity duration-200 ${bgChoice === 'none' ? 'opacity-30 pointer-events-none' : ''}`}>
           {/* BG par défaut */}
           <button
-            onClick={() => setBgChoice('auto')}
+            onClick={() => apply({ bgChoice: 'auto' })}
             className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl border transition-all duration-200 ${
               bgChoice === 'auto' ? `${t.accentBg} ${t.accentBorder} scale-[1.03]` : `${t.btnSecondaryBg} ${t.btnSecondaryBorder} opacity-70 hover:opacity-100`
             }`}
@@ -108,7 +188,7 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter }: Props) {
 
           {/* BG personnalisé */}
           <button
-            onClick={() => customBgImage ? setBgChoice('custom') : fileInputRef.current?.click()}
+            onClick={() => customBgImage ? apply({ bgChoice: 'custom' }) : fileInputRef.current?.click()}
             className={`flex items-center justify-center gap-2 py-2 px-2 rounded-xl border transition-all duration-200 overflow-hidden ${
               bgChoice === 'custom' ? `${t.accentBg} ${t.accentBorder} scale-[1.03]` : `${t.btnSecondaryBg} ${t.btnSecondaryBorder} opacity-70 hover:opacity-100`
             }`}
@@ -133,7 +213,7 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter }: Props) {
               <Upload size={11} /> Changer l’image
             </button>
             <button
-              onClick={() => { setCustomBgImage(''); if (bgChoice === 'custom') setBgChoice('auto'); }}
+              onClick={() => apply({ customBg: '', ...(bgChoice === 'custom' && { bgChoice: 'auto' as const }) })}
               className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-semibold transition-all active:scale-95 bg-rose-500/15 border-rose-400/40 text-rose-300 hover:bg-rose-500/25"
             >
               <X size={11} /> Supprimer

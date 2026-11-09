@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type {
   Feature,
   Item,
@@ -22,6 +22,7 @@ import {
   Backpack,
   PawPrint,
   Heart,
+  Bed,
 } from "lucide-react";
 
 type TabKey =
@@ -44,9 +45,13 @@ interface DnDAttributesProps {
   onToggleFeatureUse: (featureId: string, index: number) => void;
   onShortRest: () => void;
   onLongRest: () => void;
+  /** Pathfinder 1e : remplace Court/Long par Nuit de repos et Alitement. */
+  onPf1Rest?: (bedRest: boolean) => void;
   onUpdateResourceCurrent: (id: string, delta: number) => void;
   onUpdateFamiliarHp: (id: string, delta: number) => void;
   onNavigateTab?: (tab: TabKey) => void;
+  /** Sections propres au système (ex. sauvegardes et défense Pathfinder), affichées sous le repos. */
+  systemSections?: ReactNode;
 }
 
 export function DnDAttributes({
@@ -60,9 +65,11 @@ export function DnDAttributes({
   onToggleFeatureUse,
   onShortRest,
   onLongRest,
+  onPf1Rest,
   onUpdateResourceCurrent,
   onUpdateFamiliarHp,
   onNavigateTab,
+  systemSections,
 }: DnDAttributesProps) {
   const t = useThemeClasses();
   const { dashboardVisibility } = useAppSettings();
@@ -122,6 +129,24 @@ export function DnDAttributes({
         >
           Repos
         </span>
+        {onPf1Rest ? (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onPf1Rest(false)}
+            title="8 h de repos : +niveau PV, capacités et sorts du jour rechargés"
+            className={`flex items-center gap-1.5 ${t.inputBg} bg-linear-to-b from-cyan-500/16 to-cyan-500/6 border border-cyan-300/30 ${t.textSecondary} hover:brightness-90 active:scale-90 transition-all rounded-xl px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider`}
+          >
+            <Moon size={11} /> Nuit <span className="font-mono normal-case opacity-70">+{activeChar.level}</span>
+          </button>
+          <button
+            onClick={() => onPf1Rest(true)}
+            title="Journée entière d’alitement : +2 × niveau PV"
+            className={`flex items-center gap-1.5 ${t.inputBg} bg-linear-to-b from-sky-500/18 to-sky-500/6 border border-sky-300/30 ${t.textSecondary} hover:brightness-90 active:scale-90 transition-all rounded-xl px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider`}
+          >
+            <Bed size={11} /> Alitement <span className="font-mono normal-case opacity-70">+{activeChar.level * 2}</span>
+          </button>
+        </div>
+        ) : (
         <div className="flex items-center gap-2">
           <button
             onClick={onShortRest}
@@ -136,7 +161,10 @@ export function DnDAttributes({
             <Moon size={11} /> Long
           </button>
         </div>
+        )}
       </div>
+
+      {systemSections}
 
       {dashboardVisibility.showProficientSkills &&
         proficientSkills.length > 0 && (

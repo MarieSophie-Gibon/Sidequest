@@ -11,6 +11,7 @@ interface Props {
 
 export function EditProfileModal({ activeChar, syncCharacterField, onClose }: Props) {
   const t = useThemeClasses();
+  const isPf1 = activeChar.system === 'pf1e';
   const [levelInput, setLevelInput] = useState(String(activeChar.level));
   const [profInput, setProfInput] = useState(String(activeChar.proficiency_bonus ?? 2));
 
@@ -45,7 +46,8 @@ export function EditProfileModal({ activeChar, syncCharacterField, onClose }: Pr
             <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Sous-classe</label>
             <input type="text" value={activeChar.subclass} onChange={(e) => syncCharacterField('subclass', e.target.value)} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-sm focus:outline-none`} />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          {/* Pathfinder 1e n'a pas de bonus de maîtrise (BBA et rangs de compétence à la place). */}
+          <div className={`grid ${isPf1 ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Niveau</label>
               <input
@@ -65,7 +67,7 @@ export function EditProfileModal({ activeChar, syncCharacterField, onClose }: Pr
                 className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`}
               />
             </div>
-            <div>
+            {!isPf1 && <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Maîtrise</label>
               <input
                 type="number"
@@ -83,7 +85,7 @@ export function EditProfileModal({ activeChar, syncCharacterField, onClose }: Pr
                 }}
                 className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full font-mono text-sm focus:outline-none`}
               />
-            </div>
+            </div>}
           </div>
         </div>
         <ModalActions onCancel={onClose} onSave={onClose} saveLabel="Sauvegarder" />

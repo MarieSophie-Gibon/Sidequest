@@ -10,9 +10,11 @@ interface Props {
   onSubmit: (e: React.FormEvent) => void;
   onDelete?: (id: string) => void | Promise<void>;
   onClose: () => void;
+  /** Pathfinder 1e : pas de repos court, tout se recharge à la nuit de repos. */
+  perDayOnly?: boolean;
 }
 
-export function AddResourceModal({ newResource, setNewResource, onSubmit, onDelete, onClose }: Props) {
+export function AddResourceModal({ newResource, setNewResource, onSubmit, onDelete, onClose, perDayOnly }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newResource.id;
   const [currentInput, setCurrentInput] = useState(String(newResource.current));
@@ -77,6 +79,9 @@ export function AddResourceModal({ newResource, setNewResource, onSubmit, onDele
           </div>
           <div>
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Récupération</label>
+            {perDayOnly ? (
+              <p className={`text-[11px] ${t.textSecondary}`}>Par jour : rechargée à chaque nuit de repos.</p>
+            ) : (
             <div className={`flex rounded-xl overflow-hidden border ${t.inputBorder}`}>
               {(['SHORT_REST', 'LONG_REST'] as const).map((type) => (
                 <button key={type} type="button"
@@ -86,6 +91,7 @@ export function AddResourceModal({ newResource, setNewResource, onSubmit, onDele
                 </button>
               ))}
             </div>
+            )}
           </div>
         </div>
         {isEditing && onDelete && (

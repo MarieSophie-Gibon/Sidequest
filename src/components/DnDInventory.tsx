@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { Character, Item } from "../types/rpg.types";
 import { useThemeClasses } from "../contexts/AppSettingsContext";
 import {
@@ -24,6 +24,8 @@ interface Props {
   onOpenCrafting: () => void;
   onOpenEditItem: (item: Item) => void;
   onOpenItemAction: (item: Item) => void;
+  /** Sections propres au système (ex. projets d'artisanat Pathfinder), au-dessus de l'inventaire. */
+  extraSections?: ReactNode;
   onUpdateCurrency: <T extends keyof Character>(
     field: T,
     value: Character[T],
@@ -39,6 +41,7 @@ export function DnDInventory({
   onOpenEditItem,
   onOpenItemAction,
   onUpdateCurrency,
+  extraSections,
 }: Props) {
   const t = useThemeClasses();
   const [showTypeFilters, setShowTypeFilters] = useState(false);
@@ -509,6 +512,8 @@ export function DnDInventory({
           </div>
         </div>
       )}
+
+      {extraSections}
 
       {/* Objects/Inventory section */}
       <div
