@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, type ReactNode } from 'react';
 import { useAppSettings, useThemeClasses } from '../contexts/AppSettingsContext';
 import type { CharacterTheme, ThemeName } from '../contexts/AppSettingsContext';
 import { Sword, Sparkles, Shield, GraduationCap, Trash2, AlertTriangle, Check, Upload, X, Palette, MessageSquare, Coffee } from 'lucide-react';
@@ -11,6 +11,8 @@ interface Props {
   /** Thème propre au personnage ; null = il suit le thème par défaut de l'app. */
   characterTheme?: CharacterTheme | null;
   onChangeCharacterTheme?: (theme: CharacterTheme | null) => void;
+  /** Encart de partage avec le MJ (absent sur une fiche en lecture seule). */
+  shareSection?: ReactNode;
 }
 
 /** Réduit l'image (côté max 1600 px, JPEG) pour qu'elle tienne en base et en localStorage. */
@@ -41,7 +43,7 @@ const THEME_OPTIONS: { name: ThemeName; label: string; color: string }[] = [
   { name: 'azure',   label: 'Azur',     color: '#60a5fa' },
 ];
 
-export function SettingsTab({ activeCharacterName, onDeleteCharacter, characterTheme, onChangeCharacterTheme }: Props) {
+export function SettingsTab({ activeCharacterName, onDeleteCharacter, characterTheme, onChangeCharacterTheme, shareSection }: Props) {
   const settings = useAppSettings();
   const { dashboardVisibility, setDashboardVisibility } = settings;
   const t = useThemeClasses();
@@ -247,6 +249,8 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter, characterT
           ))}
         </div>
       </div>
+
+      {shareSection}
 
       {/* Aide et soutien */}
       <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
