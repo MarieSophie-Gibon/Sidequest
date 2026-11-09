@@ -28,7 +28,7 @@ export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreat
     <div className="flex flex-col flex-1 min-h-0">
 
       {/* -mx/px et -mt/pt : laissent de la place au zoom et à l'ombre des cartes, que le défilement rognerait sinon. */}
-      <div className="flex-1 overflow-y-auto space-y-2 pb-3 -mx-2 px-2 -mt-1 pt-1">
+      <div className="flex-1 overflow-y-auto space-y-2 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-2 tablet:content-start pb-3 -mx-2 px-2 -mt-1 pt-1">
         {characters.length > 0 ? (
           characters.map(char => (
             <div
@@ -77,7 +77,7 @@ export function Dashboard({ characters, emailConfirmed, onLoadCharacter, onCreat
             </div>
           ))
         ) : (
-          <div className={`border-2 border-dashed ${t.cardBorder} rounded-2xl p-8 text-center ${t.cardBg}/70`}>
+          <div className={`tablet:col-span-2 border-2 border-dashed ${t.cardBorder} rounded-2xl p-8 text-center ${t.cardBg}/70`}>
             <p className={`text-sm ${t.textSecondary} italic`}>Aucun aventurier n'est encore enregistré.</p>
           </div>
         )}

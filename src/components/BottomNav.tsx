@@ -27,7 +27,7 @@ export function BottomNav({ activeTab, setActiveTab, onDashboard, iconOverrides 
 
   return (
     <nav
-      className={`fixed left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md z-40 ${t.navBg} border ${t.navBorder} rounded-2xl p-2 shadow-lg ${t.cardShadow} flex justify-between items-center backdrop-blur-sm`}
+      className={`fixed left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md tablet:max-w-[46rem] z-40 ${t.navBg} border ${t.navBorder} rounded-2xl p-2 shadow-lg ${t.cardShadow} flex justify-between items-center backdrop-blur-sm`}
       style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
     >
       {onDashboard && (

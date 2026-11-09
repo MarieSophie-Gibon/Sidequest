@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tablette : écran large ET tactile. Un ordinateur garde le format mobile quelle que soit la taille de la fenêtre. */
+@custom-variant tablet (@media (min-width: 768px) and (pointer: coarse));
+
 @theme {
   --animate-loaderBlink: loaderBlink 1.5s ease-in-out infinite;
   --animate-loaderBar: loaderBar 2s ease-in-out infinite;
@@ -34,4 +37,24 @@ input[type=number] {
 }
 *::-webkit-scrollbar {
   display: none;
+}
+
+/*
+ * Tablette (≥ 768 px, écran tactile) : les encarts d'un onglet se répartissent sur 2 colonnes.
+ * .tab-full : encart qui garde toute la largeur (barre de repos, en-têtes, longues listes).
+ */
+@media (min-width: 768px) and (pointer: coarse) {
+  .tab-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    align-items: start;
+  }
+  /* Annule les marges de space-y-* : l'espacement vient du gap. */
+  .tab-grid > * {
+    margin-block: 0;
+  }
+  .tab-grid > .tab-full {
+    grid-column: 1 / -1;
+  }
 }

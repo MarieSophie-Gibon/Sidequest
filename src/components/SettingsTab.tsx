@@ -86,7 +86,7 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter, characterT
   ];
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 tab-grid">
       {/* Portée du thème : ce personnage ou l'app entière */}
       {canHaveOwnTheme && (
         <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow} space-y-2`}>

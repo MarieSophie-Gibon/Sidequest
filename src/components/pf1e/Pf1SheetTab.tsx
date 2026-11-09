@@ -42,7 +42,7 @@ export function Pf1SheetTab({ data, sheet, onChange }: Props) {
           </span>
         </div>
         <p className={`text-[10px] ${t.textMuted} mb-3`}>◆ = compétence de classe (+3 dès 1 rang). Max {sheet.level} rang{sheet.level > 1 ? 's' : ''} par compétence.</p>
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-1.5 tablet:items-start">
           {sheet.skills.map(skill => {
             const highlighted = skill.ranks > 0;
             return (

@@ -82,7 +82,7 @@ export function DnDSpellcasting({
           <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider`}>{slotsTitle}</h4>
           <span className={`text-[9px] ${t.textMuted} uppercase`}>{slotsHint}</span>
         </div>
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 tablet:grid-cols-3 gap-2.5">
             {spellSlots.map((slot) => (
               <div
                 key={slot.level}
@@ -186,7 +186,7 @@ export function DnDSpellcasting({
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-2 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-2 tablet:items-start">
           {[...spells]
             .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name, 'fr'))
             .filter(s => filterLevel === null || Number(s.level) === filterLevel)
