@@ -69,6 +69,14 @@ export interface CraftingComponentSelection {
 export interface SharedCharacter {
   character: Character;
   ownerName: string;
+  /** Campagne du MJ où la fiche est rangée (null = sans campagne). */
+  campaignId: string | null;
+}
+
+/** Campagne du MJ : dossier privé pour ranger les fiches partagées. */
+export interface Campaign {
+  id: string;
+  name: string;
 }
 
 /** MJ ayant accès à une fiche. */
@@ -127,6 +135,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   const [view, setView] = useState<'dashboard' | 'sheet'>('dashboard');
   const [characters, setCharacters] = useState<Character[]>([]);
   const [sharedCharacters, setSharedCharacters] = useState<SharedCharacter[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [activeChar, setActiveChar] = useState<Character | null>(null);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [spells, setSpells] = useState<Spell[]>([]);
@@ -195,18 +204,67 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   /** Fiches que d'autres joueurs ont partagées avec l'utilisateur (il en est le MJ). */
   async function fetchSharedCharacters() {
     if (!user?.id) { setSharedCharacters([]); return; }
-    const { data, error } = await supabase
-      .from('character_viewers')
-      .select('owner_name, characters(*)')
-      .eq('viewer_id', user.id)
-      .order('created_at', { ascending: false });
+    const [{ data, error }, { data: camps }] = await Promise.all([
+      supabase
+        .from('character_viewers')
+        .select('owner_name, campaign_id, characters(*)')
+        .eq('viewer_id', user.id)
+        .order('created_at', { ascending: false }),
+      supabase.from('campaigns').select('id, name').order('created_at'),
+    ]);
+    setCampaigns((camps || []) as Campaign[]);
     // Table absente (migration non appliquée) : on ignore, la liste reste vide.
     if (error) { setSharedCharacters([]); return; }
     setSharedCharacters(
-      (data as unknown as { owner_name: string | null; characters: Character | null }[])
+      (data as unknown as { owner_name: string | null; campaign_id: string | null; characters: Character | null }[])
         .filter(row => row.characters)
-        .map(row => ({ character: row.characters as Character, ownerName: row.owner_name ?? 'un joueur' })),
+        .map(row => ({ character: row.characters as Character, ownerName: row.owner_name ?? 'un joueur', campaignId: row.campaign_id })),
     );
+  }
+
+  // ── Campagnes du MJ ───────────────────────────────────────────────────────
+
+  async function createCampaign(name: string): Promise<Campaign | null> {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const { data, error } = await supabase.from('campaigns').insert([{ name: trimmed }]).select('id, name').single();
+    if (error || !data) {
+      showAlert('Erreur', getNetworkAwareMessage(error?.message, 'Impossible de créer la campagne.'));
+      return null;
+    }
+    setCampaigns(prev => [...prev, data as Campaign]);
+    return data as Campaign;
+  }
+
+  async function renameCampaign(id: string, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setCampaigns(prev => prev.map(c => (c.id === id ? { ...c, name: trimmed } : c)));
+    const { error } = await supabase.from('campaigns').update({ name: trimmed }).eq('id', id);
+    if (error) showAlert('Erreur', getNetworkAwareMessage(error.message, 'Impossible de renommer la campagne.'));
+  }
+
+  /** Supprime la campagne ; ses fiches repassent « sans campagne » (elles restent partagées). */
+  async function deleteCampaign(id: string) {
+    setCampaigns(prev => prev.filter(c => c.id !== id));
+    setSharedCharacters(prev => prev.map(s => (s.campaignId === id ? { ...s, campaignId: null } : s)));
+    const { error } = await supabase.from('campaigns').delete().eq('id', id);
+    if (error) showAlert('Erreur', getNetworkAwareMessage(error.message, 'Impossible de supprimer la campagne.'));
+  }
+
+  /** Range une fiche partagée dans une campagne (null = sans campagne). */
+  async function assignCampaign(characterId: string, campaignId: string | null) {
+    if (!user?.id) return;
+    setSharedCharacters(prev => prev.map(s => (s.character.id === characterId ? { ...s, campaignId } : s)));
+    const { error } = await supabase
+      .from('character_viewers')
+      .update({ campaign_id: campaignId })
+      .eq('character_id', characterId)
+      .eq('viewer_id', user.id);
+    if (error) {
+      showAlert('Erreur', getNetworkAwareMessage(error.message, 'Impossible de ranger cette fiche.'));
+      await fetchSharedCharacters();
+    }
   }
 
   /** Crée un lien d'invitation (7 jours) pour la fiche ; renvoie l'URL à envoyer au MJ. */
@@ -1508,6 +1566,11 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     fetchCharacterViewers,
     removeCharacterViewer,
     acceptShare,
+    campaigns,
+    createCampaign,
+    renameCampaign,
+    deleteCampaign,
+    assignCampaign,
     loadCharacterData,
     syncCharacterField: guard(syncCharacterField),
     syncPf1Data: guard(syncPf1Data),

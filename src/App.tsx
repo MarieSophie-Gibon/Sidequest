@@ -409,6 +409,11 @@ export default function App() {
               characters={data.characters}
               sharedCharacters={data.sharedCharacters}
               onLeaveShare={(id) => { if (auth.user) data.removeCharacterViewer(id, auth.user.id); }}
+              campaigns={data.campaigns}
+              onCreateCampaign={data.createCampaign}
+              onRenameCampaign={data.renameCampaign}
+              onDeleteCampaign={data.deleteCampaign}
+              onAssignCampaign={data.assignCampaign}
               emailConfirmed={!!auth.user.email_confirmed_at}
               onLoadCharacter={(id) => data.loadCharacterData(id)}
               onCreateCharacter={(name, race, system) => data.handleCreateCharacter(name, race, system)}
