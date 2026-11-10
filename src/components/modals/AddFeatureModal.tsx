@@ -13,9 +13,17 @@ interface Props {
   onClose: () => void;
   /** Pathfinder 1e : pas de repos court, tout se recharge à la nuit de repos. */
   perDayOnly?: boolean;
+  /** Homebrew : types de capacités définis par le MJ. */
+  typeOptions?: { id: string; name: string }[];
 }
 
-export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit, onDelete, onClose, perDayOnly }: Props) {
+const DEFAULT_TYPES = [
+  { id: 'classe', name: 'Classe' },
+  { id: 'espece', name: 'Espèce' },
+  { id: 'don', name: 'Don' },
+];
+
+export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit, onDelete, onClose, perDayOnly, typeOptions }: Props) {
   const t = useThemeClasses();
   const [maxInput, setMaxInput] = useState(String(newFeature.max));
   const [resourceCostInput, setResourceCostInput] = useState(String(newFeature.resource_cost));
@@ -30,10 +38,10 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
           <div>
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Catégorie</label>
             <div className="grid grid-cols-3 gap-1.5">
-              {(['classe', 'espece', 'don'] as const).map(cat => (
-                <button key={cat} type="button" onClick={() => setNewFeature(prev => ({ ...prev, type: cat }))}
-                  className={`py-1.5 rounded-xl border text-[9px] font-bold uppercase h-7 transition-all ${newFeature.type === cat ? `${t.accentBg} ${t.accentBorder} ${t.accent}` : `${t.inputBg} ${t.inputBorder} ${t.textMuted}`}`}
-                >{cat === 'espece' ? 'Espèce' : cat.charAt(0).toUpperCase() + cat.slice(1)}</button>
+              {(typeOptions ?? DEFAULT_TYPES).map(({ id, name }) => (
+                <button key={id} type="button" onClick={() => setNewFeature(prev => ({ ...prev, type: id }))}
+                  className={`py-1.5 px-1 rounded-xl border text-[9px] font-bold uppercase min-h-7 leading-tight transition-all ${newFeature.type === id ? `${t.accentBg} ${t.accentBorder} ${t.accent}` : `${t.inputBg} ${t.inputBorder} ${t.textMuted}`}`}
+                >{name || 'Sans nom'}</button>
               ))}
             </div>
           </div>

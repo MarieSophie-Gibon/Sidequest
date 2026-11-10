@@ -104,11 +104,20 @@ export function BreakdownText({ breakdown }: { breakdown: Breakdown }) {
  * Encart repliable (fermé par défaut), même rendu que les sections de l'onglet Capacités.
  * `aside` reste visible fermé : bouton d'ajout, résumé chiffré…
  */
-export function Pf1Collapsible({ title, aside, defaultOpen = false, children }: { title: ReactNode; aside?: ReactNode; defaultOpen?: boolean; children: ReactNode }) {
+export function Pf1Collapsible({ title, aside, defaultOpen = false, id, openSignal = 0, children }: {
+  title: ReactNode; aside?: ReactNode; defaultOpen?: boolean;
+  /** Ancre (pour faire défiler la page jusqu'à l'encart). */
+  id?: string;
+  /** Chaque changement de valeur ouvre l'encart (ex. « Ajouter une valeur spéciale… »). */
+  openSignal?: number;
+  children: ReactNode;
+}) {
   const t = useThemeClasses();
   const [open, setOpen] = useState(defaultOpen);
+  const [lastSignal, setLastSignal] = useState(openSignal);
+  if (openSignal !== lastSignal) { setLastSignal(openSignal); setOpen(true); }
   return (
-    <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
+    <div id={id} className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow} scroll-mt-2`}>
       <div className={`flex justify-between items-center gap-2 ${open ? 'mb-3' : ''}`}>
         <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} className="flex items-center gap-1.5 flex-1 min-w-0 text-left">
           <ChevronDown size={12} className={`${t.textMuted} transition-transform shrink-0 ${open ? 'rotate-0' : '-rotate-90'}`} />

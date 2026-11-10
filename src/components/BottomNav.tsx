@@ -9,6 +9,8 @@ interface Props {
   onDashboard?: () => void;
   /** Remplace l'icône de certains onglets (ex. « Actions » en Pathfinder). */
   iconOverrides?: Partial<Record<TabKey, typeof LayoutDashboard>>;
+  /** Onglets absents de la fiche (sections désactivées par le MJ d'un système homebrew). */
+  hiddenTabs?: Set<string>;
 }
 
 const TABS: { key: TabKey; icon: typeof LayoutDashboard }[] = [
@@ -22,7 +24,7 @@ const TABS: { key: TabKey; icon: typeof LayoutDashboard }[] = [
   { key: 'settings', icon: Settings },
 ];
 
-export function BottomNav({ activeTab, setActiveTab, onDashboard, iconOverrides }: Props) {
+export function BottomNav({ activeTab, setActiveTab, onDashboard, iconOverrides, hiddenTabs }: Props) {
   const t = useThemeClasses();
 
   return (
@@ -38,7 +40,7 @@ export function BottomNav({ activeTab, setActiveTab, onDashboard, iconOverrides 
           <ArrowLeft size={20} />
         </button>
       )}
-      {TABS.map(tab => {
+      {TABS.filter(tab => !hiddenTabs?.has(tab.key)).map(tab => {
         const Icon = iconOverrides?.[tab.key] ?? tab.icon;
         return (
           <button

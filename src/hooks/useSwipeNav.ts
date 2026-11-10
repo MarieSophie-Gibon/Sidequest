@@ -5,7 +5,7 @@ type TabKey = typeof TABS[number];
 
 const MIN_SWIPE_X = 55;
 
-export function useSwipeNav(activeTab: TabKey, setActiveTab: (tab: TabKey) => void) {
+export function useSwipeNav(activeTab: TabKey, setActiveTab: (tab: TabKey) => void, hiddenTabs?: Set<string>) {
   const startX = useRef<number | null>(null);
   const startY = useRef<number | null>(null);
 
@@ -23,9 +23,11 @@ export function useSwipeNav(activeTab: TabKey, setActiveTab: (tab: TabKey) => vo
 
     if (Math.abs(dx) < MIN_SWIPE_X || Math.abs(dy) > Math.abs(dx) * 1.2) return;
 
-    const idx = TABS.indexOf(activeTab);
-    if (dx < 0 && idx < TABS.length - 1) setActiveTab(TABS[idx + 1]);
-    else if (dx > 0 && idx > 0) setActiveTab(TABS[idx - 1]);
+    // Onglets visibles seulement (une fiche homebrew peut en masquer).
+    const visible = TABS.filter(tab => !hiddenTabs?.has(tab));
+    const idx = visible.indexOf(activeTab);
+    if (dx < 0 && idx < visible.length - 1) setActiveTab(visible[idx + 1]);
+    else if (dx > 0 && idx > 0) setActiveTab(visible[idx - 1]);
   };
 
   return { onTouchStart, onTouchEnd };

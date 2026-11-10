@@ -3,6 +3,9 @@ import { supabase } from '../supabaseClient';
 import { DEFAULT_SKILLS_TEMPLATES } from '../constants';
 import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography, Familiar, CharacterStatKey, Note, GameSystem } from '../types/rpg.types';
 import { createPf1Data, normalizePf1Data } from '../systems/pf1e/defaults';
+import { createHomebrewData } from '../systems/homebrew/sheet';
+import { resourcesEnabled, sheetStructure } from '../systems/homebrew/presets';
+import type { HomebrewStructure } from '../systems/homebrew/types';
 import { computePf1Sheet } from '../systems/pf1e/rules';
 import type { Pf1CraftProject, Pf1Data } from '../systems/pf1e/types';
 import { formatCp, magicCheck, magicCostCp, mundaneCheck, mundaneMaterialsCp, payFromPurse } from '../systems/pf1e/crafting';
@@ -945,7 +948,13 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   }
 
   // Character creation
-  async function handleCreateCharacter(heroName: string, heroRace: string, system: GameSystem = 'dnd5e') {
+  async function handleCreateCharacter(
+    heroName: string,
+    heroRace: string,
+    system: GameSystem = 'dnd5e',
+    /** Fiche homebrew : modèle choisi (sa structure est copiée dans la fiche). */
+    homebrew?: { systemId: string; structure: HomebrewStructure },
+  ) {
     if (!user) return;
     if (!heroName.trim()) {
       showAlert("Nom requis", "Veuillez saisir un nom valide.");
@@ -988,6 +997,16 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
         hp_max: 10,
         hp_current: 10,
       }),
+      // Homebrew : copie de la structure du modèle + valeurs vides, rattachée au modèle.
+      ...(system === 'homebrew' && homebrew && {
+        system,
+        game_system_id: homebrew.systemId,
+        system_data: createHomebrewData(sheetStructure(homebrew.structure)),
+        class: '',
+        subclass: '',
+        hp_max: 10,
+        hp_current: 10,
+      }),
     };
 
     const { data: createdCharacter, error } = await supabase
@@ -1010,6 +1029,19 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       showAlert('Erreur', baseMessage === error?.message ? 'Impossible de creer le personnage pour le moment. Reessayez dans quelques instants.' : baseMessage);
       setLoading(false);
       return null;
+    }
+
+    // Homebrew : ressources prévues par le MJ dans le modèle.
+    const modelResources = system === 'homebrew' && homebrew && resourcesEnabled(homebrew.structure) ? (homebrew.structure.resources ?? []).filter(r => r.name.trim()) : [];
+    if (modelResources.length > 0) {
+      const { error: resError } = await supabase.from('resources').insert(modelResources.map(r => ({
+        character_id: (createdCharacter as Character).id,
+        name: r.name.trim(),
+        max: r.defaultMax,
+        current: r.defaultMax,
+        recharge: r.recharge,
+      })));
+      if (resError) console.error('Erreur creation ressources du modele :', resError.message);
     }
 
     await fetchCharactersList();
@@ -1108,7 +1140,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
     if (activeChar.system === 'pf1e') {
       const pf1 = normalizePf1Data(activeChar.system_data);
-      await syncPf1Data({ ...pf1, spellsUsed: [], prepared: pf1.prepared.map(p => ({ ...p, cast: false })) });
+      await syncPf1Data({ ...pf1, spellsUsed: [], prepared: pf1.prepared.map(p => ({ ...p, cast: false, chargesLeft: undefined })) });
     }
 
     setActiveConditions([]);
@@ -1139,7 +1171,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     await Promise.all(resources.map(r => supabase.from('resources').update({ current: r.max }).eq('id', r.id)));
 
     const pf1 = normalizePf1Data(activeChar.system_data);
-    await syncPf1Data({ ...pf1, spellsUsed: [], prepared: pf1.prepared.map(p => ({ ...p, cast: false })) });
+    await syncPf1Data({ ...pf1, spellsUsed: [], prepared: pf1.prepared.map(p => ({ ...p, cast: false, chargesLeft: undefined })) });
 
     showAlert(
       bedRest ? 'Journée d’alitement' : 'Nuit de repos',

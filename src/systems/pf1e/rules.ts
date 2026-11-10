@@ -2,7 +2,7 @@ import type { CharacterStatKey } from '../../types/rpg.types';
 import { classSpellsPerDay } from './data/classes';
 import { PF1_SKILLS } from './data/skills';
 import type {
-  BabProgression, Breakdown, Pf1Attack, Pf1AttackLine, Pf1Data, Pf1SaveKey, Pf1Sheet, Pf1SkillLine,
+  BabProgression, Breakdown, Pf1Attack, Pf1AttackLine, Pf1Data, Pf1SaveKey, Pf1Sheet, Pf1SkillLine, Pf1SpellCharges,
 } from './types';
 
 export const STAT_KEYS: CharacterStatKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
@@ -44,6 +44,12 @@ function bd(parts: [string, number][]): Breakdown {
   return { total: kept.reduce((s, [, v]) => s + v, 0), parts: kept };
 }
 
+/** Nombre de charges d'un sort à charges pour un niveau de lanceur donné. */
+export function spellChargeCount(cfg: Pf1SpellCharges, casterLevel: number): number {
+  const n = Math.max(1, Math.floor(Math.max(1, casterLevel) / Math.max(1, cfg.everyLevels)));
+  return cfg.max !== null && cfg.max > 0 ? Math.min(cfg.max, n) : n;
+}
+
 export function signed(n: number): string {
   return n >= 0 ? `+${n}` : `${n}`;
 }
@@ -59,7 +65,7 @@ export function computePf1Sheet(data: Pf1Data, levelInput: number): Pf1Sheet {
   ) as Record<CharacterStatKey, number>;
   const mods = Object.fromEntries(STAT_KEYS.map(k => [k, abilityMod(scores[k])])) as Record<CharacterStatKey, number>;
 
-  const bab = baseAttackBonus(data.bab, level);
+  const bab = data.babBase ?? baseAttackBonus(data.bab, level);
 
   // Armure et bouclier
   const armorBonus = data.armor?.bonus ?? 0;
@@ -78,7 +84,7 @@ export function computePf1Sheet(data: Pf1Data, levelInput: number): Pf1Sheet {
 
   const saves = Object.fromEntries((['fort', 'ref', 'will'] as Pf1SaveKey[]).map(key => {
     const stat = SAVE_STAT[key];
-    return [key, bd([['Base', baseSave(data.goodSaves.includes(key), level)], [STAT_SHORT[stat], mods[stat]], ['Divers', data.saveMisc[key] ?? 0]])];
+    return [key, bd([['Base', data.saveBase?.[key] ?? baseSave(data.goodSaves.includes(key), level)], [STAT_SHORT[stat], mods[stat]], ['Divers', data.saveMisc[key] ?? 0]])];
   })) as Record<Pf1SaveKey, Breakdown>;
 
   const cmb = bd([['BBA', bab], ['For', mods.str], ['Taille', size.special]]);
@@ -94,7 +100,8 @@ export function computePf1Sheet(data: Pf1Data, levelInput: number): Pf1Sheet {
       ["Malus d'armure", def.armorPenalty ? armorCheckPenalty : 0], ['Divers', data.skillMisc[def.id] ?? 0]]);
     return { id: def.id, name: def.name, stat: def.stat, ranks, isClassSkill, trainedOnly: def.trainedOnly, usable: !def.trainedOnly || ranks > 0, value };
   });
-  const perLevel = Math.max(1, data.skillRanksPerLevel + mods.int) + (data.favoredClassBonus === 'skill' ? 1 : 0);
+  // Bonus de classe de prédilection : ajouté par le joueur lui-même (rangs de compétence ou PV).
+  const perLevel = Math.max(1, data.skillRanksPerLevel + mods.int);
   const skillRanksBudget = perLevel * level;
   const skillRanksSpent = skills.reduce((s, sk) => s + sk.ranks, 0);
 
