@@ -121,14 +121,25 @@ export interface Pf1Data {
   initiativeMisc: number;
   skillRanks: Record<string, number>;
   skillMisc: Record<string, number>;
+  /** Compétences personnalisées, affichées en fin de liste. */
+  customSkills?: Pf1CustomSkill[];
   attacks: Pf1Attack[];
   concentrationMisc: number;
   /** Bonus pour lancer sur la défensive (Magie de guerre : +4). */
   defensiveCastingBonus: number;
 }
 
+/** Compétence ajoutée par le joueur (ex. Artisanat (forge), Profession (marin)). */
+export interface Pf1CustomSkill {
+  id: string;
+  name: string;
+  stat: CharacterStatKey;
+}
+
 export interface Pf1SkillLine {
   id: string;
+  /** Compétence personnalisée (supprimable). */
+  custom?: boolean;
   name: string;
   stat: CharacterStatKey;
   ranks: number;

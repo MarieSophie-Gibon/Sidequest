@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from './supabaseClient';
 import { useAuth } from './hooks/useAuth';
 import { useCharacterData } from './hooks/useCharacterData';
@@ -59,12 +59,12 @@ import { Pf1DefenseSection } from './components/pf1e/Pf1DefenseSection';
 import { Pf1ActionsTab } from './components/pf1e/Pf1ActionsTab';
 import { Pf1CraftingModal } from './components/pf1e/Pf1CraftingModal';
 import { Pf1CraftProjectsCard } from './components/pf1e/Pf1CraftProjectsCard';
-import { Pf1AttackModal, Pf1DefenseModal, Pf1HelpModal, Pf1MagicModal, Pf1StatsModal } from './components/pf1e/Pf1Modals';
+import { Pf1AttackModal, Pf1DefenseModal, Pf1HelpModal, Pf1InitSpeedModal, Pf1MagicModal, Pf1StatsModal } from './components/pf1e/Pf1Modals';
 import { normalizePf1Data } from './systems/pf1e/defaults';
 import { computePf1Sheet } from './systems/pf1e/rules';
 import type { Pf1Attack } from './systems/pf1e/types';
 
-/** Thème fixe de l'accueil : violet, fond clair flouté (le voile d'étoiles est toujours affiché). */
+/** Thème de l'accueil : violet ; fond clair flouté tant que le fond de l'app est « par défaut » (voile d'étoiles toujours affiché). */
 const HOME_THEME: CharacterTheme = { themeName: 'violet', bgChoice: 'light', bgOverlay: true };
 
 /** Fenêtres de pure consultation, autorisées sur une fiche en lecture seule. */
@@ -158,9 +158,17 @@ export default function App() {
   }, [userId]);
 
   // Thème : sur une fiche, celui du personnage (ou le thème de l'app s'il n'en a pas) ;
-  // hors fiche (accueil, sélection du PJ, connexion), toujours le thème d'accueil fixe.
-  const { setCharacterTheme } = settings;
-  const sheetTheme = data.view === 'sheet' ? (data.activeChar?.theme ?? null) : HOME_THEME;
+  // hors fiche (accueil, sélection du PJ, connexion), le thème d'accueil (violet + fond de l'app).
+  const { setCharacterTheme, defaultTheme } = settings;
+  // Hors fiche : couleur violette fixe, mais le fond d'écran (image, flou, image perso) suit le thème de l'app.
+  const homeTheme = useMemo<CharacterTheme>(() => ({
+    ...HOME_THEME,
+    // « Par défaut » garde l'image claire de l'accueil ; un choix explicite (image perso, aucun…) s'applique.
+    bgChoice: defaultTheme.bgChoice === 'auto' ? HOME_THEME.bgChoice : defaultTheme.bgChoice,
+    bgOverlay: defaultTheme.bgOverlay,
+    customBg: defaultTheme.customBg,
+  }), [defaultTheme.bgChoice, defaultTheme.bgOverlay, defaultTheme.customBg]);
+  const sheetTheme = data.view === 'sheet' ? (data.activeChar?.theme ?? null) : homeTheme;
   useEffect(() => {
     setCharacterTheme(sheetTheme);
   }, [sheetTheme, setCharacterTheme]);
@@ -514,6 +522,7 @@ export default function App() {
                   onOpenHelp={() => setModalType('pf1_help')}
                   onOpenBuild={() => setModalType('pf1_build')}
                   onOpenDefense={() => setModalType('pf1_defense')}
+                  onOpenInitSpeed={() => setModalType('pf1_init_speed')}
                   renderAvatar={() => renderActiveAvatar(data.activeChar!)}
                 />
               ) : (
@@ -876,7 +885,19 @@ export default function App() {
           {modalType === 'pf1_defense' && pf1Data && data.activeChar && (
             <Pf1DefenseModal
               data={pf1Data}
+              level={data.activeChar.level}
+              onSave={async (next) => {
+                setModalType(null);
+                await data.syncPf1Data(next);
+              }}
+              onClose={() => setModalType(null)}
+            />
+          )}
+          {modalType === 'pf1_init_speed' && pf1Data && pf1Sheet && data.activeChar && (
+            <Pf1InitSpeedModal
+              data={pf1Data}
               speed={data.activeChar.speed}
+              dexMod={pf1Sheet.mods.dex}
               level={data.activeChar.level}
               onSave={async (next, speed) => {
                 setModalType(null);

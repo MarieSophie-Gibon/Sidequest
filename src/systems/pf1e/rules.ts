@@ -7,7 +7,7 @@ import type {
 
 export const STAT_KEYS: CharacterStatKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
-const SAVE_STAT: Record<Pf1SaveKey, CharacterStatKey> = { fort: 'con', ref: 'dex', will: 'wis' };
+export const SAVE_STAT: Record<Pf1SaveKey, CharacterStatKey> = { fort: 'con', ref: 'dex', will: 'wis' };
 
 /** Taille : bonus à l'attaque et à la CA, et modificateur spécial de BMO/DMD. */
 const SIZE_MODS = { P: { attack: 1, ac: 1, special: -1 }, M: { attack: 0, ac: 0, special: 0 }, G: { attack: -1, ac: -1, special: 1 } };
@@ -93,12 +93,13 @@ export function computePf1Sheet(data: Pf1Data, levelInput: number): Pf1Sheet {
 
   // Compétences
   const classSkills = new Set(data.classSkills);
-  const skills: Pf1SkillLine[] = PF1_SKILLS.map(def => {
+  const customDefs = (data.customSkills ?? []).map(c => ({ ...c, armorPenalty: false, trainedOnly: false, custom: true }));
+  const skills: Pf1SkillLine[] = [...PF1_SKILLS.map(def => ({ ...def, custom: false })), ...customDefs].map(def => {
     const ranks = Math.max(0, Math.floor(data.skillRanks[def.id] ?? 0));
     const isClassSkill = classSkills.has(def.id);
     const value = bd([['Rangs', ranks], [STAT_SHORT[def.stat], mods[def.stat]], ['Compétence de classe', isClassSkill && ranks > 0 ? 3 : 0],
       ["Malus d'armure", def.armorPenalty ? armorCheckPenalty : 0], ['Divers', data.skillMisc[def.id] ?? 0]]);
-    return { id: def.id, name: def.name, stat: def.stat, ranks, isClassSkill, trainedOnly: def.trainedOnly, usable: !def.trainedOnly || ranks > 0, value };
+    return { id: def.id, custom: def.custom, name: def.name, stat: def.stat, ranks, isClassSkill, trainedOnly: def.trainedOnly, usable: !def.trainedOnly || ranks > 0, value };
   });
   // Bonus de classe de prédilection : ajouté par le joueur lui-même (rangs de compétence ou PV).
   const perLevel = Math.max(1, data.skillRanksPerLevel + mods.int);

@@ -119,7 +119,7 @@ export function SettingsTab({ activeCharacterName, onDeleteCharacter, characterT
               ? (ownTheme
                 ? 'Ce personnage a son propre thème, appliqué uniquement sur sa fiche.'
                 : 'Ce personnage suit le thème de l’app. Le modifier ci-dessous lui crée son propre thème.')
-              : 'Thème des personnages qui n’ont pas leur propre thème. L’accueil garde toujours son thème violet.'
+              : 'Thème des personnages qui n’ont pas leur propre thème. L’accueil garde sa couleur violette mais reprend ce fond d’écran.'
                 + (ownTheme ? ' Ce personnage ayant son propre thème, les changements ne seront pas visibles ici.' : '')}
           </p>
           {editingCharacter && ownTheme && (
