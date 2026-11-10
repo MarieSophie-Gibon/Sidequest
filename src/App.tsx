@@ -26,7 +26,9 @@ import { HomebrewCombatHUD } from './components/homebrew/HomebrewCombatHUD';
 import { HomebrewHomeSections } from './components/homebrew/HomebrewHomeSections';
 import { HomebrewSkillsTab } from './components/homebrew/HomebrewSkillsTab';
 import { normalizeHomebrewData, type HomebrewData } from './systems/homebrew/sheet';
-import { featureTypesOf, resourcesEnabled } from './systems/homebrew/presets';
+import { featureTypesOf, itemCategoriesOf, resourcesEnabled, restsEnabled, restsOf, spellFieldsOf } from './systems/homebrew/presets';
+import { HomebrewInventoryTab } from './components/homebrew/HomebrewInventoryTab';
+import { HomebrewSpellsTab } from './components/homebrew/HomebrewSpellsTab';
 import { DnDNotes } from './components/DnDNotes';
 import { BottomNav } from './components/BottomNav';
 import { AppHeader } from './components/AppHeader';
@@ -309,6 +311,9 @@ export default function App() {
       damage: spell.damage || '',
       upcast_damage: spell.upcast_damage || '',
       desc: spell.desc || '',
+      school: spell.school || '',
+      cost: spell.cost || '',
+      condition: spell.condition || '',
     });
     setModalType('add_spell');
   };
@@ -569,6 +574,10 @@ export default function App() {
                     onLongRest={data.handleLongRest}
                     onPf1Rest={pf1Data ? data.handlePf1NightRest : undefined}
                     onUpdateResourceCurrent={data.handleUpdateResourceCurrent}
+                    onSetResourceCurrent={data.handleSetResourceCurrent}
+                    onToggleResourceBullet={data.handleToggleResourceBullet}
+                    hbRests={hbData ? (restsEnabled(hbData.structure) ? restsOf(hbData.structure) : []) : undefined}
+                    onHbRest={hbData ? data.handleHomebrewRest : undefined}
                     onUpdateFamiliarHp={data.handleUpdateFamiliarHp}
                     onNavigateTab={requestTabChange}
                     systemSections={hbData ? <HomebrewHomeSections data={hbData} onChange={saveHb} /> : pf1Data && pf1Sheet && (
@@ -592,9 +601,28 @@ export default function App() {
                   />
                 )}
 
-                {activeTab === 'spells' && !pf1Data && (
+                {activeTab === 'spells' && hbData && (
+                  <HomebrewSpellsTab
+                    data={hbData}
+                    onChange={saveHb}
+                    spellSlots={data.spellSlots}
+                    spells={data.spells}
+                    spellDc={data.activeChar.spell_dc}
+                    spellAttack={data.activeChar.spell_attack}
+                    onOpenEditSpellSlot={(slot) => {
+                      data.setNewSpellSlot({ level: slot.level, max: slot.max, current: slot.current });
+                      setModalType('edit_spell_slot');
+                    }}
+                    onToggleSpellSlot={data.handleToggleSpellSlot}
+                    onOpenAddSpell={() => setModalType('add_spell')}
+                    onEditSpellcasting={() => setModalType('edit_spellcasting')}
+                    onEditSpell={openEditSpell}
+                  />
+                )}
+
+                {activeTab === 'spells' && !pf1Data && !hbData && (
                   <DnDSpellcasting
-                    spellSlots={hbData && !hbData.structure.spellSlots ? [] : data.spellSlots}
+                    spellSlots={data.spellSlots}
                     spells={data.spells}
                     spellDc={data.activeChar.spell_dc}
                     spellAttack={data.activeChar.spell_attack}
@@ -618,13 +646,28 @@ export default function App() {
                     onLongRest={data.handleLongRest}
                     onOpenEditFeature={openEditFeature}
                     onOpenCreateFeature={openCreateFeature}
-                    onOpenAddResource={() => { data.setNewResource({ name: '', max: 10, current: 10, recharge: 'LONG_REST' }); setModalType('add_resource'); }}
-                    onOpenEditResource={(res) => { data.setNewResource({ id: res.id, name: res.name, max: res.max, current: res.current, recharge: res.recharge ?? 'LONG_REST' }); setModalType('add_resource'); }}
+                    onOpenAddResource={() => {
+                      // Homebrew : puces par défaut, rechargées par le premier repos du système.
+                      data.setNewResource(hbData
+                        ? { name: '', max: 3, current: 3, recharge: 'LONG_REST', display: 'bullets', bullets: null, rest_id: restsEnabled(hbData.structure) ? (restsOf(hbData.structure)[0]?.id ?? null) : null, rest_amount: null }
+                        : { name: '', max: 10, current: 10, recharge: 'LONG_REST' });
+                      setModalType('add_resource');
+                    }}
+                    onOpenEditResource={(res) => {
+                      data.setNewResource({
+                        id: res.id, name: res.name, max: res.max, current: res.current, recharge: res.recharge ?? 'LONG_REST',
+                        ...(hbData && { display: res.display ?? 'bullets', bullets: res.bullets ?? null, rest_id: res.rest_id ?? null, rest_amount: res.rest_amount ?? null }),
+                      });
+                      setModalType('add_resource');
+                    }}
                     onUpdateResourceCurrent={data.handleUpdateResourceCurrent}
+                    onSetResourceCurrent={data.handleSetResourceCurrent}
+                    onToggleResourceBullet={data.handleToggleResourceBullet}
                     onOpenAddFamiliar={() => { data.setNewFamiliar({ name: '', species: '', description: '', hp_current: 1, hp_max: 1, ac: 10, speed: '', str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, passive_perception: 10, senses: '', abilities: '', resistances: '', darkvision: '', actions: '', avatar_url: '', status: 'present' }); setModalType('add_familiar'); }}
                     onOpenEditFamiliar={(fam: Familiar) => { data.setNewFamiliar({ id: fam.id, name: fam.name, species: fam.species || '', description: fam.description || '', hp_current: fam.hp_current, hp_max: fam.hp_max, ac: fam.ac ?? 10, speed: fam.speed || '', str: fam.str ?? 10, dex: fam.dex ?? 10, con: fam.con ?? 10, int: fam.int ?? 10, wis: fam.wis ?? 10, cha: fam.cha ?? 10, passive_perception: fam.passive_perception ?? 10, senses: fam.senses || '', abilities: fam.abilities || '', resistances: fam.resistances || '', darkvision: fam.darkvision || '', actions: fam.actions || '', avatar_url: fam.avatar_url || '', status: fam.status }); setModalType('add_familiar'); }}
                     onUpdateFamiliarHp={data.handleUpdateFamiliarHp}
                     featureGroups={hbData ? featureTypesOf(hbData.structure) : undefined}
+                    simpleFamiliars={!!hbData}
                     showFeatures={hbData ? hbData.structure.sections.features : true}
                     showResources={hbData ? resourcesEnabled(hbData.structure) : true}
                   />
@@ -651,7 +694,26 @@ export default function App() {
                   />
                 )}
 
-                {activeTab === 'inventory' && (
+                {activeTab === 'inventory' && hbData && (
+                  <HomebrewInventoryTab
+                    categories={itemCategoriesOf(hbData.structure)}
+                    items={data.items}
+                    onToggleEquip={data.handleToggleItemEquip}
+                    onAddItem={(categoryId) => {
+                      data.setNewItem({ name: '', description: '', quantity: 1, equipped: false, category: categoryId, damage: '', range: '', defense_bonus: 0 });
+                      setModalType('add_item');
+                    }}
+                    onEditItem={(item: Item) => {
+                      data.setNewItem({
+                        id: item.id, name: item.name, description: item.description || '', quantity: item.quantity, equipped: item.equipped,
+                        category: item.category || 'objet', damage: item.damage || '', range: item.range || '', defense_bonus: item.defense_bonus || 0,
+                      });
+                      setModalType('add_item');
+                    }}
+                  />
+                )}
+
+                {activeTab === 'inventory' && !hbData && (
                   <DnDInventory
                     hidePurse={!!hbData}
                     activeChar={data.activeChar}
@@ -762,7 +824,7 @@ export default function App() {
             <AddFeatureModal perDayOnly={!!pf1Data} typeOptions={hbData ? featureTypesOf(hbData.structure) : undefined} newFeature={data.newFeature} setNewFeature={data.setNewFeature} resources={data.resources} onSubmit={(e) => { data.handleSaveFeature(e); setModalType(null); }} onDelete={data.handleDeleteFeature} onClose={() => setModalType(null)} />
           )}
           {modalType === 'add_resource' && (
-            <AddResourceModal perDayOnly={!!pf1Data} newResource={data.newResource} setNewResource={data.setNewResource} onSubmit={async (e) => { const ok = await data.handleSaveResource(e); if (ok) setModalType(null); }} onDelete={async (id) => { await data.handleDeleteResource(id); setModalType(null); }} onClose={() => setModalType(null)} />
+            <AddResourceModal perDayOnly={!!pf1Data} hbRests={hbData ? (restsEnabled(hbData.structure) ? restsOf(hbData.structure) : []) : undefined} newResource={data.newResource} setNewResource={data.setNewResource} onSubmit={async (e) => { const ok = await data.handleSaveResource(e); if (ok) setModalType(null); }} onDelete={async (id) => { await data.handleDeleteResource(id); setModalType(null); }} onClose={() => setModalType(null)} />
           )}
           {modalType === 'edit_spell_slot' && (
             <EditSpellSlotModal
@@ -790,7 +852,7 @@ export default function App() {
             <EditSpellcastingModal activeChar={data.activeChar} syncCharacterField={data.syncCharacterField} onClose={() => setModalType(null)} />
           )}
           {modalType === 'add_spell' && (
-            <AddSpellModal newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], material_components: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', upcast_damage: '', desc: '' }); setModalType(null); }} />
+            <AddSpellModal hbFields={hbData ? spellFieldsOf(hbData.structure) : undefined} newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], material_components: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', upcast_damage: '', desc: '' }); setModalType(null); }} />
           )}
           {modalType === 'death_saves' && data.activeChar && (
             <DeathSavingThrowsModal
@@ -810,10 +872,12 @@ export default function App() {
               onDelete={data.handleDeleteFamiliar}
               onAvatarUpload={data.handleFamiliarAvatarUpload}
               onClose={() => setModalType(null)}
+              homebrew={hbData ? { abilities: !!hbData.structure.familiarAbilities } : undefined}
             />
           )}
           {modalType === 'add_item' && (
             <AddItemModal
+              hbCategories={hbData ? itemCategoriesOf(hbData.structure) : undefined}
               newItem={data.newItem}
               setNewItem={data.setNewItem}
               onSubmit={async (e) => { await data.handleSaveItem(e); setModalType(null); }}

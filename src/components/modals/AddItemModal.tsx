@@ -3,6 +3,7 @@ import type { NewItemState } from '../../hooks/useCharacterData';
 import { useState } from 'react';
 import { Package, Sword, Shield, Trash2, FlaskConical, ScrollText, WandSparkles, Leaf } from 'lucide-react';
 import { ModalActions, ModalHeader } from './ModalControls';
+import type { HbItemCategory } from '../../systems/homebrew/types';
 
 interface Props {
   newItem: NewItemState;
@@ -10,15 +11,22 @@ interface Props {
   onSubmit: (e: React.FormEvent) => void;
   onDelete?: (id: string, name: string) => void;
   onClose: () => void;
+  /** Homebrew : catégories du MJ et leurs champs (Bonus, DM). */
+  hbCategories?: HbItemCategory[];
 }
 
-export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose }: Props) {
+export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose, hbCategories }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newItem.id;
   const [quantityInput, setQuantityInput] = useState(String(newItem.quantity));
   const [defenseInput, setDefenseInput] = useState(String(newItem.defense_bonus));
 
-  const categories = [
+  const hbCategory = hbCategories?.find(c => c.id === newItem.category);
+  // Champs affichés : ceux de la catégorie homebrew, sinon les champs D&D de l'arme / de l'armure.
+  const showDamage = hbCategories ? !!hbCategory?.fields.includes('dm') : newItem.category === 'arme';
+  const showBonus = hbCategories ? !!hbCategory?.fields.includes('bonus') : newItem.category === 'armure';
+
+  const categories = hbCategories ? hbCategories.map(c => ({ key: c.id, label: c.name || 'Sans nom', icon: Package })) : [
     { key: 'objet' as const, label: 'Objet', icon: Package },
     { key: 'potion' as const, label: 'Potion', icon: FlaskConical },
     { key: 'parchemin' as const, label: 'Parchemin', icon: ScrollText },
@@ -116,23 +124,23 @@ export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose 
           </div>
 
           {/* Weapon fields */}
-          {newItem.category === 'arme' && (
-            <div className="grid grid-cols-2 gap-2">
+          {showDamage && (
+            <div className={`grid ${hbCategories ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
               <div>
                 <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Dégâts</label>
                 <input type="text" placeholder="1d8+3" value={newItem.damage} onChange={(e) => setNewItem(prev => ({ ...prev, damage: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
               </div>
-              <div>
+              {!hbCategories && <div>
                 <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Portée</label>
                 <input type="text" placeholder="1.5m / 9m" value={newItem.range} onChange={(e) => setNewItem(prev => ({ ...prev, range: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} />
-              </div>
+              </div>}
             </div>
           )}
 
           {/* Armor fields */}
-          {newItem.category === 'armure' && (
+          {showBonus && (
             <div>
-              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Bonus Défense (CA)</label>
+              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>{hbCategories ? 'Bonus' : 'Bonus Défense (CA)'}</label>
               <input
                 type="number"
                 min="0"

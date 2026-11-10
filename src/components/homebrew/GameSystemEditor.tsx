@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { ArrowLeft, Save, Trash2 } from 'lucide-react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
-import type { GameSystemRecord, HbAttackType, HbCategoryKey, HbModifierRule, HbSections, HbSpecial, HomebrewStructure } from '../../systems/homebrew/types';
-import { CATEGORY_KEYS, categoriesOf, newId, removeSpecial, removeStat, SPECIAL_CATALOG, toggleCategory, prefillDnd, setBaseBonus, BASE_BONUS_FREE, identityFieldsOf, setIdentityFields, DEFAULT_IDENTITY_FIELDS, featureTypesOf, resourcesEnabled } from '../../systems/homebrew/presets';
+import type { GameSystemRecord, HbAttackType, HbItemCategory, HbRest, HbRestGain, HbCategoryKey, HbModifierRule, HbSections, HbSpecial, HomebrewStructure } from '../../systems/homebrew/types';
+import { CATEGORY_KEYS, categoriesOf, newId, removeSpecial, removeStat, SPECIAL_CATALOG, toggleCategory, prefillDnd, setBaseBonus, BASE_BONUS_FREE, identityFieldsOf, setIdentityFields, DEFAULT_IDENTITY_FIELDS, featureTypesOf, resourcesEnabled, restsOf, restsEnabled, SPELL_FIELD_KEYS, SPELL_FIELD_LABELS, spellFieldsOf, spellModeOf, itemCategoriesOf } from '../../systems/homebrew/presets';
 import { Pf1Collapsible } from '../pf1e/ui';
 import { ListEditor } from './ListEditor';
 
@@ -39,6 +39,7 @@ const ATTACK_TYPES: { id: HbAttackType; label: string }[] = [
 const SECTION_LABELS: Record<keyof HbSections, string> = {
   features: 'Capacités',
   resources: 'Ressources',
+  rests: 'Repos',
   spells: 'Sorts (onglet à part)',
   inventory: 'Inventaire',
   familiars: 'Familiers',
@@ -65,6 +66,26 @@ export function GameSystemEditor({ system, onSave, onDelete, onClose, heroName, 
   const edit = (next: HomebrewStructure) => { setS(next); setDirty(true); };
   const set = <K extends keyof HomebrewStructure>(key: K, value: HomebrewStructure[K]) => edit({ ...s, [key]: value });
   const cat = categoriesOf(s);
+  const rests = restsOf(s);
+
+  /** Ligne « PV : + [n] × niveau » d'un repos non automatique. */
+  const gainRow = (labelText: string, gain: HbRestGain | undefined, onChange: (g: HbRestGain) => void, key: string) => (
+    <div key={key} className={`flex items-center gap-2 text-[10px] ${t.textMuted}`}>
+      <span className="w-20 truncate">{labelText}</span>
+      <span>+</span>
+      <input
+        type="number"
+        min={0}
+        value={gain?.amount ?? 0}
+        onChange={e => onChange({ amount: Math.max(0, Math.trunc(Number(e.target.value) || 0)), perLevel: gain?.perLevel ?? false })}
+        className={`${select} w-14 font-mono`}
+      />
+      <label className="flex items-center gap-1 cursor-pointer">
+        <input type="checkbox" checked={gain?.perLevel ?? false} onChange={e => onChange({ amount: gain?.amount ?? 0, perLevel: e.target.checked })} />
+        × niveau
+      </label>
+    </div>
+  );
   const [specialsSignal, setSpecialsSignal] = useState(0);
 
   /** Bonus de base au toucher ; « Ajouter une valeur spéciale… » coche la catégorie et y fait défiler la page. */
@@ -185,66 +206,6 @@ export function GameSystemEditor({ system, onSave, onDelete, onClose, heroName, 
           </div>
         </Pf1Collapsible>
 
-        <Pf1Collapsible title="Éléments de la fiche" defaultOpen>
-          <div className="space-y-3">
-            <p className={hint}>Coche ce qui existe dans ton jeu. Une catégorie décochée disparaît de la fiche (son contenu est gardé si tu la recoches).</p>
-            <div>
-              <span className={label}>Valeurs et règles</span>
-              <div className="grid grid-cols-2 gap-1.5">
-                {CATEGORY_KEYS.map(key => check(cat[key], v => setCat(key, v), CATEGORY_LABELS[key], key))}
-              </div>
-            </div>
-            <div>
-              <span className={label}>Onglets</span>
-              <div className="grid grid-cols-2 gap-1.5">
-                {(Object.keys(SECTION_LABELS) as (keyof HbSections)[]).map(key => check(
-                  key === 'resources' ? resourcesEnabled(s) : !!s.sections[key],
-                  v => set('sections', { ...s.sections, [key]: v }), SECTION_LABELS[key], key,
-                ))}
-              </div>
-              {s.sections.spells && <div className="pt-1.5">{check(s.spellSlots, v => set('spellSlots', v), 'Emplacements de sorts dans l’onglet Sorts')}</div>}
-            </div>
-          </div>
-        </Pf1Collapsible>
-
-        {s.sections.features && <Pf1Collapsible title={`Types de capacités (${featureTypesOf(s).length})`}>
-          <div className="space-y-2">
-            <p className={hint}>Chaque type devient un groupe de l’onglet Capacités (capacités de classe, de race, dons…). Le joueur y ajoute ses capacités.</p>
-            <ListEditor
-              items={featureTypesOf(s)}
-              onChange={v => set('featureTypes', v)}
-              createItem={() => ({ id: newId(), name: '' })}
-              addLabel="Ajouter un type de capacité"
-              emptyText="Aucun type : l’onglet Capacités n’aura pas de groupe."
-            />
-          </div>
-        </Pf1Collapsible>}
-
-        {resourcesEnabled(s) && <Pf1Collapsible title={`Ressources (${(s.resources ?? []).length})`}>
-          <div className="space-y-2">
-            <p className={hint}>Ressources présentes d’office sur chaque nouvelle fiche (Ki, Rage…). Le joueur peut toujours en ajouter d’autres.</p>
-            <ListEditor
-              items={s.resources ?? []}
-              onChange={v => set('resources', v)}
-              createItem={() => ({ id: newId(), name: '', defaultMax: 3, recharge: 'LONG_REST' as const })}
-              addLabel="Ajouter une ressource"
-              emptyText="Aucune ressource prévue."
-              renderExtra={(item, update) => (
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className={`flex items-center gap-1.5 text-[10px] ${t.textMuted}`}>
-                    Max par défaut
-                    <input type="number" min={0} value={item.defaultMax} onChange={e => update({ defaultMax: Math.max(0, Math.trunc(Number(e.target.value) || 0)) })} className={`${select} w-16 font-mono`} />
-                  </label>
-                  <select value={item.recharge} onChange={e => update({ recharge: e.target.value as 'SHORT_REST' | 'LONG_REST' })} className={select}>
-                    <option value="SHORT_REST">Repos court</option>
-                    <option value="LONG_REST">Repos long</option>
-                  </select>
-                </div>
-              )}
-            />
-          </div>
-        </Pf1Collapsible>}
-
         <Pf1Collapsible title={`Identité (${identityFields.length})`}>
           <div className="space-y-2">
             <p className={hint}>Par défaut Race et Classe (style D&D) : renomme-les, supprime-les (jeu sans races…) ou ajoute tes propres champs.</p>
@@ -268,6 +229,200 @@ export function GameSystemEditor({ system, onSave, onDelete, onClose, heroName, 
             {check(s.identity.showLevel, v => set('identity', { ...s.identity, showLevel: v }), 'Afficher le niveau')}
           </div>
         </Pf1Collapsible>
+
+        <Pf1Collapsible title="Éléments de la fiche" defaultOpen>
+          <div className="space-y-3">
+            <p className={hint}>Coche ce qui existe dans ton jeu. Une catégorie décochée disparaît de la fiche (son contenu est gardé si tu la recoches).</p>
+            <div>
+              <span className={label}>Valeurs et règles</span>
+              <div className="grid grid-cols-2 gap-1.5">
+                {CATEGORY_KEYS.map(key => check(cat[key], v => setCat(key, v), CATEGORY_LABELS[key], key))}
+              </div>
+            </div>
+            <div>
+              <span className={label}>Onglets et repos</span>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(Object.keys(SECTION_LABELS) as (keyof HbSections)[]).map(key => check(
+                  key === 'resources' ? resourcesEnabled(s) : key === 'rests' ? restsEnabled(s) : !!s.sections[key],
+                  v => set('sections', { ...s.sections, [key]: v }), SECTION_LABELS[key], key,
+                ))}
+              </div>
+              {s.sections.familiars && (
+                <div className="pt-1.5">
+                  {check(!!s.familiarAbilities, v => set('familiarAbilities', v), 'Familiers : capacités / attaque (en plus de nom, description, image, PV)')}
+                </div>
+              )}
+              {s.sections.spells && (
+                <div className="pt-2 space-y-2">
+                  <div>
+                    <span className={label}>Gestion des sorts</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {([['slots', 'Emplacements', 'style D&D'], ['prepared', 'Préparés', 'style Pathfinder'], ['free', 'Libre', 'liste simple']] as const).map(([mode, title, sub]) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => edit({ ...s, spellMode: mode, spellSlots: mode !== 'free' })}
+                          className={`py-1.5 px-1 rounded-lg border text-[10px] font-semibold leading-tight transition-all ${spellModeOf(s) === mode ? `${t.accentBg} ${t.accentBorder} ${t.accent}` : `${t.inputBg} ${t.inputBorder} ${t.textMuted}`}`}
+                        >
+                          {title}<span className="block text-[8px] font-normal opacity-80">{sub}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className={label}>Champs d’un sort</span>
+                    <p className={`${hint} mb-1`}>Nom, niveau, portée et description sont toujours présents.</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {SPELL_FIELD_KEYS.map(f => check(
+                        spellFieldsOf(s).includes(f),
+                        v => set('spellFields', v ? [...spellFieldsOf(s), f] : spellFieldsOf(s).filter(x => x !== f)),
+                        SPELL_FIELD_LABELS[f],
+                        f,
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Pf1Collapsible>
+
+        {s.sections.inventory && <Pf1Collapsible title={`Catégories d’inventaire (${itemCategoriesOf(s).length})`}>
+          <div className="space-y-2">
+            <p className={hint}>Chaque objet a toujours nom, description, quantité et « équipé ». Coche les champs en plus pour chaque catégorie.</p>
+            <ListEditor
+              items={itemCategoriesOf(s)}
+              onChange={v => set('itemCategories', v)}
+              createItem={(): HbItemCategory => ({ id: newId(), name: '', fields: [] })}
+              addLabel="Ajouter une catégorie"
+              emptyText="Aucune catégorie."
+              renderExtra={(item, update) => (
+                <div className="flex gap-3">
+                  {([['bonus', 'Bonus'], ['dm', 'DM (dégâts)']] as const).map(([f, l]) => check(
+                    item.fields.includes(f),
+                    v => update({ fields: v ? [...item.fields, f] : item.fields.filter(x => x !== f) }),
+                    l,
+                    f,
+                  ))}
+                </div>
+              )}
+            />
+          </div>
+        </Pf1Collapsible>}
+
+        {s.sections.features && <Pf1Collapsible title={`Types de capacités (${featureTypesOf(s).length})`}>
+          <div className="space-y-2">
+            <p className={hint}>Chaque type devient un groupe de l’onglet Capacités (capacités de classe, de race, dons…). Le joueur y ajoute ses capacités.</p>
+            <ListEditor
+              items={featureTypesOf(s)}
+              onChange={v => set('featureTypes', v)}
+              createItem={() => ({ id: newId(), name: '' })}
+              addLabel="Ajouter un type de capacité"
+              emptyText="Aucun type : l’onglet Capacités n’aura pas de groupe."
+            />
+          </div>
+        </Pf1Collapsible>}
+
+        {restsEnabled(s) && <Pf1Collapsible title={`Repos (${rests.length})`}>
+          <div className="space-y-2">
+            <p className={hint}>Un bouton par repos sur la fiche. « Recharge automatique » : PV et jauges reviennent au maximum. Sinon, indique ce que le repos rend (ex. 1 PV × niveau).</p>
+            <ListEditor
+              items={rests}
+              onChange={v => set('rests', v)}
+              createItem={(): HbRest => ({ id: newId(), name: '', auto: true })}
+              addLabel="Ajouter un repos"
+              emptyText="Aucun repos : décoche « Repos » dans les éléments de la fiche."
+              renderExtra={(item, update) => (
+                <div className="space-y-1.5">
+                  {check(item.auto, v => update({ auto: v }), 'Recharge automatique (PV et jauges au max)')}
+                  {!item.auto && (
+                    <div className="space-y-1">
+                      {gainRow('PV', item.hp, g => update({ hp: g }), 'hp')}
+                      {s.gauges.map(gauge => gainRow(
+                        gauge.name || 'Jauge',
+                        item.gauges?.[gauge.id],
+                        g => update({ gauges: { ...(item.gauges ?? {}), [gauge.id]: g } }),
+                        gauge.id,
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            />
+          </div>
+        </Pf1Collapsible>}
+
+        {resourcesEnabled(s) && <Pf1Collapsible title={`Ressources (${(s.resources ?? []).length})`}>
+          <div className="space-y-2">
+            <p className={hint}>Ressources présentes d’office sur chaque nouvelle fiche (Ki, Rage…). Le joueur coche une puce quand il l’utilise, et peut ajouter ses propres ressources.</p>
+            <ListEditor
+              items={s.resources ?? []}
+              onChange={v => set('resources', v)}
+              createItem={() => ({ id: newId(), name: '', defaultMax: 3, display: 'bullets' as const, restId: rests[0]?.id ?? null })}
+              addLabel="Ajouter une ressource"
+              emptyText="Aucune ressource prévue."
+              renderExtra={(item, update) => {
+                const display = item.display ?? 'bullets';
+                const rest = rests.find(r => r.id === item.restId);
+                return (
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select value={display} onChange={e => update({ display: e.target.value as 'bullets' | 'valued' })} className={select} aria-label="Affichage">
+                        <option value="bullets">Puces</option>
+                        <option value="valued">Puces avec valeur</option>
+                      </select>
+                      {display === 'bullets' && (
+                        <label className={`flex items-center gap-1.5 text-[10px] ${t.textMuted}`}>
+                          Nombre
+                          <input type="number" min={1} max={30} value={item.defaultMax} onChange={e => update({ defaultMax: Math.max(1, Math.min(30, Math.trunc(Number(e.target.value) || 1))) })} className={`${select} w-14 font-mono`} />
+                        </label>
+                      )}
+                    </div>
+                    {display === 'valued' && (
+                      <label className={`block text-[10px] ${t.textMuted}`}>
+                        Valeur de chaque puce, séparées par des virgules
+                        <input
+                          type="text"
+                          value={(item.values ?? []).join(', ')}
+                          placeholder="d8, d8, d10"
+                          onChange={e => {
+                            const values = e.target.value.split(',').map(v => v.trim());
+                            update({ values, defaultMax: values.filter(Boolean).length });
+                          }}
+                          className={`${input} mt-0.5 font-mono`}
+                        />
+                      </label>
+                    )}
+                    {restsEnabled(s) && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className={`flex items-center gap-1.5 text-[10px] ${t.textMuted}`}>
+                          Rechargée par
+                          <select value={item.restId ?? ''} onChange={e => update({ restId: e.target.value || null })} className={select}>
+                            <option value="">Aucun repos</option>
+                            {rests.map(r => <option key={r.id} value={r.id}>{r.name || 'Repos'}</option>)}
+                          </select>
+                        </label>
+                        {rest && !rest.auto && (
+                          <label className={`flex items-center gap-1.5 text-[10px] ${t.textMuted}`}>
+                            Récupère
+                            <input
+                              type="number"
+                              min={0}
+                              value={item.restAmount ?? ''}
+                              placeholder="tout"
+                              onChange={e => update({ restAmount: e.target.value === '' ? null : Math.max(0, Math.trunc(Number(e.target.value))) })}
+                              className={`${select} w-14 font-mono`}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
+            />
+          </div>
+        </Pf1Collapsible>}
 
         {cat.stats && <Pf1Collapsible title={`Caractéristiques (${s.stats.length})`}>
           <div className="space-y-2.5">

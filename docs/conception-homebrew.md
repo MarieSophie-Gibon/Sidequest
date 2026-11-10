@@ -235,3 +235,86 @@ Décidé :
 Reste ouvert :
 1. **Partage automatique** : quand un joueur crée sa fiche depuis le lien, la partager automatiquement en
    lecture seule avec le MJ (et la ranger dans une campagne choisie par le MJ) ? À trancher avant le lot 4.
+
+## 10. Lot 5 — repos, ressources, sorts, familiers, inventaire (demandé le 2026-11-10)
+
+> Statut : **réalisé** (5a, 5b, 5c, 2026-11-10). Identité remontée juste après « Général » dans l’éditeur
+> (c’est la première chose que le MJ règle).
+
+Principe inchangé : le MJ **coche** ce qui existe dans son jeu, la fiche n’affiche que ça, et tout se
+saisit à la main. Comme le reste de la structure, ces réglages sont **copiés** dans la fiche à sa création.
+
+### 10.1 Repos
+
+Plus de « repos court / repos long » imposé : ce sont des notions de D&D.
+
+| Élément | Comportement |
+|---|---|
+| **Repos** (par défaut, coché) | Un seul repos, nom modifiable. Il remet **tous les PV** au maximum et recharge les ressources qui lui sont rattachées. |
+| Repos ajoutés par le MJ | Nom libre (ex. « Halte », « Nuit à l’auberge »). Le MJ choisit s’il remet les PV au max. |
+| Décoché | Aucun bouton de repos sur la fiche. |
+
+Sur la fiche : un bouton par repos. Données : `structure.rests = [{ id, name, restoresHp }]`.
+
+### 10.2 Ressources
+
+- La recharge d’une ressource se choisit parmi les **repos du système** (ou « aucune »), au lieu de court/long.
+- **Affichage**, au choix pour chaque ressource :
+  - **Puces** : une case par utilisation, cochée quand elle est dépensée (ex. 3 puces = 3 utilisations) ;
+  - **Puces avec valeur** : même chose, chaque puce porte une valeur (ex. dés de supériorité **d8**).
+- Le MJ règle ces deux choix sur les ressources qu’il prévoit dans le modèle ; le joueur les règle sur
+  celles qu’il ajoute.
+
+Données : sur la table `resources`, nouvelles colonnes `display` (`'bullets' | 'valued'`), `bullet_value`
+(texte, ex. « d8 ») et `rest_id` (id d’un repos du système, null = aucun).
+
+### 10.3 Sorts (si la section Sorts est cochée)
+
+**Champs du sort** : le joueur saisit toujours nom, niveau et description. Le MJ coche les champs en plus :
+DM, JS (jet de sauvegarde), coût, durée, école, amélioration (« upgrade » : effet à plus haut niveau),
+condition. Seuls les champs cochés apparaissent dans la fenêtre d’un sort.
+
+**Gestion des sorts**, un choix parmi trois :
+
+| Choix | Sur la fiche |
+|---|---|
+| Emplacements de sorts (style D&D) | Emplacements par niveau, cochés quand ils sont utilisés |
+| Sorts préparés (style Pathfinder) | Préparation depuis le grimoire, « Lancer » consomme un emplacement |
+| Libre | Juste la liste des sorts, sans emplacements |
+
+Remplace l’actuelle case « Emplacements de sorts dans l’onglet Sorts ». Données : nouvelles colonnes
+`school`, `cost`, `condition` sur `spells` (DM, JS, durée et amélioration existent déjà).
+
+### 10.4 Familiers (si la section Familiers est cochée)
+
+Par défaut : nom, description, image, PV. Le MJ coche en plus **Capacités / attaque**. Les champs propres
+à D&D (CA, 6 caractéristiques, sens, résistances, vision dans le noir…) ne sont pas affichés en homebrew.
+
+### 10.5 Inventaire (si la section Inventaire est cochée)
+
+- **Catégories** par défaut : Arme, Armure, Équipement. Le MJ les renomme, les supprime ou en crée d’autres.
+- Chaque objet a toujours nom et description. Par catégorie, le MJ coche les champs en plus : **Bonus**,
+  **DM**.
+
+Données : `structure.inventory = { categories: [{ id, name, fields: ['bonus', 'dm'] }] }` ; la catégorie
+d’un objet homebrew stocke l’id de sa catégorie.
+
+### 10.6 Réponses (2026-11-10)
+
+1. **Puces avec valeur** : chaque puce a **sa propre valeur** (ex. d8, d8, d10).
+2. **Repos** : recharge aussi les **jauges**. Case « Recharge automatique » (cochée par défaut) : tout revient
+   au maximum. Décochée, le MJ indique pour chaque élément rattaché au repos (PV, chaque jauge) une **valeur
+   récupérée**, éventuellement **× niveau** (comme la nuit de repos Pathfinder : 1 PV par niveau). Pour une
+   ressource rattachée à un repos non automatique, on indique combien d’utilisations elle récupère.
+3. **Inventaire** : on garde **Quantité** et **Équipé** sur tous les objets ; pas de poids pour l’instant.
+4. **Sorts** : **Portée** toujours présente ; **Concentration** et **Composantes** s’ajoutent à la liste des
+   champs à cocher.
+5. **Fiches déjà créées** : gardent leur structure, avec le repos par défaut. Validé.
+
+### 10.7 Découpage
+
+| Étape | Contenu |
+|---|---|
+| **5a** | Repos (éditeur + boutons sur la fiche) et ressources (puces, puces avec valeur, recharge par repos) |
+| **5b** | Sorts : champs à cocher et mode de gestion (emplacements / préparés / libre) |
+| **5c** | Familiers et inventaire (catégories et champs à cocher) |

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { NewResourceState } from '../../hooks/useCharacterData';
 import { ModalActions, ModalHeader } from './ModalControls';
+import type { HbRest } from '../../systems/homebrew/types';
 
 interface Props {
   newResource: NewResourceState;
@@ -12,13 +13,20 @@ interface Props {
   onClose: () => void;
   /** Pathfinder 1e : pas de repos court, tout se recharge à la nuit de repos. */
   perDayOnly?: boolean;
+  /** Homebrew : repos du système (remplace Court / Long) et affichage en puces. */
+  hbRests?: HbRest[];
 }
 
-export function AddResourceModal({ newResource, setNewResource, onSubmit, onDelete, onClose, perDayOnly }: Props) {
+export function AddResourceModal({ newResource, setNewResource, onSubmit, onDelete, onClose, perDayOnly, hbRests }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newResource.id;
   const [currentInput, setCurrentInput] = useState(String(newResource.current));
   const [maxInput, setMaxInput] = useState(String(newResource.max));
+  const homebrew = !!hbRests;
+  const valued = homebrew && newResource.display === 'valued';
+  const [valuesInput, setValuesInput] = useState((newResource.bullets ?? []).map(b => b.value).join(', '));
+  const linkedRest = hbRests?.find(r => r.id === newResource.rest_id);
+  const toggleCls = (active: boolean) => `flex-1 py-2 text-[10px] font-bold uppercase tracking-wide transition-all ${active ? `${t.accentBg} ${t.accent}` : `${t.inputBg} ${t.textMuted}`}`;
 
   useEffect(() => {
     setCurrentInput(String(newResource.current));
@@ -37,9 +45,36 @@ export function AddResourceModal({ newResource, setNewResource, onSubmit, onDele
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Nom</label>
             <input type="text" placeholder="ex: Points de Ki" value={newResource.name} onChange={(e) => setNewResource(prev => ({ ...prev, name: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} required />
           </div>
+          {homebrew && (
+            <div>
+              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Affichage</label>
+              <div className={`flex rounded-xl overflow-hidden border ${t.inputBorder}`}>
+                <button type="button" className={toggleCls(!valued)} onClick={() => setNewResource(prev => ({ ...prev, display: 'bullets' }))}>Puces</button>
+                <button type="button" className={toggleCls(valued)} onClick={() => setNewResource(prev => ({ ...prev, display: 'valued' }))}>Puces avec valeur</button>
+              </div>
+            </div>
+          )}
+          {valued ? (
+            <div>
+              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Valeur de chaque puce</label>
+              <input
+                type="text"
+                placeholder="d8, d8, d10"
+                value={valuesInput}
+                onChange={(e) => {
+                  setValuesInput(e.target.value);
+                  const values = e.target.value.split(',').map(v => v.trim()).filter(Boolean);
+                  // On garde l'état « utilisée » des puces déjà présentes, par position.
+                  setNewResource(prev => ({ ...prev, bullets: values.map((value, i) => ({ value, used: prev.bullets?.[i]?.used ?? false })) }));
+                }}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+              />
+              <p className={`text-[10px] ${t.textMuted} mt-1`}>Séparées par des virgules : une puce par valeur.</p>
+            </div>
+          ) : (
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Actuel</label>
+              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>{homebrew ? 'Restantes' : 'Actuel'}</label>
               <input
                 type="number"
                 min="0"
@@ -77,9 +112,33 @@ export function AddResourceModal({ newResource, setNewResource, onSubmit, onDele
               />
             </div>
           </div>
+          )}
           <div>
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Récupération</label>
-            {perDayOnly ? (
+            {homebrew ? (
+              <div className="flex gap-2 items-center">
+                <select
+                  value={newResource.rest_id ?? ''}
+                  onChange={(e) => setNewResource(prev => ({ ...prev, rest_id: e.target.value || null }))}
+                  className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 flex-1 min-w-0 text-xs focus:outline-none`}
+                >
+                  <option value="">Aucun repos</option>
+                  {hbRests!.map(r => <option key={r.id} value={r.id}>{r.name || 'Repos'}</option>)}
+                </select>
+                {linkedRest && !linkedRest.auto && (
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="tout"
+                    aria-label="Utilisations récupérées"
+                    title="Utilisations récupérées (vide = toutes)"
+                    value={newResource.rest_amount ?? ''}
+                    onChange={(e) => setNewResource(prev => ({ ...prev, rest_amount: e.target.value === '' ? null : Math.max(0, Math.trunc(Number(e.target.value))) }))}
+                    className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-16 text-xs focus:outline-none font-mono`}
+                  />
+                )}
+              </div>
+            ) : perDayOnly ? (
               <p className={`text-[11px] ${t.textSecondary}`}>Par jour : rechargée à chaque nuit de repos.</p>
             ) : (
             <div className={`flex rounded-xl overflow-hidden border ${t.inputBorder}`}>

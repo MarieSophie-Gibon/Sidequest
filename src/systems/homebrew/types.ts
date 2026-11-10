@@ -26,17 +26,60 @@ export type HbSpecialKind = 'inspiration' | 'proficiency' | 'bab' | 'cmb' | 'cmd
 export interface HbSpecial { id: string; kind: HbSpecialKind; name: string; type: 'number' | 'checkbox' }
 
 export type HbAttackType = 'contact' | 'distance' | 'sort';
+
+/** Champs d'un sort que le MJ peut cocher (nom, niveau, portée et description sont toujours là). */
+export type HbSpellField = 'damage' | 'save' | 'cost' | 'duration' | 'school' | 'upcast' | 'condition' | 'concentration' | 'components';
+/** Champs d'un objet cochables par catégorie (nom, description, quantité et équipé toujours présents). */
+export type HbItemField = 'bonus' | 'dm';
+/** Catégorie d'inventaire définie par le MJ (Armes, Armures, Équipement…). */
+export interface HbItemCategory { id: string; name: string; fields: HbItemField[] }
+
+/** Gestion des sorts : emplacements (D&D), sorts préparés (Pathfinder) ou liste libre. */
+export type HbSpellMode = 'slots' | 'prepared' | 'free';
 export interface HbCurrency { id: string; name: string }
 
 /** Type de capacité défini par le MJ (Capacités de classe, de race, Dons…) : un groupe dans l'onglet Capacités. */
 export interface HbFeatureType { id: string; name: string }
-/** Ressource prévue par le MJ (Ki, Rage…), créée sur chaque nouvelle fiche issue du modèle. */
-export interface HbResource { id: string; name: string; defaultMax: number; recharge: 'SHORT_REST' | 'LONG_REST' }
+/**
+ * Ressource prévue par le MJ (Ki, Rage…), créée sur chaque nouvelle fiche issue du modèle.
+ * display : puces simples (defaultMax puces) ou puces avec une valeur chacune (values).
+ */
+export interface HbResource {
+  id: string;
+  name: string;
+  defaultMax: number;
+  /** Ancien réglage (avant les repos du MJ) : ignoré. */
+  recharge?: 'SHORT_REST' | 'LONG_REST';
+  display?: 'bullets' | 'valued';
+  /** Valeur de chaque puce (display = 'valued'), ex. ['d8', 'd8', 'd10']. */
+  values?: string[];
+  /** Repos qui recharge la ressource ; null = aucun. */
+  restId?: string | null;
+  /** Utilisations récupérées si le repos n'est pas automatique ; null = toutes. */
+  restAmount?: number | null;
+}
+
+/** Quantité récupérée par un repos non automatique (ex. 1 PV × niveau). */
+export interface HbRestGain { amount: number; perLevel: boolean }
+
+/**
+ * Repos défini par le MJ. auto = PV et jauges reviennent au maximum ;
+ * sinon, gains indiqués pour les PV et chaque jauge (absent = rien).
+ */
+export interface HbRest {
+  id: string;
+  name: string;
+  auto: boolean;
+  hp?: HbRestGain;
+  gauges?: Record<string, HbRestGain>;
+}
 
 export interface HbSections {
   features: boolean;
   /** Bloc Ressources (onglet Capacités) ; absent = suit `features` (anciens modèles). */
   resources?: boolean;
+  /** Boutons de repos sur la fiche ; absent = oui (repos par défaut). */
+  rests?: boolean;
   spells: boolean;
   inventory: boolean;
   familiars: boolean;
@@ -68,14 +111,24 @@ export interface HomebrewStructure {
   specials: HbSpecial[];
   /** baseBonusId : id d'une valeur spéciale, « libre » (saisi par le joueur) ou null (aucun). */
   attacks: { enabled: boolean; types: HbAttackType[]; baseBonusId: string | null };
-  /** Emplacements de sorts dans l'onglet Sorts (si la section Sorts est cochée). */
+  /** Ancien réglage « emplacements de sorts » ; remplacé par spellMode (absent = slots si true, sinon libre). */
   spellSlots: boolean;
+  /** Gestion des sorts (si la section Sorts est cochée). */
+  spellMode?: HbSpellMode;
+  /** Champs du sort cochés par le MJ ; absent = champs D&D habituels. */
+  spellFields?: HbSpellField[];
   currencies: HbCurrency[];
   sections: HbSections;
   /** Types de capacités ; absent = Classe / Race / Dons (ids 'classe', 'espece', 'don'). */
   featureTypes?: HbFeatureType[];
   /** Ressources pré-remplies sur les nouvelles fiches. */
   resources?: HbResource[];
+  /** Repos du système ; absent = un seul « Repos » automatique. */
+  rests?: HbRest[];
+  /** Catégories d'inventaire ; absent = Armes / Armures / Équipement. */
+  itemCategories?: HbItemCategory[];
+  /** Familiers : champ « Capacités / attaque » en plus de nom, description, image et PV. */
+  familiarAbilities?: boolean;
 }
 
 /** Système tel que stocké en base (table game_systems). */

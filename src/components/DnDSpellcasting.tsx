@@ -243,6 +243,10 @@ export function DnDSpellcasting({
                           {[spell.range, spell.duration ? `⏱ ${spell.duration}` : null].filter(Boolean).join(' · ')}
                         </span>
                       )}
+                      {/* Homebrew : école, coût, condition */}
+                      {[spell.school, spell.cost && `Coût ${spell.cost}`, spell.condition && `Si ${spell.condition}`].filter(Boolean).map(label => (
+                        <span key={label as string} className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>{label}</span>
+                      ))}
                       {spell.material_components && (
                         <span className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>
                           M: {spell.material_components}

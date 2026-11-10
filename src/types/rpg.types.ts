@@ -81,7 +81,18 @@ export interface Resource {
   current: number;
   max: number;
   recharge?: 'SHORT_REST' | 'LONG_REST';
+  /** Homebrew : null = compteur −/+ ; 'bullets' = puces ; 'valued' = puces avec valeur. */
+  display?: ResourceDisplay | null;
+  /** Puces avec valeur (display = 'valued'). */
+  bullets?: ResourceBullet[] | null;
+  /** Homebrew : repos qui recharge la ressource (id du repos du système). */
+  rest_id?: string | null;
+  /** Utilisations récupérées par un repos non automatique ; null = toutes. */
+  rest_amount?: number | null;
 }
+
+export type ResourceDisplay = 'bullets' | 'valued';
+export interface ResourceBullet { value: string; used: boolean }
 
 export interface Spell {
   id: string;
@@ -100,6 +111,10 @@ export interface Spell {
   damage?: string;
   upcast_damage?: string;
   desc?: string;
+  /** Homebrew : champs cochables par le MJ. */
+  school?: string | null;
+  cost?: string | null;
+  condition?: string | null;
 }
 
 export interface Item {
@@ -110,7 +125,8 @@ export interface Item {
   quantity: number;
   weight: number;
   equipped: boolean;
-  category?: 'objet' | 'arme' | 'armure' | 'potion' | 'parchemin' | 'objet_magique' | 'composant';
+  /** D&D / PF1 : catégories fixes ; homebrew : id d'une catégorie définie par le MJ. */
+  category?: 'objet' | 'arme' | 'armure' | 'potion' | 'parchemin' | 'objet_magique' | 'composant' | (string & {});
   crafting_duration_hours?: number | null;
   damage?: string;
   range?: string;

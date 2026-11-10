@@ -180,3 +180,26 @@ it('fiche : sans valeurs spéciales, le bonus « Libre » est conservé', async 
   const s = setBaseBonus(presetStructure('libre'), 'libre');
   expect(sheetStructure({ ...s, categories: { ...s.categories!, specials: false, attacks: true } }).attacks.baseBonusId).toBe('libre');
 });
+
+describe('lot 5 : valeurs par défaut des anciens modèles', () => {
+  it('un seul repos automatique, présent sur la fiche', async () => {
+    const { restsOf, restsEnabled } = await import('./presets');
+    const s = presetStructure('libre');
+    expect(restsOf(s)).toEqual([{ id: 'repos', name: 'Repos', auto: true }]);
+    expect(restsEnabled(s)).toBe(true);
+  });
+
+  it('gestion des sorts déduite de l’ancienne case « emplacements »', async () => {
+    const { spellModeOf } = await import('./presets');
+    expect(spellModeOf({ ...presetStructure('dnd5e'), spellSlots: true })).toBe('slots');
+    expect(spellModeOf({ ...presetStructure('dnd5e'), spellSlots: false })).toBe('free');
+    expect(spellModeOf({ ...presetStructure('dnd5e'), spellMode: 'prepared' })).toBe('prepared');
+  });
+
+  it('inventaire : Armes (DM), Armures (Bonus), Équipement', async () => {
+    const { itemCategoriesOf } = await import('./presets');
+    expect(itemCategoriesOf(presetStructure('libre')).map(c => [c.id, c.fields])).toEqual([
+      ['arme', ['dm']], ['armure', ['bonus']], ['objet', []],
+    ]);
+  });
+});

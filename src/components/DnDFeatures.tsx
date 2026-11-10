@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Feature, Resource, Familiar } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
+import { ResourceTracker } from './ResourceTracker';
 import { Sword, Dna, Zap, CirclePlus, Star, PawPrint, Heart, ChevronDown } from 'lucide-react';
 
 interface DnDFeaturesProps {
@@ -14,11 +15,16 @@ interface DnDFeaturesProps {
   onOpenAddResource: () => void;
   onOpenEditResource: (resource: Resource) => void;
   onUpdateResourceCurrent: (id: string, delta: number) => void;
+  /** Ressources en puces (homebrew). */
+  onSetResourceCurrent: (id: string, current: number) => void;
+  onToggleResourceBullet: (id: string, index: number) => void;
   onOpenAddFamiliar: () => void;
   onOpenEditFamiliar: (familiar: Familiar) => void;
   onUpdateFamiliarHp: (id: string, delta: number) => void;
   /** Homebrew : groupes de capacités définis par le MJ (sinon Classe / Espèce / Dons). */
   featureGroups?: { id: string; name: string }[];
+  /** Homebrew : familiers sans CA ni caractéristiques D&D. */
+  simpleFamiliars?: boolean;
   showFeatures?: boolean;
   showResources?: boolean;
 }
@@ -39,10 +45,13 @@ export function DnDFeatures({
   onOpenAddResource,
   onOpenEditResource,
   onUpdateResourceCurrent,
+  onSetResourceCurrent,
+  onToggleResourceBullet,
   onOpenAddFamiliar,
   onOpenEditFamiliar,
   onUpdateFamiliarHp,
   featureGroups,
+  simpleFamiliars = false,
   showFeatures = true,
   showResources = true,
 }: DnDFeaturesProps) {
@@ -151,7 +160,7 @@ export function DnDFeatures({
                       {fam.species && <span className={`text-[9px] ${t.textMuted} font-mono`}>{fam.species}</span>}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      {fam.ac != null && fam.ac > 0 && (
+                      {!simpleFamiliars && fam.ac != null && fam.ac > 0 && (
                         <span className="text-[9px] font-mono font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-1.5 py-0.5 rounded-md">CA {fam.ac}</span>
                       )}
                       <span className={`text-[9px] font-bold uppercase ${statusColor[fam.status]}`}>{statusLabel[fam.status]}</span>
@@ -197,7 +206,7 @@ export function DnDFeatures({
                 </div>
                 {isExpanded && (
                   <div className={`px-3 pb-3 space-y-2 border-t ${t.cardBorder} pt-2`}>
-                    {statKeys.some(s => fam[s.key] != null) && (
+                    {!simpleFamiliars && statKeys.some(s => fam[s.key] != null) && (
                       <div className="grid grid-cols-6 gap-1 text-center">
                         {statKeys.map(({ key, label }) => {
                           const val = (fam[key] as number | undefined) ?? 10;
@@ -213,7 +222,7 @@ export function DnDFeatures({
                       </div>
                     )}
                     {/* Badges VIT / PP / vision */}
-                    {(fam.speed || (fam.passive_perception != null && fam.passive_perception > 0) || fam.darkvision) && (
+                    {!simpleFamiliars && (fam.speed || (fam.passive_perception != null && fam.passive_perception > 0) || fam.darkvision) && (
                       <div className="flex flex-wrap gap-1.5">
                         {fam.speed && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>VIT {fam.speed}</span>}
                         {fam.passive_perception != null && fam.passive_perception > 0 && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>PP {fam.passive_perception}</span>}
@@ -273,13 +282,9 @@ export function DnDFeatures({
         {!collapsed['ressources'] && resources.length > 0 && (
           <div className="space-y-2">
             {resources.map(res => (
-              <div key={res.id} className={`${t.inputBg} rounded-xl px-3 py-2 border ${t.cardBorder} flex items-center justify-between`}>
+              <div key={res.id} className={`${t.inputBg} rounded-xl px-3 py-2 border ${t.cardBorder} flex items-center justify-between gap-2`}>
                 <span onClick={() => onOpenEditResource(res)} className={`text-xs font-bold ${t.textPrimary} cursor-pointer`}>{res.name}</span>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => onUpdateResourceCurrent(res.id, -1)} className={`w-6 h-6 flex items-center justify-center rounded-lg ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-sm font-bold hover:brightness-90 active:scale-90 transition-all`}>−</button>
-                  <span className={`text-xs font-mono font-bold ${t.textPrimary} min-w-8 text-center`}>{res.current}<span className={`${t.textMuted} font-normal`}>/{res.max}</span></span>
-                  <button type="button" onClick={() => onUpdateResourceCurrent(res.id, +1)} className={`w-6 h-6 flex items-center justify-center rounded-lg ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-sm font-bold hover:brightness-90 active:scale-90 transition-all`}>+</button>
-                </div>
+                <ResourceTracker resource={res} onDelta={onUpdateResourceCurrent} onSetCurrent={onSetResourceCurrent} onToggleBullet={onToggleResourceBullet} />
               </div>
             ))}
           </div>

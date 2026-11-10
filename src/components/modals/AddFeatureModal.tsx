@@ -85,7 +85,10 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
               </div>
               <div>
                 <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Récupération</label>
-                {perDayOnly ? (
+                {typeOptions ? (
+                  // Homebrew : pas de repos court / long, les repos automatiques du MJ rechargent les capacités.
+                  <p className={`border ${t.inputBorder} rounded-xl p-2.5 w-full text-xs ${t.inputBg} ${t.textSecondary} font-bold`}>Au repos</p>
+                ) : perDayOnly ? (
                   <p className={`border ${t.inputBorder} rounded-xl p-2.5 w-full text-xs ${t.inputBg} ${t.textSecondary} font-bold`}>Par jour</p>
                 ) : (
                 <select value={newFeature.recharge} onChange={(e) => setNewFeature(prev => ({ ...prev, recharge: e.target.value }))} className={`border ${t.inputBorder} rounded-xl p-2.5 w-full text-xs ${t.inputBg} ${t.textSecondary} font-bold focus:outline-none`}>

@@ -22,7 +22,11 @@ export interface HomebrewValues {
   identity: Record<string, string>;
   /** Modificateurs saisis par le joueur (règle « libre »). */
   statMods: Record<string, number>;
+  /** Sorts préparés (gestion « sorts préparés ») : un même sort peut être préparé plusieurs fois. */
+  prepared?: HbPreparedSpell[];
 }
+
+export interface HbPreparedSpell { id: string; spellId: string; cast: boolean }
 
 export interface HomebrewData {
   version: 1;
@@ -123,7 +127,7 @@ export function combatTotal(data: HomebrewData, item: HbCombatValue): HbBreakdow
 }
 
 /** Met à jour une valeur sans muter l'objet d'origine. */
-export function setValue<K extends keyof HomebrewValues>(
+export function setValue<K extends Exclude<keyof HomebrewValues, 'prepared'>>(
   data: HomebrewData, kind: K, id: string, value: HomebrewValues[K][string],
 ): HomebrewData {
   return { ...data, values: { ...data.values, [kind]: { ...data.values[kind], [id]: value } } };

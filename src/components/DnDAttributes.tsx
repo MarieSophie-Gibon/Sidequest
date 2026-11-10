@@ -24,6 +24,7 @@ import {
   Heart,
   Bed,
 } from "lucide-react";
+import { ResourceTracker } from "./ResourceTracker";
 
 type TabKey =
   | "home"
@@ -48,6 +49,12 @@ interface DnDAttributesProps {
   /** Pathfinder 1e : remplace Court/Long par Nuit de repos et Alitement. */
   onPf1Rest?: (bedRest: boolean) => void;
   onUpdateResourceCurrent: (id: string, delta: number) => void;
+  /** Ressources en puces (homebrew). */
+  onSetResourceCurrent: (id: string, current: number) => void;
+  onToggleResourceBullet: (id: string, index: number) => void;
+  /** Homebrew : repos du MJ à la place de Court / Long (tableau vide = pas de barre de repos). */
+  hbRests?: { id: string; name: string }[];
+  onHbRest?: (restId: string) => void;
   onUpdateFamiliarHp: (id: string, delta: number) => void;
   onNavigateTab?: (tab: TabKey) => void;
   /** Sections propres au système (ex. sauvegardes et défense Pathfinder), affichées sous le repos. */
@@ -67,6 +74,10 @@ export function DnDAttributes({
   onLongRest,
   onPf1Rest,
   onUpdateResourceCurrent,
+  onSetResourceCurrent,
+  onToggleResourceBullet,
+  hbRests,
+  onHbRest,
   onUpdateFamiliarHp,
   onNavigateTab,
   systemSections,
@@ -119,9 +130,12 @@ export function DnDAttributes({
     skills: "border-cyan-400/22 bg-cyan-500/4",
   };
 
+  // Homebrew sans repos (décoché par le MJ) : pas de barre de repos.
+  const showRestBar = !hbRests || hbRests.length > 0;
+
   return (
     <div className="space-y-2 tab-grid">
-      <div
+      {showRestBar && <div
         className={`tab-full sticky top-0 z-10 ${t.cardBg} ${sectionStyles.rest} border ${t.cardBorder} rounded-2xl px-3 py-2 shadow-sm ${t.cardShadow} flex items-center justify-between backdrop-blur-xl`}
       >
         <span
@@ -129,7 +143,19 @@ export function DnDAttributes({
         >
           Repos
         </span>
-        {onPf1Rest ? (
+        {hbRests && onHbRest ? (
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {hbRests.map((rest, i) => (
+            <button
+              key={rest.id}
+              onClick={() => onHbRest(rest.id)}
+              className={`flex items-center gap-1.5 ${t.inputBg} bg-linear-to-b from-cyan-500/16 to-cyan-500/6 border border-cyan-300/30 ${t.textSecondary} hover:brightness-90 active:scale-90 transition-all rounded-xl px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider`}
+            >
+              {i === 0 ? <Moon size={11} /> : <Bed size={11} />} {rest.name || 'Repos'}
+            </button>
+          ))}
+        </div>
+        ) : onPf1Rest ? (
         <div className="flex items-center gap-2">
           <button
             onClick={() => onPf1Rest(false)}
@@ -162,7 +188,7 @@ export function DnDAttributes({
           </button>
         </div>
         )}
-      </div>
+      </div>}
 
       {systemSections}
 
@@ -406,30 +432,12 @@ export function DnDAttributes({
                           {res.name}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onUpdateResourceCurrent(res.id, -1)}
-                          className={`w-6 h-6 flex items-center justify-center rounded-lg ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-sm font-bold hover:brightness-90 active:scale-90 transition-all`}
-                        >
-                          −
-                        </button>
-                        <span
-                          className={`text-xs font-mono font-bold ${t.textPrimary} min-w-8 text-center`}
-                        >
-                          {res.current}
-                          <span className={`${t.textMuted} font-normal`}>
-                            /{res.max}
-                          </span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => onUpdateResourceCurrent(res.id, +1)}
-                          className={`w-6 h-6 flex items-center justify-center rounded-lg ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-sm font-bold hover:brightness-90 active:scale-90 transition-all`}
-                        >
-                          +
-                        </button>
-                      </div>
+                      <ResourceTracker
+                        resource={res}
+                        onDelta={onUpdateResourceCurrent}
+                        onSetCurrent={onSetResourceCurrent}
+                        onToggleBullet={onToggleResourceBullet}
+                      />
                     </div>
                   ))}
                 </div>

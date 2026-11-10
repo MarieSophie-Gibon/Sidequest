@@ -1,5 +1,5 @@
 import { PF1_SKILLS } from '../pf1e/data/skills';
-import type { HbCategoryKey, HbFeatureType, HbIdentityField, HbSpecial, HbSpecialKind, HomebrewBase, HomebrewStructure } from './types';
+import type { HbCategoryKey, HbFeatureType, HbItemCategory, HbRest, HbSpellField, HbSpellMode, HbIdentityField, HbSpecial, HbSpecialKind, HomebrewBase, HomebrewStructure } from './types';
 
 /** Identifiant court et stable pour un nouvel élément de structure. */
 export function newId(): string {
@@ -44,6 +44,52 @@ export const DEFAULT_FEATURE_TYPES: HbFeatureType[] = [
 
 export function featureTypesOf(structure: HomebrewStructure): HbFeatureType[] {
   return structure.featureTypes ?? DEFAULT_FEATURE_TYPES;
+}
+
+export const SPELL_FIELD_LABELS: Record<HbSpellField, string> = {
+  damage: 'DM (dégâts)',
+  save: 'JS (jet de sauvegarde)',
+  cost: 'Coût',
+  duration: 'Durée',
+  school: 'École',
+  upcast: 'Amélioration (niveau sup.)',
+  condition: 'Condition',
+  concentration: 'Concentration',
+  components: 'Composantes',
+};
+export const SPELL_FIELD_KEYS = Object.keys(SPELL_FIELD_LABELS) as HbSpellField[];
+/** Anciens modèles : les champs D&D affichés jusqu'ici. */
+const LEGACY_SPELL_FIELDS: HbSpellField[] = ['damage', 'save', 'duration', 'upcast', 'concentration', 'components'];
+
+export function spellFieldsOf(structure: HomebrewStructure): HbSpellField[] {
+  return structure.spellFields ?? LEGACY_SPELL_FIELDS;
+}
+
+export function spellModeOf(structure: HomebrewStructure): HbSpellMode {
+  return structure.spellMode ?? (structure.spellSlots ? 'slots' : 'free');
+}
+
+/** Catégories d'inventaire par défaut (ids des catégories D&D pour garder les objets existants). */
+export const DEFAULT_ITEM_CATEGORIES: HbItemCategory[] = [
+  { id: 'arme', name: 'Armes', fields: ['dm'] },
+  { id: 'armure', name: 'Armures', fields: ['bonus'] },
+  { id: 'objet', name: 'Équipement', fields: [] },
+];
+
+export function itemCategoriesOf(structure: HomebrewStructure): HbItemCategory[] {
+  return structure.itemCategories ?? DEFAULT_ITEM_CATEGORIES;
+}
+
+/** Repos par défaut : remet PV et jauges au maximum. */
+export const DEFAULT_RESTS: HbRest[] = [{ id: 'repos', name: 'Repos', auto: true }];
+
+export function restsOf(structure: HomebrewStructure): HbRest[] {
+  return structure.rests ?? DEFAULT_RESTS;
+}
+
+/** Boutons de repos présents sur la fiche ? (absent = oui). */
+export function restsEnabled(structure: HomebrewStructure): boolean {
+  return structure.sections.rests ?? true;
 }
 
 /** Le bloc Ressources est-il présent ? (anciens modèles : suit la section Capacités). */
