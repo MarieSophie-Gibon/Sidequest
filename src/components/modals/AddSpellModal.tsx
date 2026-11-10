@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { NewSpellState } from '../../hooks/useCharacterData';
 import { ModalActions, ModalHeader } from './ModalControls';
+import type { HbSpellField } from '../../systems/homebrew/types';
 
 interface Props {
   newSpell: NewSpellState;
@@ -10,13 +11,24 @@ interface Props {
   onSubmit: (e: React.FormEvent) => void;
   onDelete?: (id: string, name: string) => void;
   onClose: () => void;
+  /** Homebrew : champs cochés par le MJ (nom, niveau, portée et description toujours présents). */
+  hbFields?: HbSpellField[];
 }
 
-export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClose }: Props) {
+export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClose, hbFields }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newSpell.id;
   const [levelInput, setLevelInput] = useState(String(newSpell.level));
   const showUpcastDamageInput = Number(levelInput) > 0;
+  // Sans liste (D&D) : tous les champs habituels.
+  const show = (f: HbSpellField) => !hbFields || hbFields.includes(f);
+  const inputCls = `${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`;
+  const extraField = (f: 'school' | 'cost' | 'condition', label: string, placeholder: string) => hbFields?.includes(f) && (
+    <div key={f}>
+      <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>{label}</label>
+      <input type="text" placeholder={placeholder} value={newSpell[f] ?? ''} onChange={(e) => setNewSpell(prev => ({ ...prev, [f]: e.target.value }))} className={inputCls} />
+    </div>
+  );
 
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
@@ -52,12 +64,12 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
               <input type="text" placeholder="18m / Contact" value={newSpell.range} onChange={(e) => setNewSpell(prev => ({ ...prev, range: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
+          {(show('duration') || show('components')) && <div className="grid grid-cols-2 gap-2">
+            {show('duration') && <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Durée</label>
               <input type="text" placeholder="1 min / 1h / Instantané" value={newSpell.duration} onChange={(e) => setNewSpell(prev => ({ ...prev, duration: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} />
-            </div>
-            <div>
+            </div>}
+            {show('components') && <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Composantes</label>
               <div className={`flex gap-1 ${t.inputBg} border ${t.inputBorder} rounded-xl px-2.5 py-2`}>
                 {(['V', 'S', 'M'] as const).map((comp) => {
@@ -88,9 +100,15 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
                   );
                 })}
               </div>
+            </div>}
+          </div>}
+          {(hbFields?.includes('school') || hbFields?.includes('cost')) && (
+            <div className="grid grid-cols-2 gap-2">
+              {extraField('school', 'École', 'Évocation, Nécromancie…')}
+              {extraField('cost', 'Coût', '2 PM, 1 point de Ki…')}
             </div>
-          </div>
-          {newSpell.components.includes('M') && (
+          )}
+          {show('components') && newSpell.components.includes('M') && (
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Composants materiels</label>
               <input
@@ -102,14 +120,14 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
               />
             </div>
           )}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
+          {(show('damage') || (show('upcast') && showUpcastDamageInput)) && <div className="grid grid-cols-2 gap-2">
+            {show('damage') && <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Dégâts</label>
               <input type="text" placeholder="1d10 Feu" value={newSpell.damage} onChange={(e) => setNewSpell(prev => ({ ...prev, damage: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`} />
-            </div>
-            {showUpcastDamageInput && (
+            </div>}
+            {show('upcast') && showUpcastDamageInput && (
               <div>
-                <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Dégâts niv. sup</label>
+                <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>{hbFields ? 'Amélioration' : 'Dégâts niv. sup'}</label>
                 <input
                   type="text"
                   placeholder="+1d8 / niveau"
@@ -119,8 +137,9 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
                 />
               </div>
             )}
-          </div>
-          <div className="grid grid-cols-2 gap-2">
+          </div>}
+          {/* Action / Bonus / Réaction : propre à D&D. */}
+          {!hbFields && <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Type</label>
               <div className={`flex ${t.inputBg} border ${t.inputBorder} rounded-xl overflow-hidden`}>
@@ -140,14 +159,14 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
                 ))}
               </div>
             </div>
-          </div>
-          <div className={`flex items-center gap-4 ${t.inputBg} border ${t.inputBorder} rounded-xl p-2.5`}>
+          </div>}
+          {show('concentration') && <div className={`flex items-center gap-4 ${t.inputBg} border ${t.inputBorder} rounded-xl p-2.5`}>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={newSpell.concentration} onChange={(e) => setNewSpell(prev => ({ ...prev, concentration: e.target.checked }))} className="w-3.5 h-3.5 rounded accent-violet-500" />
               <span className={`text-xs font-bold ${t.textPrimary}`}>Concentration</span>
             </label>
-          </div>
-          <div className={`flex flex-col gap-2 ${t.inputBg} border ${t.inputBorder} rounded-xl p-2.5`}>
+          </div>}
+          {show('save') && <div className={`flex flex-col gap-2 ${t.inputBg} border ${t.inputBorder} rounded-xl p-2.5`}>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={newSpell.is_aoe} onChange={(e) => setNewSpell(prev => ({ ...prev, is_aoe: e.target.checked, save_type: e.target.checked ? prev.save_type : '', save_effect: e.target.checked ? prev.save_effect : '' }))} className="w-3.5 h-3.5 rounded accent-violet-500" />
               <span className={`text-xs font-bold ${t.textPrimary}`}>Jet de sauvegarde</span>
@@ -158,7 +177,8 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
                 <input type="text" placeholder="Réussite : dégâts ÷2, aucun effet..." value={newSpell.save_effect} onChange={(e) => setNewSpell(prev => ({ ...prev, save_effect: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-lg px-2 py-1.5 text-xs focus:outline-none`} />
               </div>
             )}
-          </div>
+          </div>}
+          {extraField('condition', 'Condition', 'Cible consentante, de nuit…')}
           <div>
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Description</label>
             <textarea placeholder="Effets..." value={newSpell.desc} onChange={(e) => setNewSpell(prev => ({ ...prev, desc: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-16 focus:outline-none`} />

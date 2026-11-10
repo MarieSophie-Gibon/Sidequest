@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
-import { ArrowLeft, BookOpen, ChevronRight, CirclePlus, Plus, Undo2, X, Zap } from 'lucide-react';
+import { ArrowLeft, BatteryCharging, BookOpen, ChevronRight, CirclePlus, Minus, Plus, Undo2, X, Zap } from 'lucide-react';
 import type { Spell, SpellSlot } from '../../types/rpg.types';
-import type { Pf1Attack, Pf1Data, Pf1PreparedSpell, Pf1Sheet } from '../../systems/pf1e/types';
-import { signed } from '../../systems/pf1e/rules';
+import type { Pf1Attack, Pf1Data, Pf1PreparedSpell, Pf1Sheet, Pf1SpellCharges } from '../../systems/pf1e/types';
+import { signed, spellChargeCount } from '../../systems/pf1e/rules';
 import { DnDSpellcasting } from '../DnDSpellcasting';
 import { Pf1SpellHeader } from './Pf1SpellHeader';
 import { Pf1ManeuversCard } from './Pf1ManeuversCard';
-import { Pf1Collapsible } from './ui';
+import { FieldLabel, NumField, Pf1Collapsible, Pf1Modal } from './ui';
 
 interface Props {
   data: Pf1Data;
@@ -29,6 +29,7 @@ interface Props {
 export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSlot, onOpenAttack, onOpenMagic, onOpenAddSpell, onEditSpell }: Props) {
   const t = useThemeClasses();
   const [view, setView] = useState<'actions' | 'grimoire'>('actions');
+  const [chargesFor, setChargesFor] = useState<Spell | null>(null);
   const card = `${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`;
   const iconBtn = `w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md hover:brightness-110 active:scale-90 transition-all`;
   const smallBtn = `flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 leading-none`;
@@ -37,6 +38,8 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
   // Un sort supprimé du grimoire disparaît aussi des sorts préparés.
   const prepared = data.prepared.filter(p => spellById.has(p.spellId));
   const perDay = sheet.spellcasting?.perDay ?? [];
+  const casterLevel = sheet.spellcasting?.casterLevel ?? sheet.level;
+  const chargesCfg = (spellId: string) => data.spellCharges?.[spellId];
 
   const preparedCount = (spellId: string) => prepared.filter(p => p.spellId === spellId).length;
 
@@ -55,8 +58,21 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
     onChange({
       ...data,
       spellsUsed,
-      prepared: prepared.map(p => (p.id === entry.id ? { ...p, cast } : p)),
+      prepared: prepared.map(p => {
+        if (p.id !== entry.id) return p;
+        const cfg = chargesCfg(p.spellId);
+        // Sort à charges : les charges du lancer restent disponibles jusqu'à épuisement.
+        return { ...p, cast, chargesLeft: cast && cfg ? spellChargeCount(cfg, casterLevel) : undefined };
+      }),
     });
+  };
+  const setCharges = (entry: Pf1PreparedSpell, chargesLeft: number) => {
+    onChange({ ...data, prepared: prepared.map(p => (p.id === entry.id ? { ...p, chargesLeft: Math.max(0, chargesLeft) } : p)) });
+  };
+  const saveChargesCfg = (spellId: string, cfg: Pf1SpellCharges | null) => {
+    const next = { ...(data.spellCharges ?? {}) };
+    if (cfg) next[spellId] = cfg; else delete next[spellId];
+    onChange({ ...data, spellCharges: next });
   };
 
   if (view === 'grimoire') {
@@ -184,12 +200,28 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
                       {entries.map(entry => {
                         const spell = spellById.get(entry.spellId)!;
                         const meta = [spell.damage && `⚔ ${spell.damage}`, spell.save_type && `JS ${spell.save_type}`, spell.range].filter(Boolean).join(' · ');
+                        const cfg = chargesCfg(spell.id);
+                        const charging = entry.cast && (entry.chargesLeft ?? 0) > 0;
+                        const spent = entry.cast && !charging;
                         return (
-                          <div key={entry.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${t.inputBg} ${t.cardBorder} ${entry.cast ? 'opacity-50' : ''}`}>
+                          <div key={entry.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${t.inputBg} ${charging ? t.accentBorder : t.cardBorder} ${spent ? 'opacity-50' : ''}`}>
                             <div className="flex-1 min-w-0">
-                              <span className={`text-xs font-bold ${t.textPrimary} block truncate ${entry.cast ? 'line-through' : ''}`}>{spell.name}</span>
+                              <span className={`text-xs font-bold ${t.textPrimary} block truncate ${spent ? 'line-through' : ''}`}>{spell.name}</span>
                               {meta && <span className={`text-[9px] font-mono ${t.textMuted} block truncate`}>{meta}</span>}
+                              {cfg && !entry.cast && <span className={`text-[9px] ${t.textMuted} block`}>{spellChargeCount(cfg, casterLevel)} charge(s) au lancer</span>}
                             </div>
+                            {charging && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button type="button" onClick={() => setCharges(entry, (entry.chargesLeft ?? 0) - 1)} aria-label="Utiliser une charge" className={`${smallBtn} ${t.accentBg} ${t.accentBorder} ${t.accent}`}><Minus size={10} /></button>
+                                <span className={`text-[10px] font-mono font-bold ${t.accent} min-w-9 text-center`}><BatteryCharging size={10} className="inline -mt-0.5 mr-0.5" />{entry.chargesLeft}</span>
+                                <button type="button" onClick={() => setCharges(entry, (entry.chargesLeft ?? 0) + 1)} aria-label="Rendre une charge" className={`${smallBtn} ${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.btnSecondaryText}`}><Plus size={10} /></button>
+                              </div>
+                            )}
+                            {!entry.cast && level > 0 && (
+                              <button type="button" onClick={() => setChargesFor(spell)} aria-label="Charges du sort" title="Sort à charges" className={`${cfg ? t.accent : t.textMuted} hover:brightness-125 transition-colors`}>
+                                <BatteryCharging size={14} />
+                              </button>
+                            )}
                             {level > 0 && (entry.cast ? (
                               <button type="button" onClick={() => setCast(entry, false)} className={`${smallBtn} ${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.btnSecondaryText}`}>
                                 <Undo2 size={10} /> Annuler
@@ -213,6 +245,48 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
               })}
             </div>
       </Pf1Collapsible>
+      {chargesFor && (
+        <SpellChargesModal
+          spell={chargesFor}
+          value={chargesCfg(chargesFor.id) ?? null}
+          casterLevel={casterLevel}
+          onSave={(cfg) => { saveChargesCfg(chargesFor.id, cfg); setChargesFor(null); }}
+          onClose={() => setChargesFor(null)}
+        />
+      )}
     </div>
+  );
+}
+
+/** Réglage d'un sort à charges : « 1 charge tous les N niveaux de lanceur », plafond facultatif. */
+function SpellChargesModal({ spell, value, casterLevel, onSave, onClose }: {
+  spell: Spell; value: Pf1SpellCharges | null; casterLevel: number;
+  onSave: (cfg: Pf1SpellCharges | null) => void; onClose: () => void;
+}) {
+  const t = useThemeClasses();
+  const [enabled, setEnabled] = useState(!!value);
+  const [everyLevels, setEveryLevels] = useState(value?.everyLevels ?? 1);
+  const [max, setMax] = useState(value?.max ?? 0);
+  const cfg: Pf1SpellCharges = { everyLevels, max: max > 0 ? max : null };
+  return (
+    <Pf1Modal title={`Charges · ${spell.name}`} onClose={onClose} onSave={() => onSave(enabled ? cfg : null)}>
+      <label className={`flex items-center gap-2 text-xs ${t.textSecondary} cursor-pointer`}>
+        <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
+        Sort à charges (ex. Contact glacial : 1 contact par niveau)
+      </label>
+      {enabled && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <NumField label="1 charge tous les … niv." value={everyLevels} min={1} max={20} onChange={setEveryLevels} />
+            <NumField label="Maximum (0 = aucun)" value={max} min={0} max={50} onChange={setMax} />
+          </div>
+          <div>
+            <FieldLabel>Au niveau de lanceur {casterLevel}</FieldLabel>
+            <p className={`text-xs font-bold ${t.accent}`}>{spellChargeCount(cfg, casterLevel)} charge(s) par lancer</p>
+          </div>
+          <p className={`text-[10px] ${t.textMuted}`}>Une fois lancé, le sort reste actif tant qu’il lui reste des charges : − en utilise une, + en rend une.</p>
+        </>
+      )}
+    </Pf1Modal>
   );
 }

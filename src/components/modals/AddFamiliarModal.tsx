@@ -11,6 +11,11 @@ interface Props {
   onDelete?: (id: string, name: string) => void;
   onAvatarUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClose: () => void;
+  /**
+   * Homebrew : nom, description, image et PV seulement ;
+   * abilities = le MJ a coché « Capacités / attaque ». Absent = fiche D&D complète.
+   */
+  homebrew?: { abilities: boolean };
 }
 
 const statusOptions: { key: NewFamiliarState['status']; label: string }[] = [
@@ -20,7 +25,7 @@ const statusOptions: { key: NewFamiliarState['status']; label: string }[] = [
   { key: 'dead', label: 'Mort' },
 ];
 
-export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDelete, onAvatarUpload, onClose }: Props) {
+export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDelete, onAvatarUpload, onClose, homebrew }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newFamiliar.id;
   const [numberInputs, setNumberInputs] = useState({
@@ -89,15 +94,15 @@ export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDele
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid ${homebrew ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Nom</label>
               <input type="text" placeholder="ex: Ombre" value={newFamiliar.name} onChange={e => setNewFamiliar(prev => ({ ...prev, name: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} required />
             </div>
-            <div>
+            {!homebrew && <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Espèce</label>
               <input type="text" placeholder="ex: Chouette" value={newFamiliar.species} onChange={e => setNewFamiliar(prev => ({ ...prev, species: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} />
-            </div>
+            </div>}
           </div>
 
           <div>
@@ -105,7 +110,7 @@ export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDele
             <textarea placeholder="Apparence, histoire..." value={newFamiliar.description} onChange={e => setNewFamiliar(prev => ({ ...prev, description: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-14 focus:outline-none`} />
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className={`grid ${homebrew ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>PV max</label>
               <input
@@ -144,7 +149,7 @@ export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDele
                 className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
               />
             </div>
-            <div>
+            {!homebrew && <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>CA</label>
               <input
                 type="number"
@@ -161,9 +166,11 @@ export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDele
                 }}
                 className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
               />
-            </div>
+            </div>}
           </div>
 
+          {/* Champs propres à D&D : masqués en homebrew. */}
+          {!homebrew && <>
           {/* Caractéristiques */}
           <div>
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1.5`}>Caractéristiques</label>
@@ -237,15 +244,19 @@ export function AddFamiliarModal({ newFamiliar, setNewFamiliar, onSubmit, onDele
             <textarea placeholder="Immunisé au feu, résistance aux dégâts perforants..." value={newFamiliar.resistances} onChange={e => setNewFamiliar(prev => ({ ...prev, resistances: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-14 focus:outline-none`} />
           </div>
 
+          </>}
+
+          {(!homebrew || homebrew.abilities) && <>
           <div>
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Capacités</label>
             <textarea placeholder="Capacités passives, traits spéciaux..." value={newFamiliar.abilities} onChange={e => setNewFamiliar(prev => ({ ...prev, abilities: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-16 focus:outline-none`} />
           </div>
 
           <div>
-            <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Actions</label>
+            <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>{homebrew ? 'Attaque / actions' : 'Actions'}</label>
             <textarea placeholder="Morsure, Griffe, Attaque multijet..." value={newFamiliar.actions} onChange={e => setNewFamiliar(prev => ({ ...prev, actions: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-16 focus:outline-none`} />
           </div>
+          </>}
 
           <div>
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Statut</label>

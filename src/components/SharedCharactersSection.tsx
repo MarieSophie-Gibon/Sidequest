@@ -7,6 +7,7 @@ import { GAME_SYSTEM_LABELS, type GameSystem } from '../types/rpg.types';
 const SYSTEM_BADGE: Record<GameSystem, string> = {
   dnd5e: 'text-rose-300 bg-rose-500/12 border-rose-400/35',
   pf1e: 'text-amber-300 bg-amber-500/12 border-amber-400/35',
+  homebrew: 'text-emerald-300 bg-emerald-500/12 border-emerald-400/35',
 };
 
 interface Props {

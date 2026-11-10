@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from './supabaseClient';
 import { useAuth } from './hooks/useAuth';
 import { useCharacterData } from './hooks/useCharacterData';
@@ -20,6 +20,15 @@ import { DnDInventory } from './components/DnDInventory';
 import { DnDBiography } from './components/DnDBiography';
 import { SettingsTab } from './components/SettingsTab';
 import { CharacterShareCard } from './components/CharacterShareCard';
+import { GameSystemEditor } from './components/homebrew/GameSystemEditor';
+import { useGameSystems } from './hooks/useGameSystems';
+import { HomebrewCombatHUD } from './components/homebrew/HomebrewCombatHUD';
+import { HomebrewHomeSections } from './components/homebrew/HomebrewHomeSections';
+import { HomebrewSkillsTab } from './components/homebrew/HomebrewSkillsTab';
+import { normalizeHomebrewData, type HomebrewData } from './systems/homebrew/sheet';
+import { featureTypesOf, itemCategoriesOf, resourcesEnabled, restsEnabled, restsOf, spellFieldsOf } from './systems/homebrew/presets';
+import { HomebrewInventoryTab } from './components/homebrew/HomebrewInventoryTab';
+import { HomebrewSpellsTab } from './components/homebrew/HomebrewSpellsTab';
 import { DnDNotes } from './components/DnDNotes';
 import { BottomNav } from './components/BottomNav';
 import { AppHeader } from './components/AppHeader';
@@ -34,7 +43,6 @@ import { AddResourceModal } from './components/modals/AddResourceModal';
 import { EditSpellSlotModal } from './components/modals/EditSpellSlotModal';
 import { AddSpellModal } from './components/modals/AddSpellModal';
 import { AddItemModal } from './components/modals/AddItemModal';
-import { ChangeAvatarModal } from './components/modals/ChangeAvatarModal';
 import { EditConditionsModal } from './components/modals/EditConditionsModal';
 import { EditSpellcastingModal } from './components/modals/EditSpellcastingModal';
 import { EditBiographyModal } from './components/modals/EditBiographyModal';
@@ -53,12 +61,12 @@ import { Pf1DefenseSection } from './components/pf1e/Pf1DefenseSection';
 import { Pf1ActionsTab } from './components/pf1e/Pf1ActionsTab';
 import { Pf1CraftingModal } from './components/pf1e/Pf1CraftingModal';
 import { Pf1CraftProjectsCard } from './components/pf1e/Pf1CraftProjectsCard';
-import { Pf1AttackModal, Pf1BuildModal, Pf1DefenseModal, Pf1HelpModal, Pf1MagicModal } from './components/pf1e/Pf1Modals';
-import { HOUSE_RULE_ELEPHANT, normalizePf1Data } from './systems/pf1e/defaults';
+import { Pf1AttackModal, Pf1DefenseModal, Pf1HelpModal, Pf1InitSpeedModal, Pf1MagicModal, Pf1StatsModal } from './components/pf1e/Pf1Modals';
+import { normalizePf1Data } from './systems/pf1e/defaults';
 import { computePf1Sheet } from './systems/pf1e/rules';
 import type { Pf1Attack } from './systems/pf1e/types';
 
-/** Thème fixe de l'accueil : violet, fond clair flouté (le voile d'étoiles est toujours affiché). */
+/** Thème de l'accueil : violet ; fond clair flouté tant que le fond de l'app est « par défaut » (voile d'étoiles toujours affiché). */
 const HOME_THEME: CharacterTheme = { themeName: 'violet', bgChoice: 'light', bgOverlay: true };
 
 /** Fenêtres de pure consultation, autorisées sur une fiche en lecture seule. */
@@ -86,8 +94,21 @@ export default function App() {
   const [transitionDirection, setTransitionDirection] = useState<'left' | 'right'>('left');
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // Homebrew : structure copiée du modèle + valeurs du joueur.
+  const hbData = data.activeChar?.system === 'homebrew' ? normalizeHomebrewData(data.activeChar.system_data) : null;
+  const saveHb = (next: HomebrewData) => data.syncCharacterField('system_data', next);
+  // Onglets masqués selon les sections choisies par le MJ.
+  const hiddenTabs = new Set<string>(hbData ? [
+    ...(hbData.structure.sections.spells ? [] : ['spells']),
+    ...(hbData.structure.sections.features || resourcesEnabled(hbData.structure) ? [] : ['features']),
+    ...(hbData.structure.sections.inventory ? [] : ['inventory']),
+    ...(hbData.structure.sections.biography ? [] : ['biography']),
+    ...(hbData.structure.sections.notes ? [] : ['notes']),
+    ...(hbData.structure.stats.length || hbData.structure.skills.length ? [] : ['attributes']),
+  ] : []);
+
   const requestTabChange = (tab: 'home' | 'spells' | 'features' | 'attributes' | 'inventory' | 'biography' | 'notes' | 'settings') => {
-    if (tab === activeTab) return;
+    if (tab === activeTab || hiddenTabs.has(tab)) return;
     const tabs = ['home', 'spells', 'features', 'attributes', 'inventory', 'biography', 'notes', 'settings'] as const;
     const nextIndex = tabs.indexOf(tab);
     const currentIndex = tabs.indexOf(activeTab);
@@ -96,7 +117,7 @@ export default function App() {
     setIsTransitioning(true);
   };
 
-  const swipe = useSwipeNav(activeTab, requestTabChange);
+  const swipe = useSwipeNav(activeTab, requestTabChange, hiddenTabs);
 
   const [modalType, setModalTypeState] = useState<string | null>(null);
   // Fiche en lecture seule (MJ) : seules les fenêtres de consultation s'ouvrent.
@@ -108,6 +129,13 @@ export default function App() {
     setModalTypeState(next);
   };
   const [itemActionTarget, setItemActionTarget] = useState<Item | null>(null);
+
+  // Accueil : modèle de fiche (système homebrew) ouvert dans l'éditeur.
+  const [editingSystemId, setEditingSystemId] = useState<string | null>(null);
+  // Héros en attente : créé une fois son nouveau modèle configuré dans l'éditeur.
+  const [pendingHero, setPendingHero] = useState<{ name: string; race: string } | null>(null);
+  const gameSystems = useGameSystems(auth.user?.id, showAlert);
+  const editingSystem = gameSystems.systems.find(s => s.id === editingSystemId) ?? null;
   const [pf1AttackTarget, setPf1AttackTarget] = useState<Pf1Attack | null>(null);
 
   // Lien de partage MJ (?share=<jeton>) : mis de côté jusqu'à la connexion, puis accepté.
@@ -132,9 +160,17 @@ export default function App() {
   }, [userId]);
 
   // Thème : sur une fiche, celui du personnage (ou le thème de l'app s'il n'en a pas) ;
-  // hors fiche (accueil, sélection du PJ, connexion), toujours le thème d'accueil fixe.
-  const { setCharacterTheme } = settings;
-  const sheetTheme = data.view === 'sheet' ? (data.activeChar?.theme ?? null) : HOME_THEME;
+  // hors fiche (accueil, sélection du PJ, connexion), le thème d'accueil (violet + fond de l'app).
+  const { setCharacterTheme, defaultTheme } = settings;
+  // Hors fiche : couleur violette fixe, mais le fond d'écran (image, flou, image perso) suit le thème de l'app.
+  const homeTheme = useMemo<CharacterTheme>(() => ({
+    ...HOME_THEME,
+    // « Par défaut » garde l'image claire de l'accueil ; un choix explicite (image perso, aucun…) s'applique.
+    bgChoice: defaultTheme.bgChoice === 'auto' ? HOME_THEME.bgChoice : defaultTheme.bgChoice,
+    bgOverlay: defaultTheme.bgOverlay,
+    customBg: defaultTheme.customBg,
+  }), [defaultTheme.bgChoice, defaultTheme.bgOverlay, defaultTheme.customBg]);
+  const sheetTheme = data.view === 'sheet' ? (data.activeChar?.theme ?? null) : homeTheme;
   useEffect(() => {
     setCharacterTheme(sheetTheme);
   }, [sheetTheme, setCharacterTheme]);
@@ -275,6 +311,9 @@ export default function App() {
       damage: spell.damage || '',
       upcast_damage: spell.upcast_damage || '',
       desc: spell.desc || '',
+      school: spell.school || '',
+      cost: spell.cost || '',
+      condition: spell.condition || '',
     });
     setModalType('add_spell');
   };
@@ -311,8 +350,11 @@ export default function App() {
       data.setNewFeature({ name: '', max: 2, recharge: 'LONG_REST', description: '', category: 'active', type: 'classe', resource_id: '', resource_cost: 0 });
     } else if (type === 'espece') {
       data.setNewFeature({ name: '', max: 2, recharge: 'PERMANENT', description: '', category: 'passive', type: 'espece', resource_id: '', resource_cost: 0 });
-    } else {
+    } else if (type === 'don') {
       data.setNewFeature({ name: '', max: 3, recharge: 'LONG_REST', description: '', category: 'passive', type: 'don', resource_id: '', resource_cost: 0 });
+    } else {
+      // Homebrew : type de capacité défini par le MJ.
+      data.setNewFeature({ name: '', max: 2, recharge: 'LONG_REST', description: '', category: 'active', type, resource_id: '', resource_cost: 0 });
     }
     setModalType('add_feature');
   };
@@ -403,8 +445,23 @@ export default function App() {
             />
           )}
 
+          {data.view === 'dashboard' && editingSystem && (
+            <GameSystemEditor
+              key={editingSystem.id}
+              system={editingSystem}
+              onSave={(fields) => gameSystems.saveSystem(editingSystem.id, fields)}
+              onDelete={() => gameSystems.deleteSystem(editingSystem.id)}
+              onClose={() => { setEditingSystemId(null); setPendingHero(null); }}
+              heroName={pendingHero?.name}
+              onCreateHero={pendingHero ? async (structure) => {
+                const created = await data.handleCreateCharacter(pendingHero.name, pendingHero.race, 'homebrew', { systemId: editingSystem.id, structure });
+                if (created) { setPendingHero(null); setEditingSystemId(null); }
+              } : undefined}
+            />
+          )}
+
           {/* DASHBOARD */}
-          {data.view === 'dashboard' && (
+          {data.view === 'dashboard' && !editingSystem && (
             <Dashboard
               characters={data.characters}
               sharedCharacters={data.sharedCharacters}
@@ -416,7 +473,17 @@ export default function App() {
               onAssignCampaign={data.assignCampaign}
               emailConfirmed={!!auth.user.email_confirmed_at}
               onLoadCharacter={(id) => data.loadCharacterData(id)}
-              onCreateCharacter={(name, race, system) => data.handleCreateCharacter(name, race, system)}
+              onCreateCharacter={(name, race, system, homebrew) => data.handleCreateCharacter(name, race, system, homebrew)}
+              gameSystems={gameSystems.systems}
+              onStartNewModel={async (modelName, heroName, heroRace) => {
+                // Tout nouveau modèle part de « Libre » (caractéristiques, Race et Classe de D&D par défaut).
+                const model = await gameSystems.createSystem(modelName, 'libre');
+                if (!model) return false;
+                setPendingHero({ name: heroName, race: heroRace });
+                setEditingSystemId(model.id);
+                return true;
+              }}
+              onOpenGameSystem={setEditingSystemId}
             />
           )}
 
@@ -432,20 +499,35 @@ export default function App() {
                   <span className="flex items-center gap-1 shrink-0 text-emerald-300"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> en direct</span>
                 </div>
               )}
-              {pf1Data && pf1Sheet ? (
+              {hbData ? (
+                <HomebrewCombatHUD
+                  activeChar={data.activeChar}
+                  data={hbData}
+                  hpPercent={hpPercent}
+                  activeConditions={data.activeConditions}
+                  onChange={saveHb}
+                  onOpenAvatar={() => setModalType('edit_profile')}
+                  onOpenProfile={() => setModalType('edit_profile')}
+                  onOpenHealth={() => setModalType('edit_hp')}
+                  onOpenConditions={() => setModalType('edit_conditions')}
+                  onOpenStats={() => requestTabChange('attributes')}
+                  renderAvatar={() => renderActiveAvatar(data.activeChar!)}
+                />
+              ) : pf1Data && pf1Sheet ? (
                 <Pf1CombatHUD
                   activeChar={data.activeChar}
                   sheet={pf1Sheet}
                   hasArmor={!!pf1Data.armor || !!pf1Data.shield}
                   hpPercent={hpPercent}
                   activeConditions={data.activeConditions}
-                  onOpenAvatar={() => setModalType('change_avatar')}
+                  onOpenAvatar={() => setModalType('edit_profile')}
                   onOpenProfile={() => setModalType('edit_profile')}
                   onOpenHealth={() => setModalType('edit_hp')}
                   onOpenConditions={() => setModalType('edit_conditions')}
                   onOpenHelp={() => setModalType('pf1_help')}
                   onOpenBuild={() => setModalType('pf1_build')}
                   onOpenDefense={() => setModalType('pf1_defense')}
+                  onOpenInitSpeed={() => setModalType('pf1_init_speed')}
                   renderAvatar={() => renderActiveAvatar(data.activeChar!)}
                 />
               ) : (
@@ -456,7 +538,7 @@ export default function App() {
                 activeConditions={data.activeConditions}
                 coreAttributes={coreAttributes}
                 getModValue={data.getModValue}
-                onOpenAvatar={() => setModalType('change_avatar')}
+                onOpenAvatar={() => setModalType('edit_profile')}
                 onOpenProfile={() => setModalType('edit_profile')}
                 onOpenHealth={() => setModalType('edit_hp')}
                 onOpenConditions={() => setModalType('edit_conditions')}
@@ -483,7 +565,7 @@ export default function App() {
                     features={data.features}
                     items={data.items}
                     resources={data.resources}
-                    skills={pf1Data ? [] : data.skills}
+                    skills={pf1Data || hbData ? [] : data.skills}
                     familiars={data.familiars}
                     activeChar={data.activeChar!}
                     getModValue={data.getModValue}
@@ -492,9 +574,13 @@ export default function App() {
                     onLongRest={data.handleLongRest}
                     onPf1Rest={pf1Data ? data.handlePf1NightRest : undefined}
                     onUpdateResourceCurrent={data.handleUpdateResourceCurrent}
+                    onSetResourceCurrent={data.handleSetResourceCurrent}
+                    onToggleResourceBullet={data.handleToggleResourceBullet}
+                    hbRests={hbData ? (restsEnabled(hbData.structure) ? restsOf(hbData.structure) : []) : undefined}
+                    onHbRest={hbData ? data.handleHomebrewRest : undefined}
                     onUpdateFamiliarHp={data.handleUpdateFamiliarHp}
                     onNavigateTab={requestTabChange}
-                    systemSections={pf1Data && pf1Sheet && (
+                    systemSections={hbData ? <HomebrewHomeSections data={hbData} onChange={saveHb} /> : pf1Data && pf1Sheet && (
                       <Pf1DefenseSection data={pf1Data} sheet={pf1Sheet} onOpenDefense={() => setModalType('pf1_defense')} />
                     )}
                   />
@@ -515,7 +601,26 @@ export default function App() {
                   />
                 )}
 
-                {activeTab === 'spells' && !pf1Data && (
+                {activeTab === 'spells' && hbData && (
+                  <HomebrewSpellsTab
+                    data={hbData}
+                    onChange={saveHb}
+                    spellSlots={data.spellSlots}
+                    spells={data.spells}
+                    spellDc={data.activeChar.spell_dc}
+                    spellAttack={data.activeChar.spell_attack}
+                    onOpenEditSpellSlot={(slot) => {
+                      data.setNewSpellSlot({ level: slot.level, max: slot.max, current: slot.current });
+                      setModalType('edit_spell_slot');
+                    }}
+                    onToggleSpellSlot={data.handleToggleSpellSlot}
+                    onOpenAddSpell={() => setModalType('add_spell')}
+                    onEditSpellcasting={() => setModalType('edit_spellcasting')}
+                    onEditSpell={openEditSpell}
+                  />
+                )}
+
+                {activeTab === 'spells' && !pf1Data && !hbData && (
                   <DnDSpellcasting
                     spellSlots={data.spellSlots}
                     spells={data.spells}
@@ -541,12 +646,30 @@ export default function App() {
                     onLongRest={data.handleLongRest}
                     onOpenEditFeature={openEditFeature}
                     onOpenCreateFeature={openCreateFeature}
-                    onOpenAddResource={() => { data.setNewResource({ name: '', max: 10, current: 10, recharge: 'LONG_REST' }); setModalType('add_resource'); }}
-                    onOpenEditResource={(res) => { data.setNewResource({ id: res.id, name: res.name, max: res.max, current: res.current, recharge: res.recharge ?? 'LONG_REST' }); setModalType('add_resource'); }}
+                    onOpenAddResource={() => {
+                      // Homebrew : puces par défaut, rechargées par le premier repos du système.
+                      data.setNewResource(hbData
+                        ? { name: '', max: 3, current: 3, recharge: 'LONG_REST', display: 'bullets', bullets: null, rest_id: restsEnabled(hbData.structure) ? (restsOf(hbData.structure)[0]?.id ?? null) : null, rest_amount: null }
+                        : { name: '', max: 10, current: 10, recharge: 'LONG_REST' });
+                      setModalType('add_resource');
+                    }}
+                    onOpenEditResource={(res) => {
+                      data.setNewResource({
+                        id: res.id, name: res.name, max: res.max, current: res.current, recharge: res.recharge ?? 'LONG_REST',
+                        ...(hbData && { display: res.display ?? 'bullets', bullets: res.bullets ?? null, rest_id: res.rest_id ?? null, rest_amount: res.rest_amount ?? null }),
+                      });
+                      setModalType('add_resource');
+                    }}
                     onUpdateResourceCurrent={data.handleUpdateResourceCurrent}
+                    onSetResourceCurrent={data.handleSetResourceCurrent}
+                    onToggleResourceBullet={data.handleToggleResourceBullet}
                     onOpenAddFamiliar={() => { data.setNewFamiliar({ name: '', species: '', description: '', hp_current: 1, hp_max: 1, ac: 10, speed: '', str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, passive_perception: 10, senses: '', abilities: '', resistances: '', darkvision: '', actions: '', avatar_url: '', status: 'present' }); setModalType('add_familiar'); }}
                     onOpenEditFamiliar={(fam: Familiar) => { data.setNewFamiliar({ id: fam.id, name: fam.name, species: fam.species || '', description: fam.description || '', hp_current: fam.hp_current, hp_max: fam.hp_max, ac: fam.ac ?? 10, speed: fam.speed || '', str: fam.str ?? 10, dex: fam.dex ?? 10, con: fam.con ?? 10, int: fam.int ?? 10, wis: fam.wis ?? 10, cha: fam.cha ?? 10, passive_perception: fam.passive_perception ?? 10, senses: fam.senses || '', abilities: fam.abilities || '', resistances: fam.resistances || '', darkvision: fam.darkvision || '', actions: fam.actions || '', avatar_url: fam.avatar_url || '', status: fam.status }); setModalType('add_familiar'); }}
                     onUpdateFamiliarHp={data.handleUpdateFamiliarHp}
+                    featureGroups={hbData ? featureTypesOf(hbData.structure) : undefined}
+                    simpleFamiliars={!!hbData}
+                    showFeatures={hbData ? hbData.structure.sections.features : true}
+                    showResources={hbData ? resourcesEnabled(hbData.structure) : true}
                   />
                 )}
 
@@ -558,7 +681,9 @@ export default function App() {
                   />
                 )}
 
-                {activeTab === 'attributes' && !pf1Data && (
+                {activeTab === 'attributes' && hbData && <HomebrewSkillsTab data={hbData} onChange={saveHb} />}
+
+                {activeTab === 'attributes' && !pf1Data && !hbData && (
                   <DnDSkillsAndSaves
                     activeChar={data.activeChar}
                     skills={data.skills}
@@ -569,8 +694,28 @@ export default function App() {
                   />
                 )}
 
-                {activeTab === 'inventory' && (
+                {activeTab === 'inventory' && hbData && (
+                  <HomebrewInventoryTab
+                    categories={itemCategoriesOf(hbData.structure)}
+                    items={data.items}
+                    onToggleEquip={data.handleToggleItemEquip}
+                    onAddItem={(categoryId) => {
+                      data.setNewItem({ name: '', description: '', quantity: 1, equipped: false, category: categoryId, damage: '', range: '', defense_bonus: 0 });
+                      setModalType('add_item');
+                    }}
+                    onEditItem={(item: Item) => {
+                      data.setNewItem({
+                        id: item.id, name: item.name, description: item.description || '', quantity: item.quantity, equipped: item.equipped,
+                        category: item.category || 'objet', damage: item.damage || '', range: item.range || '', defense_bonus: item.defense_bonus || 0,
+                      });
+                      setModalType('add_item');
+                    }}
+                  />
+                )}
+
+                {activeTab === 'inventory' && !hbData && (
                   <DnDInventory
+                    hidePurse={!!hbData}
                     activeChar={data.activeChar}
                     items={data.items}
                     onToggleItemEquip={data.handleToggleItemEquip}
@@ -644,13 +789,24 @@ export default function App() {
                 </div>
               </main>
 
-              <BottomNav activeTab={activeTab} setActiveTab={requestTabChange} onDashboard={() => data.setView('dashboard')} iconOverrides={pf1Data ? { spells: Swords } : undefined} />
+              <BottomNav activeTab={activeTab} setActiveTab={requestTabChange} onDashboard={() => data.setView('dashboard')} iconOverrides={pf1Data ? { spells: Swords } : undefined} hiddenTabs={hiddenTabs} />
             </div>
           )}
 
           {/* MODALS */}
           {modalType === 'edit_profile' && data.activeChar && (
-            <EditProfileModal activeChar={data.activeChar} syncCharacterField={data.syncCharacterField} onClose={() => setModalType(null)} />
+            <EditProfileModal
+              activeChar={data.activeChar}
+              syncCharacterField={data.syncCharacterField}
+              pf1={pf1Data ? { data: pf1Data, onChange: (next) => data.syncPf1Data(next) } : undefined}
+              onAvatarUpload={data.handleAvatarUpload}
+              onRemoveAvatar={async () => {
+                const char = data.activeChar!;
+                data.setActiveChar({ ...char, avatar_url: '', avatar_key: '' });
+                await supabase.from('characters').update({ avatar_url: '', avatar_key: '' }).eq('id', char.id);
+              }}
+              onClose={() => setModalType(null)}
+            />
           )}
           {modalType === 'edit_character' && data.activeChar && (
             <EditCombatModal activeChar={data.activeChar} syncCharacterField={data.syncCharacterField} onClose={() => setModalType(null)} />
@@ -665,10 +821,10 @@ export default function App() {
             <EditConditionsModal activeConditions={data.activeConditions} setActiveConditions={data.setActiveConditions} onClose={() => setModalType(null)} />
           )}
           {modalType === 'add_feature' && (
-            <AddFeatureModal perDayOnly={!!pf1Data} newFeature={data.newFeature} setNewFeature={data.setNewFeature} resources={data.resources} onSubmit={(e) => { data.handleSaveFeature(e); setModalType(null); }} onDelete={data.handleDeleteFeature} onClose={() => setModalType(null)} />
+            <AddFeatureModal perDayOnly={!!pf1Data} typeOptions={hbData ? featureTypesOf(hbData.structure) : undefined} newFeature={data.newFeature} setNewFeature={data.setNewFeature} resources={data.resources} onSubmit={(e) => { data.handleSaveFeature(e); setModalType(null); }} onDelete={data.handleDeleteFeature} onClose={() => setModalType(null)} />
           )}
           {modalType === 'add_resource' && (
-            <AddResourceModal perDayOnly={!!pf1Data} newResource={data.newResource} setNewResource={data.setNewResource} onSubmit={async (e) => { const ok = await data.handleSaveResource(e); if (ok) setModalType(null); }} onDelete={async (id) => { await data.handleDeleteResource(id); setModalType(null); }} onClose={() => setModalType(null)} />
+            <AddResourceModal perDayOnly={!!pf1Data} hbRests={hbData ? (restsEnabled(hbData.structure) ? restsOf(hbData.structure) : []) : undefined} newResource={data.newResource} setNewResource={data.setNewResource} onSubmit={async (e) => { const ok = await data.handleSaveResource(e); if (ok) setModalType(null); }} onDelete={async (id) => { await data.handleDeleteResource(id); setModalType(null); }} onClose={() => setModalType(null)} />
           )}
           {modalType === 'edit_spell_slot' && (
             <EditSpellSlotModal
@@ -696,7 +852,7 @@ export default function App() {
             <EditSpellcastingModal activeChar={data.activeChar} syncCharacterField={data.syncCharacterField} onClose={() => setModalType(null)} />
           )}
           {modalType === 'add_spell' && (
-            <AddSpellModal newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], material_components: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', upcast_damage: '', desc: '' }); setModalType(null); }} />
+            <AddSpellModal hbFields={hbData ? spellFieldsOf(hbData.structure) : undefined} newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], material_components: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', upcast_damage: '', desc: '' }); setModalType(null); }} />
           )}
           {modalType === 'death_saves' && data.activeChar && (
             <DeathSavingThrowsModal
@@ -716,10 +872,12 @@ export default function App() {
               onDelete={data.handleDeleteFamiliar}
               onAvatarUpload={data.handleFamiliarAvatarUpload}
               onClose={() => setModalType(null)}
+              homebrew={hbData ? { abilities: !!hbData.structure.familiarAbilities } : undefined}
             />
           )}
           {modalType === 'add_item' && (
             <AddItemModal
+              hbCategories={hbData ? itemCategoriesOf(hbData.structure) : undefined}
               newItem={data.newItem}
               setNewItem={data.setNewItem}
               onSubmit={async (e) => { await data.handleSaveItem(e); setModalType(null); }}
@@ -757,15 +915,6 @@ export default function App() {
               }}
             />
           )}
-          {modalType === 'change_avatar' && data.activeChar && (
-            <ChangeAvatarModal
-              activeChar={data.activeChar}
-              setActiveChar={data.setActiveChar}
-              onAvatarUpload={(e) => { data.handleAvatarUpload(e); setModalType(null); }}
-              showAlert={showAlert}
-              onClose={() => setModalType(null)}
-            />
-          )}
           {modalType === 'edit_biography' && (
             <EditBiographyModal
               biography={data.biography}
@@ -788,28 +937,32 @@ export default function App() {
             />
           )}
           {modalType === 'pf1_help' && (
-            <Pf1HelpModal elephant={!!data.activeChar?.house_rules?.includes(HOUSE_RULE_ELEPHANT)} onClose={() => setModalType(null)} />
+            <Pf1HelpModal onClose={() => setModalType(null)} />
           )}
           {modalType === 'pf1_build' && pf1Data && data.activeChar && (
-            <Pf1BuildModal
+            <Pf1StatsModal
               data={pf1Data}
-              level={data.activeChar.level}
-              className={data.activeChar.class}
-              houseRules={data.activeChar.house_rules ?? []}
-              onSave={async ({ data: next, level, className, houseRules }) => {
-                setModalType(null);
-                await data.syncPf1Data(next, level);
-                if (level !== data.activeChar!.level) await data.syncCharacterField('level', level);
-                if (className !== data.activeChar!.class) await data.syncCharacterField('class', className);
-                await data.syncCharacterField('house_rules', houseRules);
-              }}
+              onSave={async (next) => { setModalType(null); await data.syncPf1Data(next); }}
               onClose={() => setModalType(null)}
             />
           )}
           {modalType === 'pf1_defense' && pf1Data && data.activeChar && (
             <Pf1DefenseModal
               data={pf1Data}
+              level={data.activeChar.level}
+              onSave={async (next) => {
+                setModalType(null);
+                await data.syncPf1Data(next);
+              }}
+              onClose={() => setModalType(null)}
+            />
+          )}
+          {modalType === 'pf1_init_speed' && pf1Data && pf1Sheet && data.activeChar && (
+            <Pf1InitSpeedModal
+              data={pf1Data}
               speed={data.activeChar.speed}
+              dexMod={pf1Sheet.mods.dex}
+              level={data.activeChar.level}
               onSave={async (next, speed) => {
                 setModalType(null);
                 await data.syncPf1Data(next);

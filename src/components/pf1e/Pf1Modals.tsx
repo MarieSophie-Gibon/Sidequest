@@ -1,18 +1,17 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
-import { Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import type { CharacterStatKey } from '../../types/rpg.types';
-import type { BabProgression, Pf1Armor, Pf1Attack, Pf1Data, Pf1SaveKey, Pf1Size } from '../../systems/pf1e/types';
-import { PF1_CLASSES, findPf1Class } from '../../systems/pf1e/data/classes';
-import { applyPf1Class, HOUSE_RULE_ELEPHANT } from '../../systems/pf1e/defaults';
-import { abilityMod, signed, STAT_KEYS, STAT_SHORT } from '../../systems/pf1e/rules';
+import type { Pf1Armor, Pf1Attack, Pf1Data, Pf1SaveKey, Pf1Size } from '../../systems/pf1e/types';
+import { findPf1Class } from '../../systems/pf1e/data/classes';
+import { abilityMod, baseAttackBonus, baseSave, SAVE_STAT, signed, STAT_KEYS, STAT_SHORT } from '../../systems/pf1e/rules';
 import { PF1_HELP } from '../../systems/pf1e/help';
 import { FieldLabel, NumField, Pf1Modal, TextField, Toggle } from './ui';
 import { useInputClass } from './useInputClass';
 
 const STAT_LABELS: Record<CharacterStatKey, string> = { str: 'Force', dex: 'Dextérité', con: 'Constitution', int: 'Intelligence', wis: 'Sagesse', cha: 'Charisme' };
 const SAVE_LABELS: Record<Pf1SaveKey, string> = { fort: 'Vigueur', ref: 'Réflexes', will: 'Volonté' };
-const BAB_LABELS: Record<BabProgression, string> = { full: 'Fort', medium: 'Moyen', poor: 'Faible' };
+const SAVE_KEYS: Pf1SaveKey[] = ['fort', 'ref', 'will'];
 
 function SectionTitle({ children }: { children: string }) {
   const t = useThemeClasses();
@@ -32,80 +31,21 @@ function StatSelect({ label, value, onChange, allowNone }: { label: string; valu
   );
 }
 
-/* ───────────────────────── Construction : classe, niveau, caractéristiques ───────────────────────── */
+/* ───────────────────────── Caractéristiques (ex-« Construction ») ───────────────────────── */
 
-export function Pf1BuildModal({ data, level, className, houseRules, onSave, onClose }: {
-  data: Pf1Data; level: number; className: string; houseRules: string[];
-  onSave: (next: { data: Pf1Data; level: number; className: string; houseRules: string[] }) => void;
+/** Fenêtre Caractéristiques : valeurs de base, ajustements raciaux, modificateur. */
+export function Pf1StatsModal({ data, onSave, onClose }: {
+  data: Pf1Data;
+  onSave: (next: Pf1Data) => void;
   onClose: () => void;
 }) {
   const t = useThemeClasses();
-  const cls = useInputClass();
   const [draft, setDraft] = useState(data);
-  const [lvl, setLvl] = useState(level);
-  const [name, setName] = useState(className);
-  const [rules, setRules] = useState(houseRules);
-  const custom = !findPf1Class(draft.classId);
-  const elephant = rules.includes(HOUSE_RULE_ELEPHANT);
-
   const setScore = (field: 'baseScores' | 'racialMods', key: CharacterStatKey, v: number) =>
     setDraft(d => ({ ...d, [field]: { ...d[field], [key]: v } }));
 
   return (
-    <Pf1Modal title="Construction" onClose={onClose} onSave={() => onSave({ data: draft, level: lvl, className: name.trim() || 'Aventurier', houseRules: rules })}>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <FieldLabel>Classe</FieldLabel>
-          <select
-            value={custom ? 'custom' : draft.classId}
-            onChange={e => {
-              const id = e.target.value;
-              const known = findPf1Class(id);
-              setDraft(d => applyPf1Class(d, id));
-              if (known) setName(known.name);
-            }}
-            className={cls}
-          >
-            {PF1_CLASSES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            <option value="custom">Autre…</option>
-          </select>
-        </div>
-        <NumField label="Niveau" value={lvl} min={1} max={20} onChange={setLvl} />
-      </div>
-      {custom && (
-        <>
-          <TextField label="Nom de la classe" value={name} onChange={setName} />
-          <div>
-            <FieldLabel>Progression du BBA</FieldLabel>
-            <div className="grid grid-cols-3 gap-1.5">
-              {(['full', 'medium', 'poor'] as BabProgression[]).map(b => (
-                <Toggle key={b} active={draft.bab === b} onClick={() => setDraft(d => ({ ...d, bab: b }))}>{BAB_LABELS[b]}</Toggle>
-              ))}
-            </div>
-          </div>
-          <div>
-            <FieldLabel>Bonnes sauvegardes</FieldLabel>
-            <div className="grid grid-cols-3 gap-1.5">
-              {(['fort', 'ref', 'will'] as Pf1SaveKey[]).map(s => (
-                <Toggle key={s} active={draft.goodSaves.includes(s)} onClick={() => setDraft(d => ({ ...d, goodSaves: d.goodSaves.includes(s) ? d.goodSaves.filter(x => x !== s) : [...d.goodSaves, s] }))}>
-                  {SAVE_LABELS[s]}
-                </Toggle>
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <NumField label="Dé de vie (d…)" value={draft.hitDie} min={4} max={12} onChange={v => setDraft(d => ({ ...d, hitDie: v }))} />
-            <NumField label="Rangs / niveau" value={draft.skillRanksPerLevel} min={0} max={10} onChange={v => setDraft(d => ({ ...d, skillRanksPerLevel: v }))} />
-          </div>
-        </>
-      )}
-      {!custom && (
-        <p className={`text-[10px] ${t.textMuted}`}>
-          d{draft.hitDie} · BBA {BAB_LABELS[draft.bab].toLowerCase()} · {draft.skillRanksPerLevel} rangs/niveau · Bons JS : {draft.goodSaves.map(s => SAVE_LABELS[s]).join(', ')}
-        </p>
-      )}
-
-      <SectionTitle>Caractéristiques</SectionTitle>
+    <Pf1Modal title="Caractéristiques" onClose={onClose} onSave={() => onSave(draft)}>
       <div className={`grid grid-cols-[1fr_4rem_4rem_2.5rem] gap-x-2 gap-y-1.5 items-center text-[10px] ${t.textMuted} uppercase font-semibold`}>
         <span />
         <span className="text-center">Base</span>
@@ -119,30 +59,70 @@ export function Pf1BuildModal({ data, level, className, houseRules, onSave, onCl
           );
         })}
       </div>
+      <p className={`text-[10px] ${t.textMuted}`}>La classe, le niveau et la taille se règlent dans Identité.</p>
+    </Pf1Modal>
+  );
+}
 
+/**
+ * Archétypes, dé de vie, rangs et taille Pathfinder, affichés dans la fenêtre Identité
+ * (la classe elle-même est saisie au-dessus, avec le multiclassage).
+ * BBA et sauvegardes de base se saisissent dans la fenêtre Défense.
+ * Les changements sont enregistrés aussitôt (comme le reste de la fenêtre Identité).
+ */
+export function Pf1ClassAndSizeFields({ data, onChange }: {
+  data: Pf1Data;
+  onChange: (next: Pf1Data) => void;
+}) {
+  const t = useThemeClasses();
+  const cls = useInputClass();
+  const archetypes = data.archetypes ?? [];
+  const setArchetypes = (next: string[]) => onChange({ ...data, archetypes: next });
+  return (
+    <div className="space-y-2">
+      <div>
+        <FieldLabel>Archétypes</FieldLabel>
+        <div className="space-y-1.5">
+          {archetypes.map((a, i) => (
+            <div key={i} className="flex gap-1.5">
+              <input
+                type="text"
+                value={a}
+                onChange={e => setArchetypes(archetypes.map((x, j) => (j === i ? e.target.value : x)))}
+                className={cls}
+              />
+              <button
+                type="button"
+                onClick={() => setArchetypes(archetypes.filter((_, j) => j !== i))}
+                className={`shrink-0 px-2.5 rounded-xl border ${t.inputBg} ${t.inputBorder} ${t.textMuted}`}
+                aria-label="Retirer l'archétype"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setArchetypes([...archetypes, ''])}
+            className={`w-full py-2 rounded-xl border border-dashed text-[10px] font-bold uppercase tracking-wider ${t.inputBorder} ${t.textMuted}`}
+          >
+            <Plus size={12} className="inline -mt-0.5 mr-1" />Ajouter un archétype
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <NumField label="Dé de vie (d…)" value={data.hitDie} min={4} max={12} onChange={v => onChange({ ...data, hitDie: v })} />
+        <NumField label="Rangs / niveau" value={data.skillRanksPerLevel} min={0} max={10} onChange={v => onChange({ ...data, skillRanksPerLevel: v })} />
+      </div>
       <div>
         <FieldLabel>Taille</FieldLabel>
         <div className="grid grid-cols-3 gap-1.5">
-          {([['P', 'Petite'], ['M', 'Moyenne'], ['G', 'Grande']] as [Pf1Size, string][]).map(([s, l]) => (
-            <Toggle key={s} active={draft.size === s} onClick={() => setDraft(d => ({ ...d, size: s }))}>{l}</Toggle>
+          {([['P', 'Petite'], ['M', 'Moyenne'], ['G', 'Grande']] as [Pf1Size, string][]).map(([sz, l]) => (
+            <Toggle key={sz} active={data.size === sz} onClick={() => onChange({ ...data, size: sz })}>{l}</Toggle>
           ))}
         </div>
       </div>
-      <div>
-        <FieldLabel>Bonus de classe de prédilection</FieldLabel>
-        <div className="grid grid-cols-2 gap-1.5">
-          <Toggle active={draft.favoredClassBonus === 'hp'} onClick={() => setDraft(d => ({ ...d, favoredClassBonus: 'hp' }))}>+1 PV / niv.</Toggle>
-          <Toggle active={draft.favoredClassBonus === 'skill'} onClick={() => setDraft(d => ({ ...d, favoredClassBonus: 'skill' }))}>+1 rang / niv.</Toggle>
-        </div>
-      </div>
-      <div>
-        <FieldLabel>Règle maison</FieldLabel>
-        <Toggle active={elephant} onClick={() => setRules(r => (elephant ? r.filter(x => x !== HOUSE_RULE_ELEPHANT) : [...r, HOUSE_RULE_ELEPHANT]))}>
-          Elephant in the Room {elephant ? '✓' : ''}
-        </Toggle>
-      </div>
-      <p className={`text-[10px] ${t.textMuted}`}>Les PV se règlent en touchant la barre de PV.</p>
-    </Pf1Modal>
+    </div>
   );
 }
 
@@ -193,16 +173,53 @@ function ArmorFields({ title, value, onChange, defaultName }: { title: string; v
   );
 }
 
-export function Pf1DefenseModal({ data, speed, onSave, onClose }: {
-  data: Pf1Data; speed: number; onSave: (next: Pf1Data, speed: number) => void; onClose: () => void;
+export function Pf1DefenseModal({ data, level, onSave, onClose }: {
+  data: Pf1Data; level: number; onSave: (next: Pf1Data) => void; onClose: () => void;
 }) {
-  const [draft, setDraft] = useState(data);
-  const [spd, setSpd] = useState(speed);
+  // Sauvegardes de base saisies à la main ; pré-remplies avec l'ancien calcul si jamais saisies.
+  // (Le BBA se règle depuis l'en-tête, fenêtre « BBA, initiative et vitesse ».)
+  const [draft, setDraft] = useState<Pf1Data>(() => ({
+    ...data,
+    saveBase: data.saveBase ?? {
+      fort: baseSave(data.goodSaves.includes('fort'), level),
+      ref: baseSave(data.goodSaves.includes('ref'), level),
+      will: baseSave(data.goodSaves.includes('will'), level),
+    },
+  }));
+  const t = useThemeClasses();
   const setAc = (k: keyof Pf1Data['acMisc'], v: number) => setDraft(d => ({ ...d, acMisc: { ...d.acMisc, [k]: v } }));
   const setSave = (k: Pf1SaveKey, v: number) => setDraft(d => ({ ...d, saveMisc: { ...d.saveMisc, [k]: v } }));
+  const setSaveBase = (k: Pf1SaveKey, v: number) => setDraft(d => ({ ...d, saveBase: { ...d.saveBase!, [k]: v } }));
 
   return (
-    <Pf1Modal title="Défense" onClose={onClose} onSave={() => onSave(draft, spd)}>
+    <Pf1Modal title="Défense" onClose={onClose} onSave={() => onSave(draft)}>
+      {/* <SectionTitle>Jets de sauvegarde</SectionTitle> */}
+      {/* Une ligne par sauvegarde : base (classes) + modificateur (calculé) + divers = total. */}
+      <div className={`grid grid-cols-[4.5rem_1fr_2.5rem_1fr_2.5rem] gap-x-2 gap-y-1.5 items-center text-[9px] ${t.textMuted} uppercase font-semibold`}>
+        <span />
+        <span className="text-center">Base</span>
+        <span className="text-center">Mod</span>
+        <span className="text-center">Divers</span>
+        <span className="text-right">Total</span>
+        {SAVE_KEYS.map(k => {
+          const stat = SAVE_STAT[k];
+          const mod = abilityMod((draft.baseScores[stat] ?? 10) + (draft.racialMods[stat] ?? 0));
+          const base = draft.saveBase?.[k] ?? 0;
+          const misc = draft.saveMisc[k] ?? 0;
+          return (
+            <Fragment key={k}>
+              <span className={`text-xs font-bold normal-case ${t.textPrimary} truncate`}>{SAVE_LABELS[k]}</span>
+              <NumField value={base} min={0} max={30} onChange={v => setSaveBase(k, v)} />
+              <span className={`text-xs font-mono font-bold text-center normal-case ${t.textSecondary}`} title={`Modificateur de ${STAT_SHORT[stat]}`}>
+                {signed(mod)}
+                <span className={`block text-[8px] font-semibold ${t.textMuted}`}>{STAT_SHORT[stat]}</span>
+              </span>
+              <NumField value={misc} onChange={v => setSave(k, v)} />
+              <span className={`text-xs font-mono font-bold text-right ${t.accent}`}>{signed(base + mod + misc)}</span>
+            </Fragment>
+          );
+        })}
+      </div>
       <ArmorFields title="Armure" value={draft.armor} defaultName="Armure" onChange={armor => setDraft(d => ({ ...d, armor }))} />
       <ArmorFields title="Bouclier" value={draft.shield} defaultName="Bouclier" onChange={shield => setDraft(d => ({ ...d, shield }))} />
       <SectionTitle>Bonus à la CA</SectionTitle>
@@ -212,14 +229,30 @@ export function Pf1DefenseModal({ data, speed, onSave, onClose }: {
         <NumField label="Esquive" value={draft.acMisc.dodge} onChange={v => setAc('dodge', v)} />
         <NumField label="Divers" value={draft.acMisc.other} onChange={v => setAc('other', v)} />
       </div>
-      <SectionTitle>Sauvegardes, initiative, vitesse</SectionTitle>
+    </Pf1Modal>
+  );
+}
+
+/** BBA, initiative et vitesse : caractéristiques principales, ouvertes depuis l'en-tête de la fiche. */
+export function Pf1InitSpeedModal({ data, speed, dexMod, level, onSave, onClose }: {
+  data: Pf1Data; speed: number; dexMod: number; level: number; onSave: (next: Pf1Data, speed: number) => void; onClose: () => void;
+}) {
+  const t = useThemeClasses();
+  // BBA saisi à la main (toutes classes) ; pré-rempli avec l'ancien calcul s'il n'a jamais été saisi.
+  const [bab, setBab] = useState(data.babBase ?? baseAttackBonus(data.bab, level));
+  const [initMisc, setInitMisc] = useState(data.initiativeMisc);
+  const [spd, setSpd] = useState(speed);
+  return (
+    <Pf1Modal title="BBA, initiative et vitesse" onClose={onClose} onSave={() => onSave({ ...data, babBase: bab, initiativeMisc: initMisc }, spd)}>
       <div className="grid grid-cols-3 gap-2">
-        {(['fort', 'ref', 'will'] as Pf1SaveKey[]).map(k => <NumField key={k} label={SAVE_LABELS[k]} value={draft.saveMisc[k] ?? 0} onChange={v => setSave(k, v)} />)}
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <NumField label="Initiative (divers)" value={draft.initiativeMisc} onChange={v => setDraft(d => ({ ...d, initiativeMisc: v }))} />
+        <NumField label="BBA" value={bab} min={0} max={30} onChange={setBab} />
+        <NumField label="Init. (divers)" value={initMisc} onChange={setInitMisc} />
         <NumField label="Vitesse (m)" value={spd} min={0} max={60} onChange={setSpd} />
       </div>
+      <p className={`text-[10px] ${t.textMuted}`}>BBA : total de toutes tes classes (tables de classe).</p>
+      <p className={`text-[10px] ${t.textMuted}`}>
+        Initiative = Dex <span className="font-mono">{signed(dexMod)}</span> + divers (Science de l’initiative +4…) = <span className={`font-mono font-bold ${t.accent}`}>{signed(dexMod + initMisc)}</span>
+      </p>
     </Pf1Modal>
   );
 }
@@ -310,9 +343,9 @@ export function Pf1MagicModal({ data, onSave, onClose }: { data: Pf1Data; onSave
 
 /* ───────────────────────── Aide-mémoire ───────────────────────── */
 
-export function Pf1HelpModal({ elephant, onClose }: { elephant: boolean; onClose: () => void }) {
+export function Pf1HelpModal({ onClose }: { onClose: () => void }) {
   const t = useThemeClasses();
-  const sections = PF1_HELP.filter(s => s.id !== 'elephant' || elephant);
+  const sections = PF1_HELP;
   const [active, setActive] = useState(sections[0].id);
   const section = sections.find(s => s.id === active) ?? sections[0];
 

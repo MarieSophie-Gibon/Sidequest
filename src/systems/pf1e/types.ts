@@ -67,6 +67,17 @@ export interface Pf1PreparedSpell {
   spellId: string;
   /** Lancé depuis le dernier repos long. */
   cast: boolean;
+  /** Sort à charges lancé : charges restantes (absent = pas de charges en cours). */
+  chargesLeft?: number;
+}
+
+/**
+ * Sort à charges (ex. Contact glacial : 1 contact par niveau de lanceur).
+ * Charges = 1 tous les `everyLevels` niveaux de lanceur (au moins 1), plafonnées à `max`.
+ */
+export interface Pf1SpellCharges {
+  everyLevels: number;
+  max: number | null;
 }
 
 /** Choix du joueur pour un perso Pathfinder 1e, stockés dans characters.system_data. */
@@ -77,6 +88,12 @@ export interface Pf1Data {
   size: Pf1Size;
   /** Id d'une classe connue (PF1_CLASSES) ou 'custom'. */
   classId: string;
+  /** Archétypes de classe, saisis à la main (un personnage peut en cumuler plusieurs). */
+  archetypes: string[];
+  /** BBA saisi à la main (toutes classes confondues). Absent = ancien calcul via `bab`. */
+  babBase?: number;
+  /** Sauvegardes de base saisies à la main. Absent = ancien calcul via `goodSaves`. */
+  saveBase?: Record<Pf1SaveKey, number>;
   /** Réglages de classe, pré-remplis depuis PF1_CLASSES, modifiables pour une classe 'custom'. */
   bab: BabProgression;
   goodSaves: Pf1SaveKey[];
@@ -89,11 +106,14 @@ export interface Pf1Data {
   spellsUsed: number[];
   /** Sorts préparés du jour : un même sort peut occuper plusieurs emplacements. */
   prepared: Pf1PreparedSpell[];
+  /** Réglage des sorts à charges, par id de sort du grimoire. */
+  spellCharges?: Record<string, Pf1SpellCharges>;
   /** Réglages par manœuvre de combat (don « Science de… », bonus divers). */
   maneuvers: Record<string, Pf1ManeuverSettings>;
   /** Objets ordinaires en cours de fabrication (compétence Artisanat). */
   craftProjects: Pf1CraftProject[];
-  favoredClassBonus: 'hp' | 'skill';
+  /** Obsolète : le joueur ajoute lui-même son bonus de classe de prédilection. */
+  favoredClassBonus?: 'hp' | 'skill';
   armor: Pf1Armor | null;
   shield: Pf1Armor | null;
   acMisc: { natural: number; deflection: number; dodge: number; other: number };
@@ -101,14 +121,25 @@ export interface Pf1Data {
   initiativeMisc: number;
   skillRanks: Record<string, number>;
   skillMisc: Record<string, number>;
+  /** Compétences personnalisées, affichées en fin de liste. */
+  customSkills?: Pf1CustomSkill[];
   attacks: Pf1Attack[];
   concentrationMisc: number;
   /** Bonus pour lancer sur la défensive (Magie de guerre : +4). */
   defensiveCastingBonus: number;
 }
 
+/** Compétence ajoutée par le joueur (ex. Artisanat (forge), Profession (marin)). */
+export interface Pf1CustomSkill {
+  id: string;
+  name: string;
+  stat: CharacterStatKey;
+}
+
 export interface Pf1SkillLine {
   id: string;
+  /** Compétence personnalisée (supprimable). */
+  custom?: boolean;
   name: string;
   stat: CharacterStatKey;
   ranks: number;

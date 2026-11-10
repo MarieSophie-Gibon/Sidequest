@@ -28,13 +28,15 @@ interface Props {
   onOpenHelp: () => void;
   onOpenBuild: () => void;
   onOpenDefense: () => void;
+  /** BBA, initiative et vitesse : réglés dans leur propre fenêtre, depuis l'en-tête. */
+  onOpenInitSpeed: () => void;
   renderAvatar: () => ReactNode;
 }
 
 /** En-tête de combat Pathfinder 1e : même mise en page que le HUD D&D. */
 export function Pf1CombatHUD({
   activeChar, sheet, hasArmor, hpPercent, activeConditions,
-  onOpenAvatar, onOpenProfile, onOpenHealth, onOpenConditions, onOpenHelp, onOpenBuild, onOpenDefense, renderAvatar,
+  onOpenAvatar, onOpenProfile, onOpenHealth, onOpenConditions, onOpenHelp, onOpenBuild, onOpenDefense, onOpenInitSpeed, renderAvatar,
 }: Props) {
   const t = useThemeClasses();
   const cell = `${t.inputBg} border ${t.cardBorder} rounded-lg py-1.5 text-center cursor-pointer hover:${t.accentBorder} transition-all`;
@@ -113,7 +115,7 @@ export function Pf1CombatHUD({
           </div>
 
           <div className="grid grid-cols-5 gap-1" onClick={onOpenDefense}>
-            <div className={cell}>
+            <div className={cell} onClick={(e) => { e.stopPropagation(); onOpenInitSpeed(); }}>
               <span className={label}>BBA</span>
               <span className={`text-sm font-extrabold font-mono ${t.accent} block mt-0.5 leading-none`}>{signed(sheet.bab)}</span>
             </div>
@@ -126,7 +128,7 @@ export function Pf1CombatHUD({
                 </span>
               )}
             </div>
-            <div className={cell}>
+            <div className={cell} onClick={(e) => { e.stopPropagation(); onOpenInitSpeed(); }}>
               <span className={label}>INIT</span>
               <span className="text-sm font-extrabold font-mono text-cyan-500 block mt-0.5 leading-none">{signed(sheet.initiative.total)}</span>
             </div>
@@ -134,7 +136,7 @@ export function Pf1CombatHUD({
               <span className={label}>BMO</span>
               <span className="text-sm font-extrabold font-mono text-emerald-500 block mt-0.5 leading-none">{signed(sheet.cmb.total)}</span>
             </div>
-            <div className={cell}>
+            <div className={cell} onClick={(e) => { e.stopPropagation(); onOpenInitSpeed(); }}>
               <span className={label}>VIT</span>
               <span className={`text-sm font-extrabold font-mono ${t.textPrimary} block mt-0.5 leading-none`}>{activeChar.speed}m</span>
             </div>

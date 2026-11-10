@@ -6,10 +6,12 @@ import { GAME_SYSTEM_LABELS } from '../types/rpg.types';
 const SYSTEM_BADGE: Record<GameSystem, string> = {
   dnd5e: 'text-rose-300 bg-rose-500/12 border-rose-400/35',
   pf1e: 'text-amber-300 bg-amber-500/12 border-amber-400/35',
+  homebrew: 'text-emerald-300 bg-emerald-500/12 border-emerald-400/35',
 };
 import { useThemeClasses } from '../contexts/AppSettingsContext';
-import { Coffee, Mail, MessageSquare, Swords, User } from 'lucide-react';
+import { BookMarked, ChevronRight, Coffee, Mail, MessageSquare, Swords, User } from 'lucide-react';
 import type { Campaign, SharedCharacter } from '../hooks/useCharacterData';
+import type { GameSystemRecord, HomebrewStructure } from '../systems/homebrew/types';
 import { SharedCharactersSection } from './SharedCharactersSection';
 import { ContactAdminModal } from './modals/ContactAdminModal';
 import { KOFI_URL } from '../config';
@@ -27,17 +29,31 @@ interface Props {
   onAssignCampaign: (characterId: string, campaignId: string | null) => void;
   emailConfirmed: boolean;
   onLoadCharacter: (charId: string) => void;
-  onCreateCharacter: (name: string, race: string, system: GameSystem) => Promise<Character | null | undefined>;
+  onCreateCharacter: (name: string, race: string, system: GameSystem, homebrew?: { systemId: string; structure: HomebrewStructure }) => Promise<Character | null | undefined>;
+  /** Modèles homebrew du joueur (onglet Systèmes), proposés à la création d'un héros. */
+  gameSystems: GameSystemRecord[];
+  /** Nouveau modèle depuis la création du héros : ouvre sa configuration, le héros est créé ensuite. */
+  onStartNewModel: (modelName: string, heroName: string, heroRace: string) => Promise<boolean>;
+  /** Ouvre un modèle dans l'éditeur de systèmes. */
+  onOpenGameSystem: (id: string) => void;
 }
 
 export function Dashboard({
   characters, sharedCharacters, onLeaveShare, campaigns, onCreateCampaign, onRenameCampaign, onDeleteCampaign, onAssignCampaign,
-  emailConfirmed, onLoadCharacter, onCreateCharacter,
+  emailConfirmed, onLoadCharacter, onCreateCharacter, gameSystems, onStartNewModel, onOpenGameSystem,
 }: Props) {
   const [isCreateHeroModalOpen, setIsCreateHeroModalOpen] = useState(false);
   const [newHeroNameInput, setNewHeroNameInput] = useState('Nouveau Héros');
   const [newHeroRaceInput, setNewHeroRaceInput] = useState('Humain');
   const [newHeroSystem, setNewHeroSystem] = useState<GameSystem>('dnd5e');
+  // Homebrew : modèle choisi, ou création d'un modèle sur place.
+  const [modelId, setModelId] = useState<string>('');
+  const [newModelOpen, setNewModelOpen] = useState(false);
+  const [newModelName, setNewModelName] = useState('');
+  const selectedModel = gameSystems.find(g => g.id === modelId) ?? null;
+  const homebrewMissingModel = newHeroSystem === 'homebrew' && !selectedModel;
+  // Libellé du champ race ; vide si le modèle homebrew n'a pas de race (champ supprimé par le MJ).
+  const raceFieldLabel = newHeroSystem === 'homebrew' && selectedModel ? selectedModel.structure.identity.race : 'Race';
   const [contactOpen, setContactOpen] = useState(false);
   const [contactSent, setContactSent] = useState(false);
   const [kofiOpen, setKofiOpen] = useState(false);
@@ -101,6 +117,41 @@ export function Dashboard({
           </div>
         )}
 
+        {/* Mes modèles de fiche (systèmes homebrew) : catégorie à part, comme les fiches partagées */}
+        {gameSystems.length > 0 && (
+          <>
+            <h3 className={`tablet:col-span-2 pt-3 text-[10px] font-bold uppercase tracking-wider ${t.textMuted} flex items-center gap-1.5`}>
+              <BookMarked size={12} /> Mes modèles
+            </h3>
+            {gameSystems.map(sys => {
+              const used = characters.filter(c => c.game_system_id === sys.id).length;
+              return (
+                <button
+                  key={sys.id}
+                  type="button"
+                  onClick={() => onOpenGameSystem(sys.id)}
+                  className={`w-full text-left ${t.cardBg} border border-emerald-300/30 rounded-2xl flex items-center gap-3 px-3 py-2.5 hover:brightness-110 active:scale-[0.98] transition-all shadow-sm ${t.cardShadow}`}
+                >
+                  <span className="w-10 h-10 shrink-0 rounded-xl bg-emerald-500/12 border border-emerald-400/35 flex items-center justify-center">
+                    <BookMarked size={18} className="text-emerald-300" />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className={`text-xs font-bold ${t.textPrimary} truncate`}>{sys.name}</span>
+                      <span className="shrink-0 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md border leading-none text-emerald-300 bg-emerald-500/12 border-emerald-400/35">Modèle</span>
+                    </span>
+                    <span className={`block text-[10px] ${t.textMuted} truncate`}>
+                      {sys.structure.stats.length} caract. · {sys.structure.skills.length} compétences
+                      {used > 0 && ` · ${used} héros`}
+                    </span>
+                  </span>
+                  <ChevronRight size={16} className={t.textMuted} />
+                </button>
+              );
+            })}
+          </>
+        )}
+
         {/* Fiches que des joueurs ont partagées avec moi (je suis leur MJ), rangées par campagne */}
         <SharedCharactersSection
           sharedCharacters={sharedCharacters}
@@ -127,7 +178,7 @@ export function Dashboard({
             style={{ boxShadow: `0 0 18px ${t.glowAccent}` }}
           >
             <Swords size={15} />
-            Forger un nouveau héros
+            Créer un nouvel aventurier
           </button>
         ) : (
           <div className={`w-full flex items-center gap-3 ${t.cardBg} border ${t.cardBorder} rounded-2xl py-3 px-4 opacity-60`}>
@@ -172,7 +223,13 @@ export function Dashboard({
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              const created = await onCreateCharacter(newHeroNameInput, newHeroRaceInput, newHeroSystem);
+              if (homebrewMissingModel) return;
+              const created = await onCreateCharacter(
+                newHeroNameInput,
+                newHeroRaceInput,
+                newHeroSystem,
+                newHeroSystem === 'homebrew' && selectedModel ? { systemId: selectedModel.id, structure: selectedModel.structure } : undefined,
+              );
               if (created) {
                 setIsCreateHeroModalOpen(false);
                 setNewHeroNameInput('Nouveau Héros');
@@ -184,19 +241,80 @@ export function Dashboard({
             <h3 className={`font-bold ${t.textPrimary} text-sm tracking-wide uppercase`}>Forger un nouveau héros</h3>
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Système de jeu</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {(Object.keys(GAME_SYSTEM_LABELS) as GameSystem[]).map(sys => (
                   <button
                     key={sys}
                     type="button"
                     onClick={() => setNewHeroSystem(sys)}
-                    className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all active:scale-95 ${newHeroSystem === sys ? `bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} ${t.btnPrimaryBorder} shadow-sm` : `${t.inputBg} ${t.inputBorder} ${t.textMuted}`}`}
+                    className={`py-2.5 px-1 rounded-xl text-[11px] font-bold uppercase tracking-wide border transition-all active:scale-95 ${newHeroSystem === sys ? `bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} ${t.btnPrimaryBorder} shadow-sm` : `${t.inputBg} ${t.inputBorder} ${t.textMuted}`}`}
                   >
                     {GAME_SYSTEM_LABELS[sys]}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* Homebrew : choisir un modèle (onglet Systèmes) ou en créer un sur place */}
+            {newHeroSystem === 'homebrew' && (
+              <div className="space-y-2">
+                <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block`}>Modèle de fiche</label>
+                {gameSystems.length > 0 && (
+                  <select
+                    value={modelId}
+                    onChange={(e) => setModelId(e.target.value)}
+                    className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-sm focus:outline-none`}
+                  >
+                    <option value="">Choisir un modèle…</option>
+                    {gameSystems.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                )}
+                {newModelOpen ? (
+                  <div className={`${t.inputBg} border ${t.cardBorder} rounded-xl p-2.5 space-y-2`}>
+                    <input
+                      value={newModelName}
+                      maxLength={80}
+                      placeholder="Nom du nouveau modèle"
+                      onChange={(e) => setNewModelName(e.target.value)}
+                      className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-lg px-2.5 py-2 w-full text-xs focus:outline-none`}
+                    />
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setNewModelOpen(false)} className={`flex-1 py-1.5 rounded-lg border text-[10px] font-semibold ${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.textSecondary}`}>Annuler</button>
+                      <button
+                        type="button"
+                        disabled={!newModelName.trim() || !newHeroNameInput.trim()}
+                        onClick={async () => {
+                          // Étape 2 : configuration du modèle, puis création du héros depuis l'éditeur.
+                          const started = await onStartNewModel(newModelName, newHeroNameInput, newHeroRaceInput);
+                          if (started) {
+                            setIsCreateHeroModalOpen(false);
+                            setNewModelOpen(false);
+                            setNewModelName('');
+                          }
+                        }}
+                        className={`flex-1 py-1.5 rounded-lg border text-[10px] font-bold disabled:opacity-40 ${t.accentBg} ${t.accentBorder} ${t.accent}`}
+                      >
+                        Configurer le modèle →
+                      </button>
+                    </div>
+                    <p className={`text-[10px] ${t.textMuted}`}>Étape suivante : coche les éléments de ton jeu (caractéristiques, compétences, sorts…), puis crée le héros.</p>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setNewModelOpen(true)}
+                    className={`w-full py-1.5 rounded-xl border border-dashed ${t.cardBorder} text-[11px] font-semibold ${t.textSecondary}`}
+                  >
+                    + Nouveau modèle
+                  </button>
+                )}
+                {selectedModel && (
+                  <p className={`text-[10px] ${t.textMuted}`}>
+                    {selectedModel.structure.stats.length} caractéristiques · {selectedModel.structure.skills.length} compétences. La fiche reçoit une copie de ce modèle.
+                  </p>
+                )}
+              </div>
+            )}
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Nom du héros</label>
               <input
@@ -207,8 +325,8 @@ export function Dashboard({
                 autoFocus
               />
             </div>
-            <div>
-              <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>Race</label>
+            {raceFieldLabel && <div>
+              <label className={`text-[10px] ${t.textMuted} uppercase font-semibold block mb-1`}>{raceFieldLabel}</label>
               <input
                 type="text"
                 value={newHeroRaceInput}
@@ -216,7 +334,7 @@ export function Dashboard({
                 className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-sm focus:outline-none focus:ring-1 focus:ring-blue-400/50`}
                 placeholder="Humain"
               />
-            </div>
+            </div>}
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -231,7 +349,8 @@ export function Dashboard({
               </button>
               <button
                 type="submit"
-                className={`bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} font-bold shadow-md hover:brightness-110 active:scale-95 border ${t.btnPrimaryBorder} py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all`}
+                disabled={homebrewMissingModel}
+                className={`bg-linear-to-b ${t.btnPrimaryFrom} ${t.btnPrimaryTo} ${t.btnPrimaryText} font-bold shadow-md hover:brightness-110 active:scale-95 border ${t.btnPrimaryBorder} py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all disabled:opacity-40`}
               >
                 Créer
               </button>

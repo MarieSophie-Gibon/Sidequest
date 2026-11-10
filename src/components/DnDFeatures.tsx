@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Feature, Resource, Familiar } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
+import { ResourceTracker } from './ResourceTracker';
 import { Sword, Dna, Zap, CirclePlus, Star, PawPrint, Heart, ChevronDown } from 'lucide-react';
 
 interface DnDFeaturesProps {
@@ -14,10 +15,26 @@ interface DnDFeaturesProps {
   onOpenAddResource: () => void;
   onOpenEditResource: (resource: Resource) => void;
   onUpdateResourceCurrent: (id: string, delta: number) => void;
+  /** Ressources en puces (homebrew). */
+  onSetResourceCurrent: (id: string, current: number) => void;
+  onToggleResourceBullet: (id: string, index: number) => void;
   onOpenAddFamiliar: () => void;
   onOpenEditFamiliar: (familiar: Familiar) => void;
   onUpdateFamiliarHp: (id: string, delta: number) => void;
+  /** Homebrew : groupes de capacités définis par le MJ (sinon Classe / Espèce / Dons). */
+  featureGroups?: { id: string; name: string }[];
+  /** Homebrew : familiers sans CA ni caractéristiques D&D. */
+  simpleFamiliars?: boolean;
+  showFeatures?: boolean;
+  showResources?: boolean;
 }
+
+const DEFAULT_GROUPS = [
+  { id: 'classe', name: 'Aptitudes de Classe' },
+  { id: 'espece', name: "Traits d'Espèce" },
+  { id: 'don', name: 'Dons & Talents' },
+];
+const OTHER_GROUP = '__autres';
 
 export function DnDFeatures({
   features,
@@ -28,15 +45,61 @@ export function DnDFeatures({
   onOpenAddResource,
   onOpenEditResource,
   onUpdateResourceCurrent,
+  onSetResourceCurrent,
+  onToggleResourceBullet,
   onOpenAddFamiliar,
   onOpenEditFamiliar,
   onUpdateFamiliarHp,
+  featureGroups,
+  simpleFamiliars = false,
+  showFeatures = true,
+  showResources = true,
 }: DnDFeaturesProps) {
   const t = useThemeClasses();
   const [expandedFamiliar, setExpandedFamiliar] = useState<string | null>(null);
   const [editingFamiliarHp, setEditingFamiliarHp] = useState<{ id: string; value: string } | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggle = (key: string) => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const baseGroups = featureGroups ?? DEFAULT_GROUPS;
+  const knownIds = new Set(baseGroups.map(g => g.id));
+  // Capacités dont le type n'existe plus (type supprimé par le MJ) : regroupées à part.
+  const orphans = features.filter(f => !knownIds.has(f.type));
+  const groups = orphans.length > 0 ? [...baseGroups, { id: OTHER_GROUP, name: 'Autres capacités' }] : baseGroups;
+  const groupIcon = (id: string) => (id === 'classe' ? <Sword size={14} /> : id === 'espece' ? <Dna size={14} /> : <Star size={14} />);
+
+  const renderGroup = (group: { id: string; name: string }) => {
+    const list = group.id === OTHER_GROUP ? orphans : features.filter(f => f.type === group.id);
+    return (
+      <div key={group.id} className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
+        <div className={`flex justify-between items-center ${!collapsed[group.id] ? 'mb-3' : ''}`}>
+          <button type="button" onClick={() => toggle(group.id)} className="flex items-center gap-1.5 flex-1 min-w-0">
+            <ChevronDown size={12} className={`${t.textMuted} transition-transform shrink-0 ${collapsed[group.id] ? '-rotate-90' : 'rotate-0'}`} />
+            <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider flex items-center gap-1.5 truncate`}>{groupIcon(group.id)} {group.name || 'Sans nom'}</h4>
+          </button>
+          {group.id !== OTHER_GROUP && <button onClick={() => onOpenCreateFeature(group.id)} className={`w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}><CirclePlus size={16} /></button>}
+        </div>
+        {!collapsed[group.id] && <div className="space-y-3">
+          {list.map((feat) => {
+            const linkedResource = feat.resource_id ? resources.find(r => r.id === feat.resource_id) : null;
+            return (
+              <div key={feat.id} onClick={() => onOpenEditFeature(feat)} className={`${t.inputBg} rounded-xl p-3.5 border ${t.cardBorder} hover:${t.accentBorder} cursor-pointer transition-all`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-xs font-bold ${t.textPrimary}`}>{feat.name}</span>
+                  {linkedResource && feat.resource_cost ? (
+                    <span className="text-[11px] font-mono font-bold text-violet-100 bg-violet-500/45 border border-violet-200/70 rounded-md px-2 py-0.5 shadow-[0_0_12px_rgba(167,139,250,0.35)]">
+                      <Zap size={10} className="inline mr-0.5" />{feat.resource_cost}
+                    </span>
+                  ) : null}
+                </div>
+                <p className={`text-[11px] ${t.textSecondary} leading-normal`}>{feat.description}</p>
+              </div>
+            );
+          })}
+        </div>}
+      </div>
+    );
+  };
 
   const familiarSection = (
     <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
@@ -97,7 +160,7 @@ export function DnDFeatures({
                       {fam.species && <span className={`text-[9px] ${t.textMuted} font-mono`}>{fam.species}</span>}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      {fam.ac != null && fam.ac > 0 && (
+                      {!simpleFamiliars && fam.ac != null && fam.ac > 0 && (
                         <span className="text-[9px] font-mono font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-1.5 py-0.5 rounded-md">CA {fam.ac}</span>
                       )}
                       <span className={`text-[9px] font-bold uppercase ${statusColor[fam.status]}`}>{statusLabel[fam.status]}</span>
@@ -143,7 +206,7 @@ export function DnDFeatures({
                 </div>
                 {isExpanded && (
                   <div className={`px-3 pb-3 space-y-2 border-t ${t.cardBorder} pt-2`}>
-                    {statKeys.some(s => fam[s.key] != null) && (
+                    {!simpleFamiliars && statKeys.some(s => fam[s.key] != null) && (
                       <div className="grid grid-cols-6 gap-1 text-center">
                         {statKeys.map(({ key, label }) => {
                           const val = (fam[key] as number | undefined) ?? 10;
@@ -159,7 +222,7 @@ export function DnDFeatures({
                       </div>
                     )}
                     {/* Badges VIT / PP / vision */}
-                    {(fam.speed || (fam.passive_perception != null && fam.passive_perception > 0) || fam.darkvision) && (
+                    {!simpleFamiliars && (fam.speed || (fam.passive_perception != null && fam.passive_perception > 0) || fam.darkvision) && (
                       <div className="flex flex-wrap gap-1.5">
                         {fam.speed && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>VIT {fam.speed}</span>}
                         {fam.passive_perception != null && fam.passive_perception > 0 && <span className={`text-[9px] font-mono ${t.textMuted} ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>PP {fam.passive_perception}</span>}
@@ -208,7 +271,7 @@ export function DnDFeatures({
 
       {familiars.length > 0 && familiarSection}
 
-      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
+      {showResources && <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
         <div className={`flex justify-between items-center ${!collapsed['ressources'] ? 'mb-3' : ''}`}>
           <button type="button" onClick={() => toggle('ressources')} className="flex items-center gap-1.5 flex-1 min-w-0">
             <ChevronDown size={12} className={`${t.textMuted} transition-transform shrink-0 ${collapsed['ressources'] ? '-rotate-90' : 'rotate-0'}`} />
@@ -219,82 +282,16 @@ export function DnDFeatures({
         {!collapsed['ressources'] && resources.length > 0 && (
           <div className="space-y-2">
             {resources.map(res => (
-              <div key={res.id} className={`${t.inputBg} rounded-xl px-3 py-2 border ${t.cardBorder} flex items-center justify-between`}>
+              <div key={res.id} className={`${t.inputBg} rounded-xl px-3 py-2 border ${t.cardBorder} flex items-center justify-between gap-2`}>
                 <span onClick={() => onOpenEditResource(res)} className={`text-xs font-bold ${t.textPrimary} cursor-pointer`}>{res.name}</span>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => onUpdateResourceCurrent(res.id, -1)} className={`w-6 h-6 flex items-center justify-center rounded-lg ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-sm font-bold hover:brightness-90 active:scale-90 transition-all`}>−</button>
-                  <span className={`text-xs font-mono font-bold ${t.textPrimary} min-w-8 text-center`}>{res.current}<span className={`${t.textMuted} font-normal`}>/{res.max}</span></span>
-                  <button type="button" onClick={() => onUpdateResourceCurrent(res.id, +1)} className={`w-6 h-6 flex items-center justify-center rounded-lg ${t.btnSecondaryBg} border ${t.btnSecondaryBorder} ${t.textSecondary} text-sm font-bold hover:brightness-90 active:scale-90 transition-all`}>+</button>
-                </div>
+                <ResourceTracker resource={res} onDelta={onUpdateResourceCurrent} onSetCurrent={onSetResourceCurrent} onToggleBullet={onToggleResourceBullet} />
               </div>
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
-      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
-        <div className={`flex justify-between items-center ${!collapsed['classe'] ? 'mb-3' : ''}`}>
-          <button type="button" onClick={() => toggle('classe')} className="flex items-center gap-1.5 flex-1 min-w-0">
-            <ChevronDown size={12} className={`${t.textMuted} transition-transform shrink-0 ${collapsed['classe'] ? '-rotate-90' : 'rotate-0'}`} />
-            <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider flex items-center gap-1.5`}><Sword size={14} /> Aptitudes de Classe</h4>
-          </button>
-          <button onClick={() => onOpenCreateFeature('classe')} className={`w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}><CirclePlus size={16} /></button>
-        </div>
-        {!collapsed['classe'] && <div className="space-y-3">
-          {features.filter((f) => f.type === 'classe').map((feat) => {
-            const linkedResource = feat.resource_id ? resources.find(r => r.id === feat.resource_id) : null;
-            return (
-              <div key={feat.id} onClick={() => onOpenEditFeature(feat)} className={`${t.inputBg} rounded-xl p-3.5 border ${t.cardBorder} hover:${t.accentBorder} cursor-pointer transition-all`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`text-xs font-bold ${t.textPrimary}`}>{feat.name}</span>
-                  {linkedResource && feat.resource_cost ? (
-                    <span className="text-[11px] font-mono font-bold text-violet-100 bg-violet-500/45 border border-violet-200/70 rounded-md px-2 py-0.5 shadow-[0_0_12px_rgba(167,139,250,0.35)]">
-                      <Zap size={10} className="inline mr-0.5" />{feat.resource_cost}
-                    </span>
-                  ) : null}
-                </div>
-                <p className={`text-[11px] ${t.textSecondary} leading-normal`}>{feat.description}</p>
-              </div>
-            );
-          })}
-        </div>}
-      </div>
-
-      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
-        <div className={`flex justify-between items-center ${!collapsed['espece'] ? 'mb-3' : ''}`}>
-          <button type="button" onClick={() => toggle('espece')} className="flex items-center gap-1.5 flex-1 min-w-0">
-            <ChevronDown size={12} className={`${t.textMuted} transition-transform shrink-0 ${collapsed['espece'] ? '-rotate-90' : 'rotate-0'}`} />
-            <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider flex items-center gap-1.5`}><Dna size={14} /> Traits d'Espèce</h4>
-          </button>
-          <button onClick={() => onOpenCreateFeature('espece')} className={`w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}><CirclePlus size={16} /></button>
-        </div>
-        {!collapsed['espece'] && <div className="space-y-3">
-          {features.filter((f) => f.type === 'espece').map((feat) => (
-            <div key={feat.id} onClick={() => onOpenEditFeature(feat)} className={`${t.inputBg} rounded-xl p-3.5 border ${t.cardBorder} hover:${t.accentBorder} cursor-pointer transition-all`}>
-              <span className={`text-xs font-bold ${t.textPrimary} block mb-1`}>{feat.name}</span>
-              <p className={`text-[11px] ${t.textSecondary} leading-normal`}>{feat.description}</p>
-            </div>
-          ))}
-        </div>}
-      </div>
-
-      <div className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`}>
-        <div className={`flex justify-between items-center ${!collapsed['don'] ? 'mb-3' : ''}`}>
-          <button type="button" onClick={() => toggle('don')} className="flex items-center gap-1.5 flex-1 min-w-0">
-            <ChevronDown size={12} className={`${t.textMuted} transition-transform shrink-0 ${collapsed['don'] ? '-rotate-90' : 'rotate-0'}`} />
-            <h4 className={`text-xs font-semibold ${t.textPrimary} uppercase tracking-wider flex items-center gap-1.5`}><Star size={14} /> Dons & Talents</h4>
-          </button>
-          <button onClick={() => onOpenCreateFeature('don')} className={`w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md backdrop-blur-xl hover:brightness-110 active:scale-90 transition-all`}><CirclePlus size={16} /></button>
-        </div>
-        {!collapsed['don'] && <div className="space-y-3">
-          {features.filter((f) => f.type === 'don').map((feat) => (
-            <div key={feat.id} onClick={() => onOpenEditFeature(feat)} className={`${t.inputBg} rounded-xl p-3.5 border ${t.cardBorder} hover:${t.accentBorder} cursor-pointer transition-all`}>
-              <span className={`text-xs font-bold ${t.textPrimary} block mb-1`}>{feat.name}</span>
-              <p className={`text-[11px] ${t.textSecondary} leading-normal`}>{feat.description}</p>
-            </div>
-          ))}
-        </div>}
-      </div>
+      {showFeatures && groups.map(renderGroup)}
 
       {familiars.length === 0 && familiarSection}
 

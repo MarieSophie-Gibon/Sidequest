@@ -26,6 +26,8 @@ interface Props {
   onOpenItemAction: (item: Item) => void;
   /** Sections propres au système (ex. projets d'artisanat Pathfinder), au-dessus de l'inventaire. */
   extraSections?: ReactNode;
+  /** Fiche homebrew : la bourse est définie par le modèle (affichée sur l'accueil). */
+  hidePurse?: boolean;
   onUpdateCurrency: <T extends keyof Character>(
     field: T,
     value: Character[T],
@@ -42,6 +44,7 @@ export function DnDInventory({
   onOpenItemAction,
   onUpdateCurrency,
   extraSections,
+  hidePurse,
 }: Props) {
   const t = useThemeClasses();
   const [showTypeFilters, setShowTypeFilters] = useState(false);
@@ -214,7 +217,7 @@ export function DnDInventory({
   return (
     <div className="space-y-2">
       {/* Purse section */}
-      <div
+      {!hidePurse && <div
         className={`${t.cardBg} border ${t.cardBorder} rounded-2xl p-2.5 shadow-sm ${t.cardShadow}`}
       >
         <div className="flex items-center gap-2.5">
@@ -357,7 +360,7 @@ export function DnDInventory({
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Equipment section */}
       {(weapons.length > 0 || armors.length > 0) && (

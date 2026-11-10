@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { DEFAULT_SKILLS_TEMPLATES } from '../constants';
-import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, Biography, Familiar, CharacterStatKey, Note, GameSystem } from '../types/rpg.types';
+import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, ResourceBullet, ResourceDisplay, Biography, Familiar, CharacterStatKey, Note, GameSystem } from '../types/rpg.types';
 import { createPf1Data, normalizePf1Data } from '../systems/pf1e/defaults';
+import { createHomebrewData, normalizeHomebrewData } from '../systems/homebrew/sheet';
+import { resourcesEnabled, restsOf, sheetStructure } from '../systems/homebrew/presets';
+import type { HomebrewStructure } from '../systems/homebrew/types';
 import { computePf1Sheet } from '../systems/pf1e/rules';
 import type { Pf1CraftProject, Pf1Data } from '../systems/pf1e/types';
 import { formatCp, magicCheck, magicCostCp, mundaneCheck, mundaneMaterialsCp, payFromPurse } from '../systems/pf1e/crafting';
@@ -27,6 +30,12 @@ export interface NewResourceState {
   max: number;
   current: number;
   recharge: 'SHORT_REST' | 'LONG_REST';
+  /** Homebrew : affichage en puces ; null/absent = compteur. */
+  display?: ResourceDisplay | null;
+  /** Puces avec valeur. */
+  bullets?: ResourceBullet[] | null;
+  rest_id?: string | null;
+  rest_amount?: number | null;
 }
 
 export interface NewSpellState {
@@ -45,6 +54,10 @@ export interface NewSpellState {
   damage: string;
   upcast_damage: string;
   desc: string;
+  /** Homebrew. */
+  school?: string;
+  cost?: string;
+  condition?: string;
 }
 
 export interface NewItemState {
@@ -53,7 +66,8 @@ export interface NewItemState {
   description: string;
   quantity: number;
   equipped: boolean;
-  category: 'objet' | 'arme' | 'armure' | 'potion' | 'parchemin' | 'objet_magique' | 'composant';
+  /** Homebrew : id d'une catégorie du MJ. */
+  category: 'objet' | 'arme' | 'armure' | 'potion' | 'parchemin' | 'objet_magique' | 'composant' | (string & {});
   crafting_duration_hours?: number | null;
   damage: string;
   range: string;
@@ -509,7 +523,21 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   async function handleSaveResource(e: React.FormEvent) {
     e.preventDefault();
     if (!activeChar || !newResource.name.trim()) return false;
-    const fields = { name: newResource.name.trim(), max: Number(newResource.max), current: Number(newResource.current), recharge: newResource.recharge };
+    const bullets = newResource.display === 'valued' ? (newResource.bullets ?? []).filter(b => b.value.trim()) : null;
+    const max = bullets ? bullets.length : Number(newResource.max);
+    const fields = {
+      name: newResource.name.trim(),
+      max,
+      current: bullets ? bullets.filter(b => !b.used).length : Math.min(Number(newResource.current), max),
+      recharge: newResource.recharge,
+      // Colonnes homebrew : envoyées seulement si utilisées (les fiches D&D/PF1 restent identiques).
+      ...(newResource.display !== undefined && {
+        display: newResource.display ?? null,
+        bullets,
+        rest_id: newResource.rest_id ?? null,
+        rest_amount: newResource.rest_amount ?? null,
+      }),
+    };
     if (newResource.id) {
       const { data, error } = await supabase.from('resources').update(fields).eq('id', newResource.id).select().single();
       if (error) {
@@ -540,6 +568,78 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     const next = Math.max(0, Math.min(res.max, res.current + delta));
     setResources(prev => prev.map(r => r.id === id ? { ...r, current: next } : r));
     await supabase.from('resources').update({ current: next }).eq('id', id);
+  }
+
+  /** Puces simples : nombre d'utilisations restantes. */
+  async function handleSetResourceCurrent(id: string, current: number) {
+    const res = resources.find(r => r.id === id);
+    if (!res) return;
+    const next = Math.max(0, Math.min(res.max, current));
+    setResources(prev => prev.map(r => r.id === id ? { ...r, current: next } : r));
+    await supabase.from('resources').update({ current: next }).eq('id', id);
+  }
+
+  /** Puces avec valeur : bascule une puce utilisée / disponible. */
+  async function handleToggleResourceBullet(id: string, index: number) {
+    const res = resources.find(r => r.id === id);
+    if (!res?.bullets?.[index]) return;
+    const bullets = res.bullets.map((b, i) => (i === index ? { ...b, used: !b.used } : b));
+    const current = bullets.filter(b => !b.used).length;
+    setResources(prev => prev.map(r => r.id === id ? { ...r, bullets, current } : r));
+    await supabase.from('resources').update({ bullets, current }).eq('id', id);
+  }
+
+  /**
+   * Homebrew : repos défini par le MJ. Automatique = PV, jauges, capacités et ressources rattachées au max ;
+   * sinon, gains indiqués par le MJ (× niveau éventuel) et ressources selon leur « récupère ».
+   */
+  async function handleHomebrewRest(restId: string) {
+    if (!activeChar || activeChar.system !== 'homebrew') return;
+    const hb = normalizeHomebrewData(activeChar.system_data);
+    if (!hb) return;
+    const rest = restsOf(hb.structure).find(r => r.id === restId);
+    if (!rest) return;
+    const level = Math.max(1, activeChar.level || 1);
+    const gain = (g?: { amount: number; perLevel: boolean }) => (g ? g.amount * (g.perLevel ? level : 1) : 0);
+
+    // PV et jauges
+    const hpNext = rest.auto ? activeChar.hp_max : Math.min(activeChar.hp_max, activeChar.hp_current + gain(rest.hp));
+    const gauges = Object.fromEntries(Object.entries(hb.values.gauges).map(([gid, v]) => [
+      gid,
+      { ...v, current: rest.auto ? v.max : Math.min(v.max, v.current + gain(rest.gauges?.[gid])) },
+    ]));
+    const prepared = rest.auto ? hb.values.prepared?.map(p => ({ ...p, cast: false })) : hb.values.prepared;
+    const systemData = { ...hb, values: { ...hb.values, gauges, ...(prepared && { prepared }) } };
+    setActiveChar(prev => (prev ? { ...prev, hp_current: hpNext, system_data: systemData } : prev));
+    await supabase.from('characters').update({ hp_current: hpNext, system_data: systemData }).eq('id', activeChar.id);
+
+    // Ressources rattachées à ce repos
+    const restored = resources.map(r => {
+      if (r.rest_id !== restId) return r;
+      const amount = rest.auto || r.rest_amount == null ? Infinity : r.rest_amount;
+      if (r.display === 'valued' && r.bullets) {
+        let left = amount;
+        const bullets = r.bullets.map(b => (b.used && left > 0 ? (left--, { ...b, used: false }) : b));
+        return { ...r, bullets, current: bullets.filter(b => !b.used).length };
+      }
+      return { ...r, current: Math.min(r.max, r.current + (amount === Infinity ? r.max : amount)) };
+    });
+    setResources(restored);
+    await Promise.all(restored
+      .filter(r => r.rest_id === restId)
+      .map(r => supabase.from('resources').update({ current: r.current, ...(r.bullets && { bullets: r.bullets }) }).eq('id', r.id)));
+
+    // Capacités à usage limité et emplacements de sorts : rechargés par un repos automatique.
+    if (rest.auto) {
+      const restoredSlots = spellSlots.map(sl => ({ ...sl, current: sl.max }));
+      setSpellSlots(restoredSlots);
+      await Promise.all(restoredSlots.map(sl => supabase.from('spell_slots').update({ current: sl.max }).eq('character_id', activeChar.id).eq('level', sl.level)));
+      const toRestore = features.filter(f => f.category === 'active');
+      setFeatures(prev => prev.map(f => (f.category === 'active' ? { ...f, current: f.max } : f)));
+      await Promise.all(toRestore.map(f => supabase.from('features').update({ current: f.max }).eq('id', f.id)));
+    }
+
+    showAlert(rest.name || 'Repos', rest.auto ? 'PV, jauges et ressources rechargés.' : 'Récupération appliquée.');
   }
 
   async function handleDeleteFeature(id: string, name: string) {
@@ -587,7 +687,13 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       concentration: newSpell.concentration,
       damage: newSpell.damage,
       upcast_damage: newSpell.upcast_damage || null,
-      desc: newSpell.desc || ''
+      desc: newSpell.desc || '',
+      // Homebrew : école, coût, condition (colonnes absentes des fiches D&D / PF1).
+      ...(activeChar.system === 'homebrew' && {
+        school: newSpell.school?.trim() || null,
+        cost: newSpell.cost?.trim() || null,
+        condition: newSpell.condition?.trim() || null,
+      }),
     };
 
     if (newSpell.id) {
@@ -664,8 +770,13 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       weight: 1,
       equipped: newItem.equipped,
       category: newItem.category,
-      ...(newItem.category === 'arme' && { damage: newItem.damage, range: newItem.range }),
-      ...(newItem.category === 'armure' && { defense_bonus: Number(newItem.defense_bonus) }),
+      ...(activeChar.system === 'homebrew'
+        // Homebrew : la catégorie du MJ décide des champs affichés ; on garde ce qui a été saisi.
+        ? { damage: newItem.damage.trim() || null, defense_bonus: Number(newItem.defense_bonus) || 0 }
+        : {
+          ...(newItem.category === 'arme' && { damage: newItem.damage, range: newItem.range }),
+          ...(newItem.category === 'armure' && { defense_bonus: Number(newItem.defense_bonus) }),
+        }),
     };
 
     if (newItem.id) {
@@ -945,7 +1056,13 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
   }
 
   // Character creation
-  async function handleCreateCharacter(heroName: string, heroRace: string, system: GameSystem = 'dnd5e') {
+  async function handleCreateCharacter(
+    heroName: string,
+    heroRace: string,
+    system: GameSystem = 'dnd5e',
+    /** Fiche homebrew : modèle choisi (sa structure est copiée dans la fiche). */
+    homebrew?: { systemId: string; structure: HomebrewStructure },
+  ) {
     if (!user) return;
     if (!heroName.trim()) {
       showAlert("Nom requis", "Veuillez saisir un nom valide.");
@@ -988,6 +1105,16 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
         hp_max: 10,
         hp_current: 10,
       }),
+      // Homebrew : copie de la structure du modèle + valeurs vides, rattachée au modèle.
+      ...(system === 'homebrew' && homebrew && {
+        system,
+        game_system_id: homebrew.systemId,
+        system_data: createHomebrewData(sheetStructure(homebrew.structure)),
+        class: '',
+        subclass: '',
+        hp_max: 10,
+        hp_current: 10,
+      }),
     };
 
     const { data: createdCharacter, error } = await supabase
@@ -1010,6 +1137,23 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       showAlert('Erreur', baseMessage === error?.message ? 'Impossible de creer le personnage pour le moment. Reessayez dans quelques instants.' : baseMessage);
       setLoading(false);
       return null;
+    }
+
+    // Homebrew : ressources prévues par le MJ dans le modèle.
+    const modelResources = system === 'homebrew' && homebrew && resourcesEnabled(homebrew.structure) ? (homebrew.structure.resources ?? []).filter(r => r.name.trim()) : [];
+    if (modelResources.length > 0) {
+      const { error: resError } = await supabase.from('resources').insert(modelResources.map(r => ({
+        character_id: (createdCharacter as Character).id,
+        name: r.name.trim(),
+        max: r.display === 'valued' ? (r.values ?? []).filter(v => v.trim()).length : r.defaultMax,
+        current: r.display === 'valued' ? (r.values ?? []).filter(v => v.trim()).length : r.defaultMax,
+        recharge: 'LONG_REST',
+        display: r.display ?? 'bullets',
+        bullets: r.display === 'valued' ? (r.values ?? []).filter(v => v.trim()).map(value => ({ value, used: false })) : null,
+        rest_id: r.restId ?? null,
+        rest_amount: r.restAmount ?? null,
+      })));
+      if (resError) console.error('Erreur creation ressources du modele :', resError.message);
     }
 
     await fetchCharactersList();
@@ -1108,7 +1252,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
 
     if (activeChar.system === 'pf1e') {
       const pf1 = normalizePf1Data(activeChar.system_data);
-      await syncPf1Data({ ...pf1, spellsUsed: [], prepared: pf1.prepared.map(p => ({ ...p, cast: false })) });
+      await syncPf1Data({ ...pf1, spellsUsed: [], prepared: pf1.prepared.map(p => ({ ...p, cast: false, chargesLeft: undefined })) });
     }
 
     setActiveConditions([]);
@@ -1139,7 +1283,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     await Promise.all(resources.map(r => supabase.from('resources').update({ current: r.max }).eq('id', r.id)));
 
     const pf1 = normalizePf1Data(activeChar.system_data);
-    await syncPf1Data({ ...pf1, spellsUsed: [], prepared: pf1.prepared.map(p => ({ ...p, cast: false })) });
+    await syncPf1Data({ ...pf1, spellsUsed: [], prepared: pf1.prepared.map(p => ({ ...p, cast: false, chargesLeft: undefined })) });
 
     showAlert(
       bedRest ? 'Journée d’alitement' : 'Nuit de repos',
@@ -1579,6 +1723,9 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     handleSaveResource: guard(handleSaveResource),
     handleDeleteResource: guard(handleDeleteResource),
     handleUpdateResourceCurrent: guard(handleUpdateResourceCurrent),
+    handleSetResourceCurrent: guard(handleSetResourceCurrent),
+    handleToggleResourceBullet: guard(handleToggleResourceBullet),
+    handleHomebrewRest: guard(handleHomebrewRest),
     toggleFeatureUse: guard(toggleFeatureUse),
     handleToggleSpellSlot: guard(handleToggleSpellSlot),
     handleAddSpell: guard(handleAddSpell),
