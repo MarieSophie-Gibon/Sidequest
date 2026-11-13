@@ -488,17 +488,20 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     if (!activeChar || !newFeature.name.trim()) return;
 
     const isPassive = newFeature.category === 'passive';
+    // Capacité active : soit un nombre d'utilisations, soit un coût en ressource — jamais les deux.
+    const usesResource = !isPassive && !!newFeature.resource_id;
+    const usesCount = !isPassive && !usesResource;
     const payload = {
       character_id: activeChar.id,
       name: newFeature.name.trim(),
       type: newFeature.type,
       category: newFeature.category,
-      current: isPassive ? 0 : Number(newFeature.max),
-      max: isPassive ? 0 : Number(newFeature.max),
-      recharge: isPassive ? 'PERMANENT' : newFeature.recharge,
+      current: usesCount ? Number(newFeature.max) : 0,
+      max: usesCount ? Number(newFeature.max) : 0,
+      recharge: usesCount ? newFeature.recharge : 'PERMANENT',
       description: newFeature.description || '',
-      resource_id: newFeature.resource_id || null,
-      resource_cost: newFeature.resource_cost || 0,
+      resource_id: usesResource ? newFeature.resource_id : null,
+      resource_cost: usesResource ? (newFeature.resource_cost || 1) : 0,
     };
 
     if (newFeature.id) {
