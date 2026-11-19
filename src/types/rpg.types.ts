@@ -1,4 +1,5 @@
 import type { CharacterTheme } from '../contexts/AppSettingsContext';
+import type { Pf1ItemStats } from '../systems/pf1e/types';
 
 export type GameSystem = 'dnd5e' | 'pf1e' | 'homebrew';
 
@@ -135,6 +136,8 @@ export interface Item {
   damage?: string;
   range?: string;
   defense_bonus?: number;
+  /** Pathfinder 1e : caractéristiques de l'arme ou de l'armure. */
+  pf1?: Pf1ItemStats | null;
 }
 
 export interface Skill {
