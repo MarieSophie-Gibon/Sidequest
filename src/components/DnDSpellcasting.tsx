@@ -46,6 +46,21 @@ interface DnDSpellcastingProps {
   pf1?: boolean;
 }
 
+/** Une teinte par niveau de sort, assez différente de ses voisines pour les repérer d'un coup d'œil. */
+const LEVEL_STYLES = [
+  { badge: 'text-emerald-300 bg-emerald-500/12 border-emerald-400/40', bar: 'border-l-emerald-400', title: 'text-emerald-400' },
+  { badge: 'text-sky-300 bg-sky-500/12 border-sky-400/40', bar: 'border-l-sky-400', title: 'text-sky-400' },
+  { badge: 'text-violet-300 bg-violet-500/12 border-violet-400/40', bar: 'border-l-violet-400', title: 'text-violet-400' },
+  { badge: 'text-amber-300 bg-amber-500/12 border-amber-400/40', bar: 'border-l-amber-400', title: 'text-amber-400' },
+  { badge: 'text-rose-300 bg-rose-500/12 border-rose-400/40', bar: 'border-l-rose-400', title: 'text-rose-400' },
+  { badge: 'text-lime-300 bg-lime-500/12 border-lime-400/40', bar: 'border-l-lime-400', title: 'text-lime-400' },
+  { badge: 'text-fuchsia-300 bg-fuchsia-500/12 border-fuchsia-400/40', bar: 'border-l-fuchsia-400', title: 'text-fuchsia-400' },
+  { badge: 'text-orange-300 bg-orange-500/12 border-orange-400/40', bar: 'border-l-orange-400', title: 'text-orange-400' },
+  { badge: 'text-teal-300 bg-teal-500/12 border-teal-400/40', bar: 'border-l-teal-400', title: 'text-teal-400' },
+  { badge: 'text-red-300 bg-red-500/12 border-red-400/40', bar: 'border-l-red-400', title: 'text-red-400' },
+];
+const levelStyle = (level: number) => LEVEL_STYLES[Math.max(0, Math.min(9, level))];
+
 export function DnDSpellcasting({
   spellSlots,
   spells,
@@ -75,18 +90,8 @@ export function DnDSpellcasting({
     reaction: { label: 'Réaction', icon: Shield },
   };
 
-  const getLevelBadgeClass = (level: number) => {
-    if (level <= 0) return 'text-emerald-300 bg-emerald-500/10 border-emerald-500/25';
-    if (level === 1) return 'text-blue-200 bg-blue-500/16 border-blue-400/35';
-    if (level === 2) return 'text-violet-200 bg-violet-500/16 border-violet-400/35';
-    if (level === 3) return 'text-indigo-300 bg-indigo-500/10 border-indigo-500/25';
-    if (level === 4) return 'text-violet-300 bg-violet-500/10 border-violet-500/25';
-    if (level === 5) return 'text-fuchsia-300 bg-fuchsia-500/10 border-fuchsia-500/25';
-    if (level === 6) return 'text-rose-300 bg-rose-500/10 border-rose-500/25';
-    if (level === 7) return 'text-orange-300 bg-orange-500/10 border-orange-500/25';
-    if (level === 8) return 'text-amber-300 bg-amber-500/10 border-amber-500/25';
-    return 'text-red-300 bg-red-500/10 border-red-500/25';
-  };
+  const getLevelBadgeClass = (level: number) => LEVEL_STYLES[Math.max(0, Math.min(9, level))].badge;
+  const levelTitle = (level: number) => (level === 0 ? (pf1 ? 'Niveau 0' : 'Sorts mineurs') : `Niveau ${level}`);
 
   return (
     <div className="space-y-2">
@@ -197,15 +202,26 @@ export function DnDSpellcasting({
           </div>
         )}
 
-        <div className="space-y-2 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-2 tablet:items-start">
-          {[...spells]
+        {(() => {
+          const visible = [...spells]
             .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name, 'fr'))
             .filter(s => filterLevel === null || Number(s.level) === filterLevel)
-            .filter(s => filterType === null || s.casting_type === filterType)
-            .map((spell) => {
+            .filter(s => filterType === null || s.casting_type === filterType);
+          const levels = [...new Set(visible.map(s => Number(s.level)))];
+          return levels.map(level => {
+            const group = visible.filter(s => Number(s.level) === level);
+            return (
+        <div key={level} className="space-y-1.5 not-first:mt-3">
+          <div className="flex items-center gap-2 px-1 pt-1">
+            <span className={`text-[10px] font-extrabold uppercase tracking-wider ${levelStyle(level).title}`}>{levelTitle(level)}</span>
+            <span className={`flex-1 border-t ${t.cardBorder}`} />
+            <span className={`text-[9px] ${t.textMuted}`}>{group.length} sort{group.length > 1 ? 's' : ''}</span>
+          </div>
+        <div className="space-y-2 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-2 tablet:items-start">
+          {group.map((spell) => {
             const isExpanded = expandedSpell === spell.id;
             return (
-              <div key={spell.id} className={`${t.inputBg} rounded-xl border ${t.cardBorder} overflow-hidden transition-all`}>
+              <div key={spell.id} className={`${t.inputBg} rounded-xl border ${t.cardBorder} border-l-4 ${levelStyle(level).bar} overflow-hidden transition-all`}>
                 <div
                   className="flex justify-between items-center p-3 cursor-pointer hover:brightness-95 active:scale-[0.99] transition-all"
                   onClick={() => setExpandedSpell(isExpanded ? null : spell.id)}
@@ -285,6 +301,10 @@ export function DnDSpellcasting({
             );
           })}
         </div>
+        </div>
+            );
+          });
+        })()}
       </div>
     </div>
   );
