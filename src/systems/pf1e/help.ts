@@ -69,8 +69,9 @@ export const PF1_HELP: Pf1HelpSection[] = [
     label: 'Magie',
     entries: [
       { title: 'Préparer ses sorts', text: 'Après 8 heures de repos, un magicien ou un magus passe 1 heure à étudier son grimoire pour choisir les sorts du jour. Préparer deux fois le même sort occupe deux emplacements.' },
-      { title: 'DD des sorts', text: '10 + niveau du sort + modificateur de la caractéristique d’incantation. L’appli le calcule pour chaque niveau.' },
-      { title: 'Concentration', text: 'd20 + niveau de lanceur + modificateur d’incantation. Pour lancer sur la défensive (sans provoquer d’attaque d’opportunité) : DD 15 + 2 × niveau du sort. En cas d’échec, le sort est perdu.' },
+      { title: 'DD des sorts', text: 'Quand un sort autorise un jet de sauvegarde, la cible doit atteindre 10 + niveau du sort + modificateur de la caractéristique d’incantation (la pastille à côté de « Incantation »). Exemple avec +4 : DD 15 pour un sort de niveau 1, DD 16 pour un sort de niveau 2.' },
+      { title: 'Concentration', text: 'd20 + niveau de lanceur + modificateur d’incantation (la pastille « Conc. »). En cas d’échec, le sort est perdu.' },
+      { title: 'Lancer sur la défensive', text: 'Lancer un sort au contact d’un ennemi provoque une attaque d’opportunité. Pour l’éviter, test de concentration DD 15 + 2 × niveau du sort : DD 17 au niveau 1, 19 au niveau 2, 21 au niveau 3… Le don Magie de guerre donne +4 à ce test.' },
       { title: 'Blessé pendant l’incantation', text: 'Test de concentration DD 10 + dégâts subis + niveau du sort.' },
       { title: 'Sort de contact', text: 'L’attaque de contact ignore l’armure, le bouclier et l’armure naturelle de la cible. Tu peux porter le contact gratuitement dans le round où tu lances le sort.' },
       { title: 'Échec des sorts profanes', text: 'En armure, un lanceur de sorts profanes lance un d100 : si le résultat est inférieur ou égal au pourcentage, le sort échoue. Certaines classes y échappent (le magus en armure légère, par exemple).' },

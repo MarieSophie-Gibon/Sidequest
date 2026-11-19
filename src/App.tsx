@@ -314,6 +314,9 @@ export default function App() {
       school: spell.school || '',
       cost: spell.cost || '',
       condition: spell.condition || '',
+      casting_time: spell.casting_time || '',
+      target: spell.target || '',
+      spell_resistance: spell.spell_resistance || '',
     });
     setModalType('add_spell');
   };
@@ -852,7 +855,7 @@ export default function App() {
             <EditSpellcastingModal activeChar={data.activeChar} syncCharacterField={data.syncCharacterField} onClose={() => setModalType(null)} />
           )}
           {modalType === 'add_spell' && (
-            <AddSpellModal hbFields={hbData ? spellFieldsOf(hbData.structure) : undefined} newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], material_components: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', upcast_damage: '', desc: '' }); setModalType(null); }} />
+            <AddSpellModal pf1={!!pf1Data} hbFields={hbData ? spellFieldsOf(hbData.structure) : undefined} newSpell={data.newSpell} setNewSpell={data.setNewSpell} onSubmit={async (e) => { await data.handleAddSpell(e); setModalType(null); }} onDelete={data.handleDeleteSpell} onClose={() => { data.setNewSpell({ name: '', level: 0, range: '', duration: '', components: [], material_components: '', casting_type: 'action', is_aoe: false, save_type: '', save_effect: '', concentration: false, damage: '', upcast_damage: '', desc: '' }); setModalType(null); }} />
           )}
           {modalType === 'death_saves' && data.activeChar && (
             <DeathSavingThrowsModal

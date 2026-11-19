@@ -58,6 +58,10 @@ export interface NewSpellState {
   school?: string;
   cost?: string;
   condition?: string;
+  /** Pathfinder 1e. */
+  casting_time?: string;
+  target?: string;
+  spell_resistance?: string;
 }
 
 export interface NewItemState {
@@ -682,7 +686,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       range: newSpell.range || null,
       duration: newSpell.duration || null,
       components: newSpell.components.length > 0 ? newSpell.components : null,
-      material_components: newSpell.components.includes('M') ? (newSpell.material_components.trim() || null) : null,
+      material_components: newSpell.components.some(c => c === 'M' || c === 'F' || c === 'FD') ? (newSpell.material_components.trim() || null) : null,
       casting_type: newSpell.casting_type,
       is_aoe: newSpell.is_aoe,
       save_type: newSpell.is_aoe ? newSpell.save_type : null,
@@ -696,6 +700,13 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
         school: newSpell.school?.trim() || null,
         cost: newSpell.cost?.trim() || null,
         condition: newSpell.condition?.trim() || null,
+      }),
+      // Pathfinder 1e : école, temps d'incantation, cible / effet, résistance à la magie.
+      ...(activeChar.system === 'pf1e' && {
+        school: newSpell.school?.trim() || null,
+        casting_time: newSpell.casting_time?.trim() || null,
+        target: newSpell.target?.trim() || null,
+        spell_resistance: newSpell.spell_resistance?.trim() || null,
       }),
     };
 

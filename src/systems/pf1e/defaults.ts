@@ -19,6 +19,7 @@ export function createPf1Data(classId = 'guerrier'): Pf1Data {
     skillRanksPerLevel: cls.skillRanksPerLevel,
     classSkills: [...cls.classSkills],
     castingStat: cls.castingStat,
+    castingMode: cls.spontaneous ? 'spontaneous' : 'prepared',
     spellsPerDayBase: classSpellsPerDay(cls.id, 1) ?? [],
     spellsUsed: [],
     prepared: [],
@@ -59,6 +60,7 @@ export function normalizePf1Data(raw: unknown): Pf1Data {
     spellsPerDayBase: Array.isArray(r.spellsPerDayBase) ? r.spellsPerDayBase : base.spellsPerDayBase,
     spellsUsed: Array.isArray(r.spellsUsed) ? r.spellsUsed : [],
     prepared: Array.isArray(r.prepared) ? r.prepared : [],
+    castingMode: r.castingMode ?? (findPf1Class(r.classId ?? '')?.spontaneous ? 'spontaneous' : 'prepared'),
     maneuvers: { ...(r.maneuvers ?? {}) },
     craftProjects: Array.isArray(r.craftProjects) ? r.craftProjects : [],
   };
@@ -77,5 +79,6 @@ export function applyPf1Class(data: Pf1Data, classId: string): Pf1Data {
     skillRanksPerLevel: cls.skillRanksPerLevel,
     classSkills: [...cls.classSkills],
     castingStat: cls.castingStat,
+    castingMode: cls.spontaneous ? 'spontaneous' : 'prepared',
   };
 }

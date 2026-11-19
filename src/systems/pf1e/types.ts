@@ -104,6 +104,12 @@ export interface Pf1Data {
   /** Sorts par jour de la table de classe, index = niveau de sort (null = pas encore accessible). */
   spellsPerDayBase: (number | null)[];
   spellsUsed: number[];
+  /**
+   * Préparé (magicien, prêtre…) : on choisit chaque jour ses sorts dans le grimoire.
+   * Spontané (barde, ensorceleur, oracle…) : on lance n'importe quel sort connu avec un emplacement libre.
+   * Absent = préparé.
+   */
+  castingMode?: 'prepared' | 'spontaneous';
   /** Sorts préparés du jour : un même sort peut occuper plusieurs emplacements. */
   prepared: Pf1PreparedSpell[];
   /** Réglage des sorts à charges, par id de sort du grimoire. */

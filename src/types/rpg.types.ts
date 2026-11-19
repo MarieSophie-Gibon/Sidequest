@@ -115,6 +115,10 @@ export interface Spell {
   school?: string | null;
   cost?: string | null;
   condition?: string | null;
+  /** Pathfinder 1e. */
+  casting_time?: string | null;
+  target?: string | null;
+  spell_resistance?: string | null;
 }
 
 export interface Item {
