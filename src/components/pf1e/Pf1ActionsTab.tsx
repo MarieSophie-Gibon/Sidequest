@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
-import { ArrowLeft, BatteryCharging, BookOpen, ChevronRight, CirclePlus, Minus, Plus, Undo2, X, Zap } from 'lucide-react';
+import { ArrowLeft, BatteryCharging, BookOpen, ChevronDown, ChevronRight, CirclePlus, Minus, Plus, Undo2, X, Zap } from 'lucide-react';
 import type { Spell, SpellSlot } from '../../types/rpg.types';
 import type { Pf1Attack, Pf1Data, Pf1PreparedSpell, Pf1Sheet, Pf1SpellCharges } from '../../systems/pf1e/types';
 import { signed, spellChargeCount } from '../../systems/pf1e/rules';
-import { DnDSpellcasting, SpellSlotGem } from '../DnDSpellcasting';
+import { DnDSpellcasting, SpellDetailsBody, SpellSlotGem } from '../DnDSpellcasting';
 import { Pf1SpellHeader } from './Pf1SpellHeader';
 import { Pf1ManeuversCard } from './Pf1ManeuversCard';
 import { FieldLabel, NumField, Pf1Collapsible, Pf1Modal } from './ui';
@@ -30,6 +30,8 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
   const t = useThemeClasses();
   const [view, setView] = useState<'actions' | 'grimoire'>('actions');
   const [chargesFor, setChargesFor] = useState<Spell | null>(null);
+  // Sort préparé déplié : sa fiche complète s'affiche sous la ligne.
+  const [openEntry, setOpenEntry] = useState<string | null>(null);
   const card = `${t.cardBg} border ${t.cardBorder} rounded-2xl p-3 shadow-sm ${t.cardShadow}`;
   const iconBtn = `w-6 h-6 flex items-center justify-center rounded-xl ${t.cardBg} border ${t.cardBorder} ${t.accent} shadow-md hover:brightness-110 active:scale-90 transition-all`;
   const smallBtn = `flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 leading-none`;
@@ -222,13 +224,18 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
                         const cfg = chargesCfg(spell.id);
                         const charging = entry.cast && (entry.chargesLeft ?? 0) > 0;
                         const spent = entry.cast && !charging;
+                        const isOpen = openEntry === entry.id;
                         return (
-                          <div key={entry.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${t.inputBg} ${charging ? t.accentBorder : t.cardBorder} ${spent ? 'opacity-50' : ''}`}>
-                            <div className="flex-1 min-w-0">
-                              <span className={`text-xs font-bold ${t.textPrimary} block truncate ${spent ? 'line-through' : ''}`}>{spell.name}</span>
+                          <div key={entry.id} className={`px-3 py-1.5 rounded-xl border ${t.inputBg} ${charging ? t.accentBorder : t.cardBorder} ${spent ? 'opacity-50' : ''}`}>
+                          <div className="flex items-center gap-2">
+                            <button type="button" onClick={() => setOpenEntry(isOpen ? null : entry.id)} aria-expanded={isOpen} className="flex-1 min-w-0 text-left">
+                              <span className={`text-xs font-bold ${t.textPrimary} flex items-center gap-1 min-w-0 ${spent ? 'line-through' : ''}`}>
+                                <ChevronDown size={11} className={`${t.textMuted} shrink-0 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
+                                <span className="truncate">{spell.name}</span>
+                              </span>
                               {meta && <span className={`text-[9px] font-mono ${t.textMuted} block truncate`}>{meta}</span>}
                               {cfg && !entry.cast && <span className={`text-[9px] ${t.textMuted} block`}>{spellChargeCount(cfg, casterLevel)} charge(s) au lancer</span>}
-                            </div>
+                            </button>
                             {charging && (
                               <div className="flex items-center gap-1 shrink-0">
                                 <button type="button" onClick={() => setCharges(entry, (entry.chargesLeft ?? 0) - 1)} aria-label="Utiliser une charge" className={`${smallBtn} ${t.accentBg} ${t.accentBorder} ${t.accent}`}><Minus size={10} /></button>
@@ -255,6 +262,8 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
                                 <X size={13} />
                               </button>
                             )}
+                          </div>
+                          {isOpen && <Pf1SpellDetails spell={spell} />}
                           </div>
                         );
                       })}
@@ -292,6 +301,7 @@ function Pf1KnownSpellsCard({ spells, perDay, bonusSpells, slots, hasSpellcastin
   onOpenGrimoire: () => void;
 }) {
   const t = useThemeClasses();
+  const [openSpell, setOpenSpell] = useState<string | null>(null);
   const smallBtn = `flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 leading-none`;
   const levels = Array.from(new Set([
     ...perDay.flatMap((v, lvl) => (v ? [lvl] : [])),
@@ -346,18 +356,25 @@ function Pf1KnownSpellsCard({ spells, perDay, bonusSpells, slots, hasSpellcastin
                 {known.length === 0 && <p className={`text-[10px] ${t.textMuted} italic`}>Aucun sort connu de ce niveau.</p>}
                 {known.map(spell => {
                   const meta = [spell.casting_time, spell.save_type && `JS ${spell.save_type}`, spell.range].filter(Boolean).join(' · ');
+                  const isOpen = openSpell === spell.id;
                   return (
-                    <div key={spell.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${t.inputBg} ${t.cardBorder}`}>
-                      <div className="flex-1 min-w-0">
-                        <span className={`text-xs font-bold ${t.textPrimary} block truncate`}>{spell.name}</span>
+                    <div key={spell.id} className={`px-3 py-1.5 rounded-xl border ${t.inputBg} ${t.cardBorder}`}>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => setOpenSpell(isOpen ? null : spell.id)} aria-expanded={isOpen} className="flex-1 min-w-0 text-left">
+                        <span className={`text-xs font-bold ${t.textPrimary} flex items-center gap-1 min-w-0`}>
+                          <ChevronDown size={11} className={`${t.textMuted} shrink-0 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
+                          <span className="truncate">{spell.name}</span>
+                        </span>
                         {meta && <span className={`text-[9px] font-mono ${t.textMuted} block truncate`}>{meta}</span>}
-                      </div>
+                      </button>
                       {level > 0 && (
                         <button type="button" onClick={cast} disabled={left === 0}
                           className={`${smallBtn} ${left > 0 ? `${t.accentBg} ${t.accentBorder} ${t.accent}` : `${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.textMuted} opacity-50`}`}>
                           <Zap size={10} /> Lancer
                         </button>
                       )}
+                    </div>
+                    {isOpen && <Pf1SpellDetails spell={spell} />}
                     </div>
                   );
                 })}
@@ -367,6 +384,17 @@ function Pf1KnownSpellsCard({ spells, perDay, bonusSpells, slots, hasSpellcastin
         })}
       </div>
     </Pf1Collapsible>
+  );
+}
+
+/** Fiche d'un sort dépliée sous sa ligne dans les Actions : même présentation que le grimoire. */
+function Pf1SpellDetails({ spell }: { spell: Spell }) {
+  const t = useThemeClasses();
+  return (
+    <div className="mt-2 space-y-2">
+      <SpellDetailsBody spell={spell} withCasting />
+      {!spell.desc && <p className={`text-[10px] ${t.textMuted} italic`}>Pas de description dans le grimoire.</p>}
+    </div>
   );
 }
 

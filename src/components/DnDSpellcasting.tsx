@@ -61,6 +61,59 @@ const LEVEL_STYLES = [
 ];
 const levelStyle = (level: number) => LEVEL_STYLES[Math.max(0, Math.min(9, level))];
 
+/**
+ * Détail d'un sort tel qu'affiché dans le grimoire (badges + description).
+ * `withCasting` : ajoute les composantes et le temps d'incantation, quand l'en-tête ne les montre pas.
+ */
+export function SpellDetailsBody({ spell, withCasting = false }: { spell: Spell; withCasting?: boolean }) {
+  const t = useThemeClasses();
+  const chip = `text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`;
+  return (
+    <>
+    {withCasting && (spell.casting_time || (spell.components?.length ?? 0) > 0) && (
+      <div className="flex items-center flex-wrap gap-1">
+        {spell.casting_time && <span className={chip}>{spell.casting_time}</span>}
+        {spell.components && spell.components.length > 0 && <span className={chip}>{spell.components.map(c => (c === 'S' ? 'G' : c)).join('·')}</span>}
+      </div>
+    )}
+    <div className="flex items-center flex-wrap gap-1">
+      {spell.damage && (
+        <span className="text-[9px] font-mono font-bold text-rose-300 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-400/50 shadow-[0_0_6px_rgba(251,113,133,0.5)]">⚔ {spell.damage}</span>
+      )}
+      {spell.upcast_damage && (
+        <span className="text-[9px] font-mono font-bold text-violet-300 bg-violet-500/10 px-1.5 py-0.5 rounded-md border border-violet-400/50">Niv.sup {spell.upcast_damage}</span>
+      )}
+      {spell.is_aoe && spell.save_type && (
+        <span className={`text-[9px] font-mono font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20`}>🛡 JS {spell.save_type}{spell.save_effect ? ` · ${spell.save_effect}` : ''}</span>
+      )}
+      {(spell.range || spell.duration) && (
+        <span className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>
+          {[spell.range, spell.duration ? `⏱ ${spell.duration}` : null].filter(Boolean).join(' · ')}
+        </span>
+      )}
+      {/* Pathfinder 1e : cible / effet, résistance à la magie */}
+      {[spell.target && `🎯 ${spell.target}`, spell.spell_resistance && `RM ${spell.spell_resistance.toLowerCase()}`].filter(Boolean).map(label => (
+        <span key={label as string} className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>{label}</span>
+      ))}
+      {/* Homebrew : école, coût, condition */}
+      {[spell.school, spell.cost && `Coût ${spell.cost}`, spell.condition && `Si ${spell.condition}`].filter(Boolean).map(label => (
+        <span key={label as string} className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>{label}</span>
+      ))}
+      {spell.material_components && (
+        <span className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>
+          M: {spell.material_components}
+        </span>
+      )}
+    </div>
+    {spell.desc && (
+      <p className={`text-[10px] ${t.textSecondary} leading-relaxed ${t.cardBg} p-2 rounded-lg border ${t.cardBorder}`}>
+        {spell.desc}
+      </p>
+    )}
+    </>
+  );
+}
+
 export function DnDSpellcasting({
   spellSlots,
   spells,
@@ -261,40 +314,7 @@ export function DnDSpellcasting({
                 </div>
                 {isExpanded && (
                   <div className="px-3 pb-3 space-y-2" onClick={() => onEditSpell(spell)}>
-                    <div className="flex items-center flex-wrap gap-1">
-                      {spell.damage && (
-                        <span className="text-[9px] font-mono font-bold text-rose-300 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-400/50 shadow-[0_0_6px_rgba(251,113,133,0.5)]">⚔ {spell.damage}</span>
-                      )}
-                      {spell.upcast_damage && (
-                        <span className="text-[9px] font-mono font-bold text-violet-300 bg-violet-500/10 px-1.5 py-0.5 rounded-md border border-violet-400/50">Niv.sup {spell.upcast_damage}</span>
-                      )}
-                      {spell.is_aoe && spell.save_type && (
-                        <span className={`text-[9px] font-mono font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20`}>🛡 JS {spell.save_type}{spell.save_effect ? ` · ${spell.save_effect}` : ''}</span>
-                      )}
-                      {(spell.range || spell.duration) && (
-                        <span className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>
-                          {[spell.range, spell.duration ? `⏱ ${spell.duration}` : null].filter(Boolean).join(' · ')}
-                        </span>
-                      )}
-                      {/* Pathfinder 1e : cible / effet, résistance à la magie */}
-                      {[spell.target && `🎯 ${spell.target}`, spell.spell_resistance && `RM ${spell.spell_resistance.toLowerCase()}`].filter(Boolean).map(label => (
-                        <span key={label as string} className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>{label}</span>
-                      ))}
-                      {/* Homebrew : école, coût, condition */}
-                      {[spell.school, spell.cost && `Coût ${spell.cost}`, spell.condition && `Si ${spell.condition}`].filter(Boolean).map(label => (
-                        <span key={label as string} className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>{label}</span>
-                      ))}
-                      {spell.material_components && (
-                        <span className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>
-                          M: {spell.material_components}
-                        </span>
-                      )}
-                    </div>
-                    {spell.desc && (
-                      <p className={`text-[10px] ${t.textSecondary} leading-relaxed ${t.cardBg} p-2 rounded-lg border ${t.cardBorder}`}>
-                        {spell.desc}
-                      </p>
-                    )}
+                    <SpellDetailsBody spell={spell} />
                   </div>
                 )}
               </div>
