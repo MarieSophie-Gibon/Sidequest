@@ -314,9 +314,15 @@ function Pf1SpellFields({ newSpell, setNewSpell, levelInput, setLevelInput }: {
         <input type="text" placeholder="1 créature, rayon de 6 m…" value={newSpell.target ?? ''} onChange={(e) => set('target', e.target.value)} className={inputCls} />
       </div>
     </div>
-    <div>
-      <label className={labelCls}>Durée</label>
-      <input type="text" placeholder="Instantanée, 1 round/niveau…" value={newSpell.duration} onChange={(e) => set('duration', e.target.value)} className={inputCls} />
+    <div className="grid grid-cols-2 gap-2">
+      <div>
+        <label className={labelCls}>Durée</label>
+        <input type="text" placeholder="Instantanée, 1 round/niveau…" value={newSpell.duration} onChange={(e) => set('duration', e.target.value)} className={inputCls} />
+      </div>
+      <div>
+        <label className={labelCls}>Dégâts</label>
+        <input type="text" placeholder="1d6/niveau (max 5d6) feu" value={newSpell.damage} onChange={(e) => set('damage', e.target.value)} className={`${inputCls} font-mono`} />
+      </div>
     </div>
     <div className={`flex items-center gap-4 ${t.inputBg} border ${t.inputBorder} rounded-xl p-2.5`}>
       <label className="flex items-center gap-2 cursor-pointer">
