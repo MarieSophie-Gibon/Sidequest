@@ -142,6 +142,7 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
                   <span>Dégâts <span className={`font-mono ${t.textSecondary}`}>{line.damage}</span></span>
                   <span>Crit <span className="font-mono">{line.attack.critRange || '20'} ×{line.attack.critMultiplier}</span></span>
                 </div>
+                {line.attack.weaponInfo && <p className={`text-[10px] ${t.textMuted} mt-0.5`}>{line.attack.weaponInfo}</p>}
                 {line.attack.notes && <p className={`text-[10px] ${t.textMuted} mt-0.5 italic`}>{line.attack.notes}</p>}
               </div>
             ))}

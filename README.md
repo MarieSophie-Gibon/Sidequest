@@ -14,12 +14,12 @@ L'installation fonctionne avec **Chrome** et **Edge**. Firefox ne permet pas d'i
   (ou l'icône d'installation à droite de la barre d'adresse). Si seul **Créer un raccourci…** est proposé, choisissez-le et cochez **Ouvrir dans une fenêtre**.
 - **Edge** : menu **⋯** → **Applications** → **Installer ce site en tant qu'application**.
 
-La fenêtre de l'application prend automatiquement le format d'un téléphone (430 × 900). Si vous la redimensionnez, la nouvelle taille est conservée.
+À chaque ouverture, la fenêtre de l'application prend exactement la largeur de l'app (448 px, hors bordures). La hauteur choisie est conservée, dans la limite de 900 px.
 
 **Sans installation**, un raccourci Windows donne le même résultat. Créez un raccourci avec comme emplacement :
 
 ```
-"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --app=https://ADRESSE-DE-SIDEQUEST --window-size=430,932
+"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --app=https://ADRESSE-DE-SIDEQUEST --window-size=464,932
 ```
 
 ### Version mobile

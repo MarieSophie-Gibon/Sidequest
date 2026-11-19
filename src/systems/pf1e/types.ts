@@ -21,9 +21,54 @@ export interface Pf1Armor {
   spellFailure: number;
 }
 
+/* Armes et armures de l'inventaire (colonne items.pf1). Poids en kg. */
+export type Pf1ArmorType = 'legere' | 'intermediaire' | 'lourde' | 'bouclier';
+export interface Pf1ArmorStats {
+  kind: 'armor';
+  armorType: Pf1ArmorType;
+  price: string;
+  /** Bonus d'armure ou de bouclier à la CA. */
+  bonus: number;
+  /** Bonus de Dex maximal ; null = aucune limite. */
+  maxDex: number | null;
+  /** Malus d'armure aux tests (valeur négative ou 0). */
+  checkPenalty: number;
+  /** Risque d'échec des sorts profanes, en %. */
+  spellFailure: number;
+  /** Vitesse en armure, ex. « 6 m / 4,50 m ». */
+  speed: string;
+  weight: number;
+}
+
+export type Pf1WeaponCategory = 'courante' | 'guerre' | 'exotique';
+export type Pf1WeaponType = 'legere' | 'une-main' | 'deux-mains' | 'distance';
+export interface Pf1WeaponStats {
+  kind: 'weapon';
+  category: Pf1WeaponCategory;
+  weaponType: Pf1WeaponType;
+  price: string;
+  /** Dégâts pour une créature de taille moyenne, ex. « 1d8 ». */
+  damage: string;
+  critRange: string;
+  critMultiplier: number;
+  /** Facteur de portée, ex. « 24 m » ; vide pour une arme de corps à corps. */
+  rangeIncrement: string;
+  weight: number;
+  /** Type de dégâts : C (contondant), P (perforant), T (tranchant), ex. « P ou T ». */
+  damageType: string;
+  /** Attributs spéciaux : allonge, croc-en-jambe, désarmement… */
+  special: string;
+}
+
+export type Pf1ItemStats = Pf1ArmorStats | Pf1WeaponStats;
+
 export interface Pf1Attack {
   id: string;
   name: string;
+  /** Arme de l'inventaire reliée : ses dégâts et son critique remplacent ceux de l'attaque. */
+  itemId?: string;
+  /** Calculé (non stocké) : type de dégâts, portée et attributs spéciaux de l'arme reliée. */
+  weaponInfo?: string;
   /** Caractéristique au toucher (Dex avec finesse ou Dervish Dance). */
   attackStat: CharacterStatKey;
   /** Caractéristique aux dégâts ; null = aucune. */

@@ -64,6 +64,7 @@ import { Pf1CraftProjectsCard } from './components/pf1e/Pf1CraftProjectsCard';
 import { Pf1AttackModal, Pf1DefenseModal, Pf1HelpModal, Pf1InitSpeedModal, Pf1MagicModal, Pf1StatsModal } from './components/pf1e/Pf1Modals';
 import { normalizePf1Data } from './systems/pf1e/defaults';
 import { computePf1Sheet } from './systems/pf1e/rules';
+import { applyPf1Equipment, equippedPf1Armor } from './systems/pf1e/equipment';
 import type { Pf1Attack } from './systems/pf1e/types';
 
 /** Thème de l'accueil : violet ; fond clair flouté tant que le fond de l'app est « par défaut » (voile d'étoiles toujours affiché). */
@@ -278,7 +279,8 @@ export default function App() {
 
   // Pathfinder 1e : choix du joueur (system_data) → valeurs calculées.
   const pf1Data = data.activeChar?.system === 'pf1e' ? normalizePf1Data(data.activeChar.system_data) : null;
-  const pf1Sheet = pf1Data && data.activeChar ? computePf1Sheet(pf1Data, data.activeChar.level) : null;
+  // L'armure équipée et les armes reliées de l'inventaire entrent dans le calcul de la fiche.
+  const pf1Sheet = pf1Data && data.activeChar ? computePf1Sheet(applyPf1Equipment(pf1Data, data.items), data.activeChar.level) : null;
   const pf1Slots = pf1Sheet?.spellcasting && pf1Data
     ? pf1Sheet.spellcasting.perDay.flatMap((max, level) => (level === 0 || max === null || max <= 0 ? [] : [{
         level, max, current: Math.max(0, max - (pf1Data.spellsUsed[level] ?? 0)),
@@ -747,6 +749,7 @@ export default function App() {
                         damage: item.damage || '',
                         range: item.range || '',
                         defense_bonus: item.defense_bonus || 0,
+                        pf1: item.pf1 ?? null,
                       });
                       setModalType('add_item');
                     }}
@@ -880,13 +883,14 @@ export default function App() {
           )}
           {modalType === 'add_item' && (
             <AddItemModal
+              pf1={!!pf1Data}
               hbCategories={hbData ? itemCategoriesOf(hbData.structure) : undefined}
               newItem={data.newItem}
               setNewItem={data.setNewItem}
               onSubmit={async (e) => { await data.handleSaveItem(e); setModalType(null); }}
               onDelete={data.handleDeleteItem}
               onClose={() => {
-                data.setNewItem({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
+                data.setNewItem({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0, pf1: null });
                 setModalType(null);
               }}
             />
@@ -952,6 +956,7 @@ export default function App() {
           {modalType === 'pf1_defense' && pf1Data && data.activeChar && (
             <Pf1DefenseModal
               data={pf1Data}
+              fromInventory={equippedPf1Armor(data.items)}
               level={data.activeChar.level}
               onSave={async (next) => {
                 setModalType(null);
@@ -977,6 +982,7 @@ export default function App() {
           {modalType === 'pf1_attack' && pf1Data && (
             <Pf1AttackModal
               attack={pf1AttackTarget}
+              weapons={data.items.filter(it => it.pf1?.kind === 'weapon')}
               onSave={(attack) => {
                 const exists = pf1Data.attacks.some(a => a.id === attack.id);
                 data.syncPf1Data({ ...pf1Data, attacks: exists ? pf1Data.attacks.map(a => (a.id === attack.id ? attack : a)) : [...pf1Data.attacks, attack] });

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import type { Pf1ItemStats } from '../systems/pf1e/types';
+import { applyPf1Equipment, formatPf1Crit, pf1StatsForCategory } from '../systems/pf1e/equipment';
 import { supabase } from '../supabaseClient';
 import { DEFAULT_SKILLS_TEMPLATES } from '../constants';
 import type { Character, Feature, Spell, Item, Skill, SpellSlot, Resource, ResourceBullet, ResourceDisplay, Biography, Familiar, CharacterStatKey, Note, GameSystem } from '../types/rpg.types';
@@ -76,6 +78,8 @@ export interface NewItemState {
   damage: string;
   range: string;
   defense_bonus: number;
+  /** Pathfinder 1e : caractéristiques de l'arme ou de l'armure. */
+  pf1?: Pf1ItemStats | null;
 }
 
 export interface CraftingComponentSelection {
@@ -474,7 +478,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     if (!activeChar) return;
     const charId = activeChar.id;
     const level = levelOverride ?? activeChar.level;
-    const sheet = computePf1Sheet(next, level);
+    const sheet = computePf1Sheet(applyPf1Equipment(next, items), level);
     const patch = { system_data: next, ac: sheet.ac.total, initiative: sheet.initiative.total };
     setActiveChar(prev => (prev ? { ...prev, ...patch } : prev));
     setCharacters(prev => prev.map(c => (c.id === charId ? { ...c, ...patch } : c)));
@@ -772,6 +776,20 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     }
 
     // Items
+  // CA après un changement d'armure dans l'inventaire.
+  async function syncArmorAc(nextItems: Item[]) {
+    if (!activeChar) return;
+    if (activeChar.system === 'pf1e') {
+      // Pathfinder : la fiche complète, armure équipée comprise.
+      const sheet = computePf1Sheet(applyPf1Equipment(normalizePf1Data(activeChar.system_data), nextItems), activeChar.level);
+      await syncCharacterField('ac', sheet.ac.total);
+      return;
+    }
+    const dexMod = Math.floor((activeChar.dex - 10) / 2);
+    const armorBonus = nextItems.filter(it => it.category === 'armure' && it.equipped).reduce((sum, it) => sum + (it.defense_bonus ?? 0), 0);
+    await syncCharacterField('ac', 10 + dexMod + armorBonus);
+  }
+
   async function handleSaveItem(e: React.FormEvent) {
     e.preventDefault();
     if (!activeChar || !newItem.name.trim()) return;
@@ -787,6 +805,18 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       ...(activeChar.system === 'homebrew'
         // Homebrew : la catégorie du MJ décide des champs affichés ; on garde ce qui a été saisi.
         ? { damage: newItem.damage.trim() || null, defense_bonus: Number(newItem.defense_bonus) || 0 }
+        : activeChar.system === 'pf1e'
+        // Pathfinder : fiche complète dans pf1 ; dégâts, portée et bonus recopiés pour l'affichage de l'inventaire.
+        ? (() => {
+          const stats = pf1StatsForCategory(newItem.category, newItem.pf1);
+          if (!stats) return { pf1: null };
+          if (stats.kind === 'armor') return { pf1: stats, weight: stats.weight, defense_bonus: stats.bonus, damage: null, range: null };
+          return {
+            pf1: stats, weight: stats.weight, defense_bonus: 0,
+            damage: [stats.damage, formatPf1Crit(stats.critRange, stats.critMultiplier), stats.damageType].filter(Boolean).join(' · ') || null,
+            range: stats.rangeIncrement || null,
+          };
+        })()
         : {
           ...(newItem.category === 'arme' && { damage: newItem.damage, range: newItem.range }),
           ...(newItem.category === 'armure' && { defense_bonus: Number(newItem.defense_bonus) }),
@@ -802,10 +832,12 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
         setItems(nextItems);
         showAlert("Objet Modifié", `${payload.name} a été mis à jour.`);
         if (savedItem.category === 'armure' && activeChar) {
-          const dexMod = Math.floor((activeChar.dex - 10) / 2);
-          const armorBonus = nextItems.filter(it => it.category === 'armure' && it.equipped).reduce((s, it) => s + (it.defense_bonus ?? 0), 0);
-          await syncCharacterField('ac', 10 + dexMod + armorBonus);
+          await syncArmorAc(nextItems);
         }
+      }
+      if (error) {
+        showAlert("Erreur", `${payload.name} n'a pas pu être modifié : ${error.message}`);
+        return false;
       }
     } else {
       const { data, error } = await supabase.from('items').insert([payload]).select().single();
@@ -815,14 +847,16 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
         setItems(nextItems);
         showAlert("Objet Ajouté", `${payload.name} est dans le sac.`);
         if (savedItem.category === 'armure' && activeChar) {
-          const dexMod = Math.floor((activeChar.dex - 10) / 2);
-          const armorBonus = nextItems.filter(it => it.category === 'armure' && it.equipped).reduce((s, it) => s + (it.defense_bonus ?? 0), 0);
-          await syncCharacterField('ac', 10 + dexMod + armorBonus);
+          await syncArmorAc(nextItems);
         }
+      }
+      if (error) {
+        showAlert("Erreur", `${payload.name} n'a pas pu être ajouté : ${error.message}`);
+        return false;
       }
     }
 
-    setNewItem({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0 });
+    setNewItem({ name: '', description: '', quantity: 1, equipped: false, category: 'objet', damage: '', range: '', defense_bonus: 0, pf1: null });
     return true;
   }
 
@@ -834,9 +868,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       setItems(nextItems);
       showAlert("Objet Retiré", `${name} a été supprimé de l'inventaire.`);
       if (targetItem?.category === 'armure' && targetItem.equipped && activeChar) {
-        const dexMod = Math.floor((activeChar.dex - 10) / 2);
-        const armorBonus = nextItems.filter(it => it.category === 'armure' && it.equipped).reduce((s, it) => s + (it.defense_bonus ?? 0), 0);
-        await syncCharacterField('ac', 10 + dexMod + armorBonus);
+        await syncArmorAc(nextItems);
       }
     }
   }
@@ -849,9 +881,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     setItems(nextItems);
     await supabase.from('items').update({ equipped: nextEquipped }).eq('id', itemId);
     if (targetItem.category === 'armure' && activeChar) {
-      const dexMod = Math.floor((activeChar.dex - 10) / 2);
-      const armorBonus = nextItems.filter(it => it.category === 'armure' && it.equipped).reduce((s, it) => s + (it.defense_bonus ?? 0), 0);
-      await syncCharacterField('ac', 10 + dexMod + armorBonus);
+      await syncArmorAc(nextItems);
     }
   }
 

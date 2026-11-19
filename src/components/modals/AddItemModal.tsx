@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Package, Sword, Shield, Trash2, FlaskConical, ScrollText, WandSparkles, Leaf } from 'lucide-react';
 import { ModalActions, ModalHeader } from './ModalControls';
 import type { HbItemCategory } from '../../systems/homebrew/types';
+import { Pf1ItemFields } from '../pf1e/Pf1ItemFields';
 
 interface Props {
   newItem: NewItemState;
@@ -13,9 +14,11 @@ interface Props {
   onClose: () => void;
   /** Homebrew : catégories du MJ et leurs champs (Bonus, DM). */
   hbCategories?: HbItemCategory[];
+  /** Pathfinder 1e : fiche complète pour les armes et les armures. */
+  pf1?: boolean;
 }
 
-export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose, hbCategories }: Props) {
+export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose, hbCategories, pf1 }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newItem.id;
   const [quantityInput, setQuantityInput] = useState(String(newItem.quantity));
@@ -23,8 +26,9 @@ export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose,
 
   const hbCategory = hbCategories?.find(c => c.id === newItem.category);
   // Champs affichés : ceux de la catégorie homebrew, sinon les champs D&D de l'arme / de l'armure.
-  const showDamage = hbCategories ? !!hbCategory?.fields.includes('dm') : newItem.category === 'arme';
-  const showBonus = hbCategories ? !!hbCategory?.fields.includes('bonus') : newItem.category === 'armure';
+  const pf1Fields = !!pf1 && (newItem.category === 'arme' || newItem.category === 'armure');
+  const showDamage = !pf1Fields && (hbCategories ? !!hbCategory?.fields.includes('dm') : newItem.category === 'arme');
+  const showBonus = !pf1Fields && (hbCategories ? !!hbCategory?.fields.includes('bonus') : newItem.category === 'armure');
 
   const categories = hbCategories ? hbCategories.map(c => ({ key: c.id, label: c.name || 'Sans nom', icon: Package })) : [
     { key: 'objet' as const, label: 'Objet', icon: Package },
@@ -122,6 +126,9 @@ export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose,
               </div>
             </div>
           </div>
+
+          {/* Pathfinder : fiche d'arme ou d'armure */}
+          {pf1Fields && <Pf1ItemFields category={newItem.category} value={newItem.pf1} onChange={stats => setNewItem(prev => ({ ...prev, pf1: stats }))} />}
 
           {/* Weapon fields */}
           {showDamage && (

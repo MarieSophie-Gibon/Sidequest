@@ -1,7 +1,8 @@
 import { Fragment, useState } from 'react';
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import { Plus, Trash2 } from 'lucide-react';
-import type { CharacterStatKey } from '../../types/rpg.types';
+import type { CharacterStatKey, Item } from '../../types/rpg.types';
+import { formatPf1Crit } from '../../systems/pf1e/equipment';
 import type { Pf1Armor, Pf1Attack, Pf1Data, Pf1SaveKey, Pf1Size } from '../../systems/pf1e/types';
 import { findPf1Class } from '../../systems/pf1e/data/classes';
 import { abilityMod, baseAttackBonus, baseSave, SAVE_STAT, signed, STAT_KEYS, STAT_SHORT } from '../../systems/pf1e/rules';
@@ -173,8 +174,26 @@ function ArmorFields({ title, value, onChange, defaultName }: { title: string; v
   );
 }
 
-export function Pf1DefenseModal({ data, level, onSave, onClose }: {
-  data: Pf1Data; level: number; onSave: (next: Pf1Data) => void; onClose: () => void;
+/** Armure ou bouclier équipé dans l'inventaire : il remplace la saisie manuelle. */
+function InventoryArmorNote({ title, armor }: { title: string; armor: Pf1Armor }) {
+  const t = useThemeClasses();
+  return (
+    <>
+      <SectionTitle>{title}</SectionTitle>
+      <p className={`text-[11px] ${t.textSecondary}`}>
+        <span className="font-bold">{armor.name}</span> · CA +{armor.bonus}
+        {armor.maxDex !== null && ` · Dex max +${armor.maxDex}`}
+        {armor.checkPenalty !== 0 && ` · malus ${armor.checkPenalty}`}
+        {armor.spellFailure > 0 && ` · échec ${armor.spellFailure} %`}
+      </p>
+      <p className={`text-[10px] ${t.textMuted}`}>Équipé dans l’inventaire : modifie-le depuis l’inventaire.</p>
+    </>
+  );
+}
+
+export function Pf1DefenseModal({ data, level, fromInventory, onSave, onClose }: {
+  data: Pf1Data; level: number; fromInventory?: { armor: Pf1Armor | null; shield: Pf1Armor | null };
+  onSave: (next: Pf1Data) => void; onClose: () => void;
 }) {
   // Sauvegardes de base saisies à la main ; pré-remplies avec l'ancien calcul si jamais saisies.
   // (Le BBA se règle depuis l'en-tête, fenêtre « BBA, initiative et vitesse ».)
@@ -220,8 +239,12 @@ export function Pf1DefenseModal({ data, level, onSave, onClose }: {
           );
         })}
       </div>
-      <ArmorFields title="Armure" value={draft.armor} defaultName="Armure" onChange={armor => setDraft(d => ({ ...d, armor }))} />
-      <ArmorFields title="Bouclier" value={draft.shield} defaultName="Bouclier" onChange={shield => setDraft(d => ({ ...d, shield }))} />
+      {fromInventory?.armor
+        ? <InventoryArmorNote title="Armure" armor={fromInventory.armor} />
+        : <ArmorFields title="Armure" value={draft.armor} defaultName="Armure" onChange={armor => setDraft(d => ({ ...d, armor }))} />}
+      {fromInventory?.shield
+        ? <InventoryArmorNote title="Bouclier" armor={fromInventory.shield} />
+        : <ArmorFields title="Bouclier" value={draft.shield} defaultName="Bouclier" onChange={shield => setDraft(d => ({ ...d, shield }))} />}
       <SectionTitle>Bonus à la CA</SectionTitle>
       <div className="grid grid-cols-2 gap-2">
         <NumField label="Armure naturelle" value={draft.acMisc.natural} onChange={v => setAc('natural', v)} />
@@ -259,8 +282,8 @@ export function Pf1InitSpeedModal({ data, speed, dexMod, level, onSave, onClose 
 
 /* ───────────────────────── Attaque ───────────────────────── */
 
-export function Pf1AttackModal({ attack, onSave, onDelete, onClose }: {
-  attack: Pf1Attack | null; onSave: (a: Pf1Attack) => void; onDelete: (id: string) => void; onClose: () => void;
+export function Pf1AttackModal({ attack, weapons = [], onSave, onDelete, onClose }: {
+  attack: Pf1Attack | null; weapons?: Item[]; onSave: (a: Pf1Attack) => void; onDelete: (id: string) => void; onClose: () => void;
 }) {
   const t = useThemeClasses();
   const cls = useInputClass();
@@ -269,20 +292,57 @@ export function Pf1AttackModal({ attack, onSave, onDelete, onClose }: {
     enhancement: 0, attackMisc: 0, damageMisc: 0, critRange: '20', critMultiplier: 2, notes: '',
   });
   const set = <K extends keyof Pf1Attack>(k: K, v: Pf1Attack[K]) => setDraft(d => ({ ...d, [k]: v }));
+  const linked = weapons.find(w => w.id === draft.itemId);
+  const linkedStats = linked?.pf1?.kind === 'weapon' ? linked.pf1 : null;
+
+  // Relier une arme : on reprend son nom, ses dégâts et son critique ; à distance, Dex au toucher et pas de Force aux dégâts.
+  const link = (itemId: string) => {
+    const item = weapons.find(w => w.id === itemId);
+    const w = item?.pf1?.kind === 'weapon' ? item.pf1 : null;
+    if (!item || !w) { setDraft(d => ({ ...d, itemId: undefined })); return; }
+    setDraft(d => ({
+      ...d,
+      itemId,
+      name: d.name.trim() && d.name !== linked?.name ? d.name : item.name,
+      damageDice: w.damage || d.damageDice,
+      critRange: w.critRange || '20',
+      critMultiplier: w.critMultiplier,
+      ...(w.weaponType === 'distance' ? { attackStat: 'dex' as const, damageStat: null } : {}),
+    }));
+  };
 
   return (
-    <Pf1Modal title={attack ? 'Modifier l’attaque' : 'Nouvelle attaque'} onClose={onClose} onSave={() => onSave({ ...draft, name: draft.name.trim() || 'Attaque' })}>
+    <Pf1Modal title={attack ? 'Modifier l’attaque' : 'Nouvelle attaque'} onClose={onClose} onSave={() => {
+      const stored: Pf1Attack = { ...draft };
+      delete stored.weaponInfo;
+      onSave({ ...stored, name: draft.name.trim() || 'Attaque' });
+    }}>
+      {weapons.length > 0 && (
+        <div>
+          <FieldLabel>Arme de l’inventaire</FieldLabel>
+          <select value={draft.itemId ?? ''} onChange={e => link(e.target.value)} className={cls}>
+            <option value="">Aucune (saisie libre)</option>
+            {weapons.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </select>
+        </div>
+      )}
       <TextField label="Nom" value={draft.name} placeholder="Cimeterre" onChange={v => set('name', v)} />
       <div className="grid grid-cols-2 gap-2">
         <StatSelect label="Carac. au toucher" value={draft.attackStat} onChange={v => set('attackStat', v ?? 'str')} />
         <StatSelect label="Carac. aux dégâts" value={draft.damageStat} allowNone onChange={v => set('damageStat', v)} />
-        <TextField label="Dés de dégâts" value={draft.damageDice} placeholder="1d6" onChange={v => set('damageDice', v)} />
+        {!linkedStats && <TextField label="Dés de dégâts" value={draft.damageDice} placeholder="1d6" onChange={v => set('damageDice', v)} />}
         <NumField label="Altération (+X)" value={draft.enhancement} min={0} max={10} onChange={v => set('enhancement', v)} />
         <NumField label="Toucher (divers)" value={draft.attackMisc} onChange={v => set('attackMisc', v)} />
         <NumField label="Dégâts (divers)" value={draft.damageMisc} onChange={v => set('damageMisc', v)} />
-        <TextField label="Zone de critique" value={draft.critRange} placeholder="19-20" onChange={v => set('critRange', v)} />
-        <NumField label="Multiplicateur" value={draft.critMultiplier} min={2} max={5} onChange={v => set('critMultiplier', v)} />
+        {!linkedStats && <TextField label="Zone de critique" value={draft.critRange} placeholder="19-20" onChange={v => set('critRange', v)} />}
+        {!linkedStats && <NumField label="Multiplicateur" value={draft.critMultiplier} min={2} max={5} onChange={v => set('critMultiplier', v)} />}
       </div>
+      {linkedStats && (
+        <p className={`text-[10px] ${t.textMuted}`}>
+          Dégâts <span className="font-mono">{linkedStats.damage}</span> · critique <span className="font-mono">{formatPf1Crit(linkedStats.critRange, linkedStats.critMultiplier)}</span>
+          {linkedStats.damageType && ` · ${linkedStats.damageType}`} : repris de l’arme, modifiables dans l’inventaire.
+        </p>
+      )}
       <div>
         <FieldLabel>Notes</FieldLabel>
         <textarea value={draft.notes ?? ''} onChange={e => set('notes', e.target.value)} rows={2} className={cls} placeholder="Ex. Danse du derviche : Dex au toucher et aux dégâts" />
