@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient';
 import { useAuth } from './hooks/useAuth';
 import { useCharacterData } from './hooks/useCharacterData';
 import { useSwipeNav } from './hooks/useSwipeNav';
-import { useThemeClasses, useAppSettings } from './contexts/AppSettingsContext';
+import { useThemeClasses, useAppSettings, intStatColor } from './contexts/AppSettingsContext';
 import type { CharacterTheme } from './contexts/AppSettingsContext';
 import type { Character, CoreAttribute, Feature, Item, Familiar, Spell } from './types/rpg.types';
 import { Eye, Swords, User } from 'lucide-react';
@@ -272,7 +272,7 @@ export default function App() {
     { label: 'Force', score: data.activeChar.str, short: 'FOR', color: 'text-rose-400', key: 'str' },
     { label: 'Dextérité', score: data.activeChar.dex, short: 'DEX', color: 'text-cyan-400', key: 'dex' },
     { label: 'Constitution', score: data.activeChar.con, short: 'CON', color: 'text-emerald-400', key: 'con' },
-    { label: 'Intelligence', score: data.activeChar.int, short: 'INT', color: 'text-indigo-400', key: 'int' },
+    { label: 'Intelligence', score: data.activeChar.int, short: 'INT', color: intStatColor(settings.themeName), key: 'int' },
     { label: 'Sagesse', score: data.activeChar.wis, short: 'SAG', color: 'text-teal-400', key: 'wis' },
     { label: 'Charisme', score: data.activeChar.cha, short: 'CHA', color: 'text-amber-400', key: 'cha' }
   ] : [];

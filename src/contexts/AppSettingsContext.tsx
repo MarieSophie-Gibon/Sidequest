@@ -144,6 +144,11 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
   );
 }
 
+/** Couleur de l'Intelligence : l'indigo clair se confond avec le fond bleu clair du thème Azur. */
+export function intStatColor(themeName: ThemeName) {
+  return themeName === 'azure' ? 'text-purple-700' : 'text-indigo-400';
+}
+
 export function useAppSettings() {
   const ctx = useContext(AppSettingsContext);
   if (!ctx) throw new Error('useAppSettings must be used within AppSettingsProvider');

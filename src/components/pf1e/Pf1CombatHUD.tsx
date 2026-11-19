@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Character } from '../../types/rpg.types';
-import { useThemeClasses } from '../../contexts/AppSettingsContext';
+import { useThemeClasses, useAppSettings, intStatColor } from '../../contexts/AppSettingsContext';
 import { DND_CONDITIONS } from '../modals/EditConditionsModal';
 import { Heart, AlertTriangle, BookOpen, Shield } from 'lucide-react';
 import type { Pf1Sheet } from '../../systems/pf1e/types';
@@ -39,6 +39,7 @@ export function Pf1CombatHUD({
   onOpenAvatar, onOpenProfile, onOpenHealth, onOpenConditions, onOpenHelp, onOpenBuild, onOpenDefense, onOpenInitSpeed, renderAvatar,
 }: Props) {
   const t = useThemeClasses();
+  const { themeName } = useAppSettings();
   const cell = `${t.inputBg} border ${t.cardBorder} rounded-lg py-1.5 text-center cursor-pointer hover:${t.accentBorder} transition-all`;
   const label = `text-[8px] ${t.textMuted} font-extrabold block uppercase leading-none`;
 
@@ -109,7 +110,7 @@ export function Pf1CombatHUD({
             {STAT_KEYS.map(key => (
               <div key={key} className={`${t.inputBg} border ${t.cardBorder} hover:${t.accentBorder} rounded-lg py-1.5 text-center cursor-pointer active:scale-95 transition-all`}>
                 <span className={`text-[8px] ${t.textMuted} uppercase font-extrabold block leading-none`}>{STAT_STYLE[key].short}</span>
-                <span className={`text-sm font-extrabold font-mono ${STAT_STYLE[key].color} block mt-0.5 leading-none`}>{signed(sheet.mods[key])}</span>
+                <span className={`text-sm font-extrabold font-mono ${key === 'int' ? intStatColor(themeName) : STAT_STYLE[key].color} block mt-0.5 leading-none`}>{signed(sheet.mods[key])}</span>
               </div>
             ))}
           </div>

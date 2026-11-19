@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { AlertTriangle, Heart, Sparkles } from 'lucide-react';
 import type { Character } from '../../types/rpg.types';
-import { useThemeClasses } from '../../contexts/AppSettingsContext';
+import { useThemeClasses, useAppSettings, intStatColor } from '../../contexts/AppSettingsContext';
 import { DND_CONDITIONS } from '../modals/EditConditionsModal';
 import { setValue, signed, statModifier, statValue, type HomebrewData } from '../../systems/homebrew/sheet';
 
@@ -28,6 +28,7 @@ export function HomebrewCombatHUD({
   onOpenAvatar, onOpenProfile, onOpenHealth, onOpenConditions, onOpenStats, renderAvatar,
 }: Props) {
   const t = useThemeClasses();
+  const { themeName } = useAppSettings();
   const { structure } = data;
   const identity = [activeChar.class, activeChar.race].filter(Boolean).join(' • ');
   const inspiration = structure.specials.find(sp => sp.type === 'checkbox');
@@ -121,7 +122,7 @@ export function HomebrewCombatHUD({
                 return (
                   <div key={s.id} className={`${t.inputBg} border ${t.cardBorder} rounded-lg py-1.5 text-center cursor-pointer active:scale-95 transition-all`}>
                     <span className={`text-[8px] ${t.textMuted} uppercase font-extrabold block leading-none truncate px-0.5`}>{s.short || s.name}</span>
-                    <span className={`text-sm font-extrabold font-mono ${STAT_COLORS[i % STAT_COLORS.length]} block mt-0.5 leading-none`}>
+                    <span className={`text-sm font-extrabold font-mono ${i % STAT_COLORS.length === 3 ? intStatColor(themeName) : STAT_COLORS[i % STAT_COLORS.length]} block mt-0.5 leading-none`}>
                       {s.showMod ? signed(statModifier(data, s.id)) : value}
                     </span>
                   </div>
