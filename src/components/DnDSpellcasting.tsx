@@ -4,6 +4,27 @@ import type { Spell, SpellSlot } from '../types/rpg.types';
 import { useThemeClasses } from '../contexts/AppSettingsContext';
 import { CirclePlus, ChevronDown, Sword, Sparkles, Shield, Funnel } from 'lucide-react';
 
+/** Emplacement de sort en losange : plein s'il est disponible, vide s'il est utilisé. */
+export function SpellSlotGem({ available }: { available: boolean }) {
+  const t = useThemeClasses();
+  const accentHex = t.accent.includes('violet') ? '#a78bfa' : '#3b82f6';
+  const accentDimHex = t.accent.includes('violet') ? '#7c3aed' : '#2563eb';
+  return (
+    <svg className="w-5 h-5 transform rotate-45" viewBox="0 0 24 24">
+      <rect
+        x="4"
+        y="4"
+        width="15"
+        height="15"
+        fill={available ? `${accentHex}40` : 'transparent'}
+        stroke={available ? accentDimHex : '#64748b'}
+        strokeWidth="2"
+      />
+      {available && <rect x="8" y="8" width="8" height="8" fill={`${accentHex}60`} />}
+    </svg>
+  );
+}
+
 interface DnDSpellcastingProps {
   spellSlots: SpellSlot[];
   spells: Spell[];
@@ -21,6 +42,8 @@ interface DnDSpellcastingProps {
   slotsHint?: string;
   /** Bouton supplémentaire sur chaque ligne de sort (ex. « Préparer » en Pathfinder). */
   renderSpellAction?: (spell: Spell) => ReactNode;
+  /** Pathfinder 1e : temps d'incantation, cible / effet et RM à la place du type d'action D&D. */
+  pf1?: boolean;
 }
 
 export function DnDSpellcasting({
@@ -37,10 +60,9 @@ export function DnDSpellcasting({
   slotsTitle = 'Emplacements de Sorts',
   slotsHint = 'Cliquer un niveau pour ajuster',
   renderSpellAction,
+  pf1 = false,
 }: DnDSpellcastingProps) {
   const t = useThemeClasses();
-  const accentHex = t.accent.includes('violet') ? '#a78bfa' : '#3b82f6';
-  const accentDimHex = t.accent.includes('violet') ? '#7c3aed' : '#2563eb';
   const [expandedSpell, setExpandedSpell] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filterLevel, setFilterLevel] = useState<number | null>(null);
@@ -104,18 +126,7 @@ export function DnDSpellcasting({
                           }}
                           className="focus:outline-none"
                         >
-                          <svg className="w-5 h-5 transform rotate-45" viewBox="0 0 24 24">
-                            <rect
-                              x="4"
-                              y="4"
-                              width="15"
-                              height="15"
-                              fill={!isUsed ? `${accentHex}40` : 'transparent'}
-                              stroke={!isUsed ? accentDimHex : '#64748b'}
-                              strokeWidth="2"
-                            />
-                            {!isUsed && <rect x="8" y="8" width="8" height="8" fill={`${accentHex}60`} />}
-                          </svg>
+                          <SpellSlotGem available={!isUsed} />
                         </button>
                       );
                     })}
@@ -168,8 +179,8 @@ export function DnDSpellcasting({
                 {lvl === 0 ? 'Mineur' : `Niv ${lvl}`}
               </button>
             ))}
-            <span className={`w-px self-stretch ${t.cardBorder} border-l mx-0.5`} />
-            {([{ key: 'action', label: 'Action' }, { key: 'bonus', label: 'Bonus' }, { key: 'reaction', label: 'Réaction' }] as const).map(opt => (
+            {!pf1 && <span className={`w-px self-stretch ${t.cardBorder} border-l mx-0.5`} />}
+            {!pf1 && ([{ key: 'action', label: 'Action' }, { key: 'bonus', label: 'Bonus' }, { key: 'reaction', label: 'Réaction' }] as const).map(opt => (
               <button
                 key={opt.key}
                 type="button"
@@ -208,9 +219,15 @@ export function DnDSpellcasting({
                   </div>
                   <div className="flex items-center gap-1.5">
                     {spell.components && spell.components.length > 0 && (
-                      <span className="text-[9px] font-mono font-semibold text-slate-400 bg-slate-500/15 px-1.5 py-0.5 rounded-lg border border-slate-500/30">{spell.components.join('·')}</span>
+                      <span className="text-[9px] font-mono font-semibold text-slate-400 bg-slate-500/15 px-1.5 py-0.5 rounded-lg border border-slate-500/30">{(pf1 ? spell.components.map(c => (c === 'S' ? 'G' : c)) : spell.components).join('·')}</span>
                     )}
-                    {spell.casting_type && (() => {
+                    {pf1 && spell.casting_time && (
+                      <span className={`text-[9px] font-mono ${t.textSecondary} uppercase ${t.btnSecondaryBg} px-1.5 py-0.5 rounded-lg border ${t.btnSecondaryBorder} flex items-center gap-1`}>
+                        <Sword size={10} />
+                        {spell.casting_time.replace(/^1 action /i, '')}
+                      </span>
+                    )}
+                    {!pf1 && spell.casting_type && (() => {
                       const meta = castingTypeMeta[spell.casting_type];
                       const CastIcon = meta.icon;
                       return (
@@ -243,6 +260,10 @@ export function DnDSpellcasting({
                           {[spell.range, spell.duration ? `⏱ ${spell.duration}` : null].filter(Boolean).join(' · ')}
                         </span>
                       )}
+                      {/* Pathfinder 1e : cible / effet, résistance à la magie */}
+                      {[spell.target && `🎯 ${spell.target}`, spell.spell_resistance && `RM ${spell.spell_resistance.toLowerCase()}`].filter(Boolean).map(label => (
+                        <span key={label as string} className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>{label}</span>
+                      ))}
                       {/* Homebrew : école, coût, condition */}
                       {[spell.school, spell.cost && `Coût ${spell.cost}`, spell.condition && `Si ${spell.condition}`].filter(Boolean).map(label => (
                         <span key={label as string} className={`text-[9px] ${t.textMuted} font-mono ${t.cardBg} px-1.5 py-0.5 rounded-md border ${t.cardBorder}`}>{label}</span>

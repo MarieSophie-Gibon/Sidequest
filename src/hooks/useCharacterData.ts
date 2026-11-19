@@ -58,6 +58,10 @@ export interface NewSpellState {
   school?: string;
   cost?: string;
   condition?: string;
+  /** Pathfinder 1e. */
+  casting_time?: string;
+  target?: string;
+  spell_resistance?: string;
 }
 
 export interface NewItemState {
@@ -488,17 +492,20 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
     if (!activeChar || !newFeature.name.trim()) return;
 
     const isPassive = newFeature.category === 'passive';
+    // Capacité active : soit un nombre d'utilisations, soit un coût en ressource — jamais les deux.
+    const usesResource = !isPassive && !!newFeature.resource_id;
+    const usesCount = !isPassive && !usesResource;
     const payload = {
       character_id: activeChar.id,
       name: newFeature.name.trim(),
       type: newFeature.type,
       category: newFeature.category,
-      current: isPassive ? 0 : Number(newFeature.max),
-      max: isPassive ? 0 : Number(newFeature.max),
-      recharge: isPassive ? 'PERMANENT' : newFeature.recharge,
+      current: usesCount ? Number(newFeature.max) : 0,
+      max: usesCount ? Number(newFeature.max) : 0,
+      recharge: usesCount ? newFeature.recharge : 'PERMANENT',
       description: newFeature.description || '',
-      resource_id: newFeature.resource_id || null,
-      resource_cost: newFeature.resource_cost || 0,
+      resource_id: usesResource ? newFeature.resource_id : null,
+      resource_cost: usesResource ? (newFeature.resource_cost || 1) : 0,
     };
 
     if (newFeature.id) {
@@ -679,7 +686,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       range: newSpell.range || null,
       duration: newSpell.duration || null,
       components: newSpell.components.length > 0 ? newSpell.components : null,
-      material_components: newSpell.components.includes('M') ? (newSpell.material_components.trim() || null) : null,
+      material_components: newSpell.components.some(c => c === 'M' || c === 'F' || c === 'FD') ? (newSpell.material_components.trim() || null) : null,
       casting_type: newSpell.casting_type,
       is_aoe: newSpell.is_aoe,
       save_type: newSpell.is_aoe ? newSpell.save_type : null,
@@ -693,6 +700,13 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
         school: newSpell.school?.trim() || null,
         cost: newSpell.cost?.trim() || null,
         condition: newSpell.condition?.trim() || null,
+      }),
+      // Pathfinder 1e : école, temps d'incantation, cible / effet, résistance à la magie.
+      ...(activeChar.system === 'pf1e' && {
+        school: newSpell.school?.trim() || null,
+        casting_time: newSpell.casting_time?.trim() || null,
+        target: newSpell.target?.trim() || null,
+        spell_resistance: newSpell.spell_resistance?.trim() || null,
       }),
     };
 

@@ -310,6 +310,9 @@ export function Pf1MagicModal({ data, onSave, onClose }: { data: Pf1Data; onSave
   const hasTable = !!findPf1Class(draft.classId)?.spellsPerDay;
   const [perDayText, setPerDayText] = useState(draft.spellsPerDayBase.map(v => (v === null ? '-' : String(v))).join(', '));
 
+  const perDayPreview = perDayText.split(',').map(s => s.trim()).filter(Boolean)
+    .map((s, lvl) => `Niv. ${lvl} : ${/^\d+$/.test(s) ? s : '—'}`).join(' · ');
+
   const save = () => {
     const spellsPerDayBase = hasTable ? draft.spellsPerDayBase : perDayText.split(',').map(s => s.trim()).filter(Boolean)
       .map(s => (/^\d+$/.test(s) ? Number(s) : null));
@@ -321,20 +324,46 @@ export function Pf1MagicModal({ data, onSave, onClose }: { data: Pf1Data; onSave
       <StatSelect label="Caractéristique d’incantation" value={draft.castingStat} allowNone onChange={v => setDraft(d => ({ ...d, castingStat: v }))} />
       {draft.castingStat && (
         <>
+          <div>
+            <FieldLabel>Type de lanceur</FieldLabel>
+            <div className="grid grid-cols-2 gap-1">
+              {([['prepared', 'Prépare ses sorts'], ['spontaneous', 'Spontané']] as const).map(([mode, label]) => {
+                const active = (draft.castingMode ?? 'prepared') === mode;
+                return (
+                  <button key={mode} type="button" onClick={() => setDraft(d => ({ ...d, castingMode: mode }))}
+                    className={`py-1.5 text-[11px] font-bold rounded-lg border transition-all ${active ? `${t.accentBg} ${t.accentBorder} ${t.accent}` : `${t.textMuted} ${t.cardBorder} hover:brightness-95`}`}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className={`text-[10px] ${t.textMuted} mt-1`}>
+              {(draft.castingMode ?? 'prepared') === 'spontaneous'
+                ? 'Barde, ensorceleur, oracle… : tu lances n’importe quel sort que tu connais, tant qu’il te reste un emplacement de son niveau.'
+                : 'Magicien, prêtre, druide… : chaque jour, tu choisis dans ton grimoire les sorts que tu pourras lancer.'}
+            </p>
+          </div>
           {hasTable ? (
             <p className={`text-[10px] ${t.textMuted}`}>Sorts par jour calculés avec la table de classe et les sorts en bonus ({STAT_SHORT[draft.castingStat]}).</p>
           ) : (
             <div>
-              <FieldLabel>Sorts / jour de la table (niv. 0, 1, 2…)</FieldLabel>
+              <FieldLabel>Nombre de sorts / jour (niv. 0, 1, 2…)</FieldLabel>
               <input value={perDayText} onChange={e => setPerDayText(e.target.value)} placeholder="3, 1, -" className={`${cls} font-mono`} />
-              <p className={`text-[10px] ${t.textMuted} mt-1`}>Sans les sorts en bonus : ils sont ajoutés automatiquement. « - » = niveau pas encore accessible.</p>
+              {perDayPreview && <p className={`text-[10px] font-mono ${t.textSecondary} mt-1`}>{perDayPreview}</p>}
+              {draft.castingMode === 'spontaneous' && (
+                <p className={`text-[10px] ${t.textMuted} mt-1`}>
+                  Si le niveau 0 est à volonté, mets « - » en premier (ex. « -, 3 »).
+                </p>
+              )}
             </div>
           )}
           <div className="grid grid-cols-2 gap-2">
-            <NumField label="Concentration (divers)" value={draft.concentrationMisc} onChange={v => setDraft(d => ({ ...d, concentrationMisc: v }))} />
+            <NumField label="Bonus de concentration" value={draft.concentrationMisc} onChange={v => setDraft(d => ({ ...d, concentrationMisc: v }))} />
             <NumField label="Bonus sur la défensive" value={draft.defensiveCastingBonus} onChange={v => setDraft(d => ({ ...d, defensiveCastingBonus: v }))} />
           </div>
-          <p className={`text-[10px] ${t.textMuted}`}>Ex. Magie de guerre : +4 pour lancer sur la défensive.</p>
+          <p className={`text-[10px] ${t.textMuted}`}>
+            La concentration est déjà calculée (niveau de lanceur + caractéristique).
+          </p>
         </>
       )}
     </Pf1Modal>

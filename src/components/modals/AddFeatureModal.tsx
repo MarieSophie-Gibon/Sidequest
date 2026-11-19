@@ -23,11 +23,31 @@ const DEFAULT_TYPES = [
   { id: 'don', name: 'Don' },
 ];
 
+type UsageMode = 'uses' | 'resource';
+
 export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit, onDelete, onClose, perDayOnly, typeOptions }: Props) {
   const t = useThemeClasses();
-  const [maxInput, setMaxInput] = useState(String(newFeature.max));
-  const [resourceCostInput, setResourceCostInput] = useState(String(newFeature.resource_cost));
-  const minMax = newFeature.resource_id ? 0 : 1;
+  const [maxInput, setMaxInput] = useState(String(Math.max(1, newFeature.max)));
+  const [resourceCostInput, setResourceCostInput] = useState(String(Math.max(1, newFeature.resource_cost)));
+  // Une capacité active se décompte soit en nombre d'utilisations (rechargées au repos),
+  // soit en points d'une ressource. Jamais les deux.
+  const [usageMode, setUsageMode] = useState<UsageMode>(newFeature.resource_id ? 'resource' : 'uses');
+
+  function selectUsageMode(mode: UsageMode) {
+    setUsageMode(mode);
+    if (mode === 'uses') {
+      const nextMax = Math.max(1, newFeature.max);
+      setMaxInput(String(nextMax));
+      setNewFeature(prev => ({ ...prev, max: nextMax, resource_id: '', resource_cost: 0 }));
+    } else {
+      const nextCost = Math.max(1, newFeature.resource_cost);
+      setResourceCostInput(String(nextCost));
+      setNewFeature(prev => ({ ...prev, max: 0, resource_cost: nextCost }));
+    }
+  }
+
+  const toggleClass = (selected: boolean) =>
+    selected ? `${t.accentBg} ${t.accentBorder} ${t.accent}` : `${t.inputBg} ${t.inputBorder} ${t.textMuted}`;
 
   return (
     <div className={`fixed inset-0 ${t.modalOverlay} z-50 flex items-center justify-center p-4`}>
@@ -40,7 +60,7 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
             <div className="grid grid-cols-3 gap-1.5">
               {(typeOptions ?? DEFAULT_TYPES).map(({ id, name }) => (
                 <button key={id} type="button" onClick={() => setNewFeature(prev => ({ ...prev, type: id }))}
-                  className={`py-1.5 px-1 rounded-xl border text-[9px] font-bold uppercase min-h-7 leading-tight transition-all ${newFeature.type === id ? `${t.accentBg} ${t.accentBorder} ${t.accent}` : `${t.inputBg} ${t.inputBorder} ${t.textMuted}`}`}
+                  className={`py-1.5 px-1 rounded-xl border text-[9px] font-bold uppercase min-h-7 leading-tight transition-all ${toggleClass(newFeature.type === id)}`}
                 >{name || 'Sans nom'}</button>
               ))}
             </div>
@@ -55,27 +75,42 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Type</label>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setNewFeature(prev => ({ ...prev, category: 'active' }))}
-                className={`py-1.5 px-3 rounded-xl border text-[10px] font-bold uppercase h-7 transition-all ${newFeature.category === 'active' ? `${t.accentBg} ${t.accentBorder} ${t.accent}` : `${t.inputBg} ${t.inputBorder} ${t.textMuted}`}`}
+                className={`py-1.5 px-3 rounded-xl border text-[10px] font-bold uppercase h-7 transition-all ${toggleClass(newFeature.category === 'active')}`}
               >Active</button>
               <button type="button" onClick={() => setNewFeature(prev => ({ ...prev, category: 'passive' }))}
-                className={`py-1.5 px-3 rounded-xl border text-[10px] font-bold uppercase h-7 transition-all ${newFeature.category === 'passive' ? `${t.accentBg} ${t.accentBorder} ${t.accent}` : `${t.inputBg} ${t.inputBorder} ${t.textMuted}`}`}
+                className={`py-1.5 px-3 rounded-xl border text-[10px] font-bold uppercase h-7 transition-all ${toggleClass(newFeature.category === 'passive')}`}
               >Passive</button>
             </div>
           </div>
 
           {newFeature.category === 'active' && (
+            <div>
+              <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Utilisation</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => selectUsageMode('uses')}
+                  className={`py-1.5 px-3 rounded-xl border text-[10px] font-bold uppercase h-7 transition-all ${toggleClass(usageMode === 'uses')}`}
+                >Nb d'utilisations</button>
+                <button type="button" disabled={resources.length === 0} onClick={() => selectUsageMode('resource')}
+                  title={resources.length === 0 ? 'Aucune ressource définie' : undefined}
+                  className={`py-1.5 px-3 rounded-xl border text-[10px] font-bold uppercase h-7 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${toggleClass(usageMode === 'resource')}`}
+                >Ressource</button>
+              </div>
+            </div>
+          )}
+
+          {newFeature.category === 'active' && usageMode === 'uses' && (
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Max</label>
                 <input
                   type="number"
-                  min={minMax}
+                  min={1}
                   value={maxInput}
                   onChange={(e) => {
                     const nextValue = e.target.value;
                     setMaxInput(nextValue);
                     if (nextValue === '') return;
-                    setNewFeature(prev => ({ ...prev, max: Math.max(minMax, Number(nextValue)) }));
+                    setNewFeature(prev => ({ ...prev, max: Math.max(1, Number(nextValue)) }));
                   }}
                   onBlur={() => {
                     if (maxInput === '') setMaxInput(String(newFeature.max));
@@ -100,47 +135,41 @@ export function AddFeatureModal({ newFeature, setNewFeature, resources, onSubmit
             </div>
           )}
 
+          {newFeature.category === 'active' && usageMode === 'resource' && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Ressource</label>
+                <select required value={newFeature.resource_id} onChange={(e) => setNewFeature(prev => ({ ...prev, resource_id: e.target.value }))}
+                  className={`border ${t.inputBorder} rounded-xl p-2.5 w-full text-xs ${t.inputBg} ${t.textSecondary} font-bold focus:outline-none`}>
+                  <option value="">— Choisir —</option>
+                  {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Coût</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={resourceCostInput}
+                  onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setResourceCostInput(nextValue);
+                    if (nextValue === '') return;
+                    setNewFeature(prev => ({ ...prev, resource_cost: Math.max(1, Number(nextValue)) }));
+                  }}
+                  onBlur={() => {
+                    if (resourceCostInput === '') setResourceCostInput(String(newFeature.resource_cost));
+                  }}
+                  className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none font-mono`}
+                />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Description</label>
             <textarea placeholder="Description..." value={newFeature.description} onChange={(e) => setNewFeature(prev => ({ ...prev, description: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-16 focus:outline-none`} />
           </div>
-
-          {resources.length > 0 && newFeature.category === 'active' && (
-            <div className={`${t.inputBg} border ${t.inputBorder} rounded-xl p-2.5 space-y-2`}>
-              <label className={`text-[10px] ${t.textMuted} uppercase block`}>Coût en ressource</label>
-              <div className="grid grid-cols-2 gap-2">
-                <select value={newFeature.resource_id} onChange={(e) => {
-                    const nextResourceId = e.target.value;
-                    setNewFeature(prev => {
-                      const nextMax = !nextResourceId && prev.max === 0 ? 1 : prev.max;
-                      if (nextMax !== prev.max) setMaxInput(String(nextMax));
-                      return { ...prev, resource_id: nextResourceId, max: nextMax };
-                    });
-                  }} className={`border ${t.inputBorder} rounded-xl p-2 w-full text-xs ${t.inputBg} ${t.textSecondary} focus:outline-none`}>
-                  <option value="">— Aucune —</option>
-                  {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-                {newFeature.resource_id && (
-                  <input
-                    type="number"
-                    min="0"
-                    value={resourceCostInput}
-                    onChange={(e) => {
-                      const nextValue = e.target.value;
-                      setResourceCostInput(nextValue);
-                      if (nextValue === '') return;
-                      setNewFeature(prev => ({ ...prev, resource_cost: Math.max(0, Number(nextValue)) }));
-                    }}
-                    onBlur={() => {
-                      if (resourceCostInput === '') setResourceCostInput(String(newFeature.resource_cost));
-                    }}
-                    placeholder="Coût"
-                    className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2 w-full text-xs focus:outline-none font-mono`}
-                  />
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {newFeature.id && (

@@ -4,7 +4,7 @@ import { ArrowLeft, BatteryCharging, BookOpen, ChevronRight, CirclePlus, Minus, 
 import type { Spell, SpellSlot } from '../../types/rpg.types';
 import type { Pf1Attack, Pf1Data, Pf1PreparedSpell, Pf1Sheet, Pf1SpellCharges } from '../../systems/pf1e/types';
 import { signed, spellChargeCount } from '../../systems/pf1e/rules';
-import { DnDSpellcasting } from '../DnDSpellcasting';
+import { DnDSpellcasting, SpellSlotGem } from '../DnDSpellcasting';
 import { Pf1SpellHeader } from './Pf1SpellHeader';
 import { Pf1ManeuversCard } from './Pf1ManeuversCard';
 import { FieldLabel, NumField, Pf1Collapsible, Pf1Modal } from './ui';
@@ -41,6 +41,7 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
   const casterLevel = sheet.spellcasting?.casterLevel ?? sheet.level;
   const chargesCfg = (spellId: string) => data.spellCharges?.[spellId];
 
+  const spontaneous = data.castingMode === 'spontaneous';
   const preparedCount = (spellId: string) => prepared.filter(p => p.spellId === spellId).length;
 
   const prepare = (spell: Spell) => {
@@ -93,7 +94,8 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
         onOpenAddSpell={onOpenAddSpell}
         onEditSpell={onEditSpell}
         onEditSpellcasting={onOpenMagic}
-        renderSpellAction={(spell) => {
+        pf1
+        renderSpellAction={spontaneous ? undefined : (spell) => {
           const count = preparedCount(spell.id);
           return (
             <button
@@ -152,6 +154,17 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
       {/* Toujours visible : même un guerrier peut avoir un grimoire (parchemins, objets…). */}
       <Pf1SpellHeader sheet={sheet} onEdit={onOpenMagic} />
 
+      {spontaneous ? (
+        <Pf1KnownSpellsCard
+          spells={spells}
+          perDay={perDay}
+          bonusSpells={sheet.spellcasting?.bonusSpells ?? []}
+          slots={slots}
+          hasSpellcasting={!!sheet.spellcasting}
+          onToggleSlot={onToggleSlot}
+          onOpenGrimoire={() => setView('grimoire')}
+        />
+      ) : (
       <Pf1Collapsible
         title={`Sorts préparés${prepared.length ? ` (${prepared.filter(p => !p.cast).length}/${prepared.length})` : ''}`}
         aside={
@@ -176,7 +189,9 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
                   .sort((a, b) => spellById.get(a.spellId)!.name.localeCompare(spellById.get(b.spellId)!.name, 'fr'));
                 const max = perDay[level];
                 const slot = slots.find(s => s.level === level);
-                if (entries.length === 0 && !slot) return null;
+                // Niveau 0 : pas d'emplacements (à volonté) mais un nombre de sorts à préparer.
+                if (entries.length === 0 && !slot && !max) return null;
+                const bonus = sheet.spellcasting?.bonusSpells[level] ?? 0;
                 const over = max !== null && max !== undefined && entries.length > max;
                 return (
                   <div key={level}>
@@ -184,14 +199,17 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
                       <span className={`text-[10px] font-bold uppercase tracking-wider ${t.textSecondary}`}>
                         {level === 0 ? 'Niv. 0 · à volonté' : `Niv. ${level}`}
                         {max !== null && max !== undefined && (
-                          <span className={`ml-1.5 font-mono ${over ? 'text-rose-400' : t.textMuted}`}>{entries.length}/{max} préparés</span>
+                          <span className={`ml-1.5 font-mono ${over ? 'text-rose-400' : t.textMuted}`}>
+                            {entries.length}/{max} préparés{bonus > 0 && ` (${max - bonus} + ${bonus} bonus)`}
+                          </span>
                         )}
                       </span>
                       {slot && (
-                        <div className="flex gap-1 flex-wrap justify-end">
+                        <div className="flex gap-1.5 flex-wrap justify-end">
                           {Array.from({ length: slot.max }).map((_, i) => (
-                            <button key={i} type="button" onClick={() => onToggleSlot(level, i)} aria-label={`Emplacement ${i + 1}`}
-                              className={`w-3 h-3 rotate-45 border transition-colors ${i < slot.current ? `${t.accent} bg-current border-current` : 'bg-transparent border-slate-500'}`} />
+                            <button key={i} type="button" onClick={() => onToggleSlot(level, i)} aria-label={`Emplacement ${i + 1}`} className="focus:outline-none">
+                              <SpellSlotGem available={i < slot.current} />
+                            </button>
                           ))}
                         </div>
                       )}
@@ -245,6 +263,7 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
               })}
             </div>
       </Pf1Collapsible>
+      )}
       {chargesFor && (
         <SpellChargesModal
           spell={chargesFor}
@@ -255,6 +274,98 @@ export function Pf1ActionsTab({ data, sheet, spells, slots, onChange, onToggleSl
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Lanceur spontané : pas de préparation. Chaque sort connu se lance avec un emplacement libre de son niveau.
+ * Les sorts de niveau 0 se lancent à volonté.
+ */
+function Pf1KnownSpellsCard({ spells, perDay, bonusSpells, slots, hasSpellcasting, onToggleSlot, onOpenGrimoire }: {
+  spells: Spell[];
+  perDay: (number | null)[];
+  bonusSpells: number[];
+  slots: SpellSlot[];
+  hasSpellcasting: boolean;
+  onToggleSlot: (level: number, slotIndex: number) => void;
+  onOpenGrimoire: () => void;
+}) {
+  const t = useThemeClasses();
+  const smallBtn = `flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all active:scale-95 leading-none`;
+  const levels = Array.from(new Set([
+    ...perDay.flatMap((v, lvl) => (v ? [lvl] : [])),
+    ...spells.map(s => s.level),
+  ])).sort((a, b) => a - b);
+
+  return (
+    <Pf1Collapsible
+      title={`Sorts connus${spells.length ? ` (${spells.length})` : ''}`}
+      aside={
+        <button type="button" onClick={onOpenGrimoire} className={`${smallBtn} ${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.btnSecondaryText}`}>
+          <BookOpen size={11} /> Gérer <ChevronRight size={11} />
+        </button>
+      }
+    >
+      {spells.length === 0 && (
+        <p className={`text-[11px] ${t.textMuted} italic mb-2`}>
+          {hasSpellcasting
+            ? 'Aucun sort connu. Ouvre « Gérer » pour inscrire les sorts que tu connais.'
+            : 'Choisis une caractéristique d’incantation (carte ci-dessus) pour avoir des sorts par jour.'}
+        </p>
+      )}
+      <div className="space-y-3">
+        {levels.map(level => {
+          const known = spells.filter(s => s.level === level).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+          const max = perDay[level];
+          const slot = slots.find(s => s.level === level);
+          const left = slot?.current ?? 0;
+          const bonus = bonusSpells[level] ?? 0;
+          // Lancer = utiliser le premier emplacement encore libre.
+          const cast = () => { if (slot && left > 0) onToggleSlot(level, left - 1); };
+          return (
+            <div key={level}>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${t.textSecondary}`}>
+                  {level === 0 ? 'Niv. 0 · à volonté' : `Niv. ${level}`}
+                  {level > 0 && max ? (
+                    <span className={`ml-1.5 font-mono ${t.textMuted}`}>{left}/{max} restants{bonus > 0 && ` (${max - bonus} + ${bonus} bonus)`}</span>
+                  ) : null}
+                </span>
+                {slot && (
+                  <div className="flex gap-1.5 flex-wrap justify-end">
+                    {Array.from({ length: slot.max }).map((_, i) => (
+                      <button key={i} type="button" onClick={() => onToggleSlot(level, i)} aria-label={`Emplacement ${i + 1}`} className="focus:outline-none">
+                        <SpellSlotGem available={i < slot.current} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1">
+                {known.length === 0 && <p className={`text-[10px] ${t.textMuted} italic`}>Aucun sort connu de ce niveau.</p>}
+                {known.map(spell => {
+                  const meta = [spell.casting_time, spell.save_type && `JS ${spell.save_type}`, spell.range].filter(Boolean).join(' · ');
+                  return (
+                    <div key={spell.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${t.inputBg} ${t.cardBorder}`}>
+                      <div className="flex-1 min-w-0">
+                        <span className={`text-xs font-bold ${t.textPrimary} block truncate`}>{spell.name}</span>
+                        {meta && <span className={`text-[9px] font-mono ${t.textMuted} block truncate`}>{meta}</span>}
+                      </div>
+                      {level > 0 && (
+                        <button type="button" onClick={cast} disabled={left === 0}
+                          className={`${smallBtn} ${left > 0 ? `${t.accentBg} ${t.accentBorder} ${t.accent}` : `${t.btnSecondaryBg} ${t.btnSecondaryBorder} ${t.textMuted} opacity-50`}`}>
+                          <Zap size={10} /> Lancer
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Pf1Collapsible>
   );
 }
 

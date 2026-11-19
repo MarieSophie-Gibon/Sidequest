@@ -13,6 +13,8 @@ export interface Pf1ClassDef {
   castingStat: CharacterStatKey | null;
   /** Sorts par jour de la table de classe, par niveau de personnage (index 0 = niveau 1). */
   spellsPerDay?: (number | null)[][];
+  /** Lanceur spontané (barde, ensorceleur) : pas de sorts préparés. */
+  spontaneous?: boolean;
 }
 
 /** Table du Magus (pathfinder-fr.org), niveaux 1 à 20, sorts de niveau 0 à 6. */
@@ -30,11 +32,11 @@ const MAGUS_SPELLS: (number | null)[][] = [
 export const PF1_CLASSES: Pf1ClassDef[] = [
   { id: 'barbare', name: 'Barbare', hitDie: 12, bab: 'full', goodSaves: ['fort'], skillRanksPerLevel: 4, castingStat: null,
     classSkills: ['acrobatics', 'craft', 'handle-animal', 'ride', 'climb', 'intimidate', 'k-nature', 'swim', 'perception', 'survival'] },
-  { id: 'barde', name: 'Barde', hitDie: 8, bab: 'medium', goodSaves: ['ref', 'will'], skillRanksPerLevel: 6, castingStat: 'cha',
+  { id: 'barde', name: 'Barde', hitDie: 8, bab: 'medium', goodSaves: ['ref', 'will'], skillRanksPerLevel: 6, castingStat: 'cha', spontaneous: true,
     classSkills: ['acrobatics', 'spellcraft', 'craft', 'bluff', ...ALL_KNOWLEDGE, 'disguise', 'diplomacy', 'stealth', 'climb', 'sleight-of-hand', 'appraise', 'escape-artist', 'intimidate', 'linguistics', 'perception', 'profession', 'sense-motive', 'perform', 'use-magic-device'] },
   { id: 'druide', name: 'Druide', hitDie: 8, bab: 'medium', goodSaves: ['fort', 'will'], skillRanksPerLevel: 4, castingStat: 'wis',
     classSkills: ['spellcraft', 'craft', 'k-geography', 'k-nature', 'handle-animal', 'ride', 'climb', 'swim', 'perception', 'heal', 'profession', 'survival', 'fly'] },
-  { id: 'ensorceleur', name: 'Ensorceleur', hitDie: 6, bab: 'poor', goodSaves: ['will'], skillRanksPerLevel: 2, castingStat: 'cha',
+  { id: 'ensorceleur', name: 'Ensorceleur', hitDie: 6, bab: 'poor', goodSaves: ['will'], skillRanksPerLevel: 2, castingStat: 'cha', spontaneous: true,
     classSkills: ['spellcraft', 'craft', 'bluff', 'k-arcana', 'appraise', 'intimidate', 'profession', 'use-magic-device', 'fly'] },
   { id: 'guerrier', name: 'Guerrier', hitDie: 10, bab: 'full', goodSaves: ['fort'], skillRanksPerLevel: 2, castingStat: null,
     classSkills: ['craft', 'k-dungeoneering', 'k-engineering', 'handle-animal', 'ride', 'climb', 'intimidate', 'swim', 'profession', 'survival'] },

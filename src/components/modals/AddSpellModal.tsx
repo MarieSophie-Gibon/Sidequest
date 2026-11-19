@@ -13,9 +13,11 @@ interface Props {
   onClose: () => void;
   /** Homebrew : champs cochés par le MJ (nom, niveau, portée et description toujours présents). */
   hbFields?: HbSpellField[];
+  /** Pathfinder 1e : champs du bloc de sort PF1 à la place de ceux de D&D. */
+  pf1?: boolean;
 }
 
-export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClose, hbFields }: Props) {
+export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClose, hbFields, pf1 }: Props) {
   const t = useThemeClasses();
   const isEditing = !!newSpell.id;
   const [levelInput, setLevelInput] = useState(String(newSpell.level));
@@ -39,6 +41,9 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Nom</label>
             <input type="text" placeholder="ex: Éclair de feu" value={newSpell.name} onChange={(e) => setNewSpell(prev => ({ ...prev, name: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`} required />
           </div>
+          {pf1 ? (
+            <Pf1SpellFields newSpell={newSpell} setNewSpell={setNewSpell} levelInput={levelInput} setLevelInput={setLevelInput} />
+          ) : <>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Niveau</label>
@@ -179,6 +184,7 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
             )}
           </div>}
           {extraField('condition', 'Condition', 'Cible consentante, de nuit…')}
+          </>}
           <div>
             <label className={`text-[10px] ${t.textMuted} uppercase block mb-1`}>Description</label>
             <textarea placeholder="Effets..." value={newSpell.desc} onChange={(e) => setNewSpell(prev => ({ ...prev, desc: e.target.value }))} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-16 focus:outline-none`} />
@@ -194,4 +200,171 @@ export function AddSpellModal({ newSpell, setNewSpell, onSubmit, onDelete, onClo
       </form>
     </div>
   );
+}
+
+const PF1_CASTING_TIMES = ['1 action simple', '1 action complexe', '1 action rapide', '1 action immédiate', '1 round'] as const;
+const PF1_COMPONENTS = [
+  { key: 'V', title: 'Verbale' },
+  { key: 'G', title: 'Gestuelle' },
+  { key: 'M', title: 'Matérielle' },
+  { key: 'F', title: 'Focaliseur' },
+  { key: 'FD', title: 'Focaliseur divin' },
+] as const;
+const PF1_SPELL_RESISTANCE = ['Oui', 'Non'] as const;
+
+/** « Oui (inoffensif, objet) » → { base: 'Oui', detail: 'inoffensif, objet' }. */
+function parseSpellResistance(value: string | undefined) {
+  const m = /^(Oui|Non)\s*(?:\((.*)\))?$/i.exec((value ?? '').trim());
+  if (!m) return { base: null, detail: '' };
+  return { base: m[1][0].toUpperCase() + m[1].slice(1).toLowerCase(), detail: m[2] ?? '' };
+}
+
+/** Champs d'un sort Pathfinder 1e, dans l'ordre du bloc de sort. */
+function Pf1SpellFields({ newSpell, setNewSpell, levelInput, setLevelInput }: {
+  newSpell: NewSpellState;
+  setNewSpell: React.Dispatch<React.SetStateAction<NewSpellState>>;
+  levelInput: string;
+  setLevelInput: (v: string) => void;
+}) {
+  const t = useThemeClasses();
+  const labelCls = `text-[10px] ${t.textMuted} uppercase block mb-1`;
+  const inputCls = `${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs focus:outline-none`;
+  const chipCls = (active: boolean) => `px-2 py-1 text-[10px] font-bold rounded-lg border transition-all ${
+    active ? `${t.accentBg} ${t.accentBorder} ${t.btnPrimaryText}` : `${t.textMuted} ${t.cardBorder} hover:brightness-95`
+  }`;
+  const set = <K extends keyof NewSpellState>(key: K, value: NewSpellState[K]) => setNewSpell(prev => ({ ...prev, [key]: value }));
+  // Anciennes fiches : « S » (somatique, D&D) correspond à « G » (gestuelle).
+  const components = newSpell.components.map(c => (c === 'S' ? 'G' : c));
+  const sr = parseSpellResistance(newSpell.spell_resistance);
+  const needsMaterial = components.some(c => c === 'M' || c === 'F' || c === 'FD');
+
+  return <>
+    <div className="grid grid-cols-2 gap-2">
+      <div>
+        <label className={labelCls}>École</label>
+        <input type="text" placeholder="Évocation [feu]" value={newSpell.school ?? ''} onChange={(e) => set('school', e.target.value)} className={inputCls} />
+      </div>
+      <div>
+        <label className={labelCls}>Niveau</label>
+        <input
+          type="number"
+          min="0"
+          max="9"
+          value={levelInput}
+          onChange={(e) => {
+            const nextValue = e.target.value;
+            setLevelInput(nextValue);
+            if (nextValue === '') return;
+            set('level', Math.max(0, Math.min(9, Number(nextValue))));
+          }}
+          onBlur={() => { if (levelInput === '') setLevelInput(String(newSpell.level)); }}
+          className={`${inputCls} font-mono`}
+        />
+      </div>
+    </div>
+    <div>
+      <label className={labelCls}>Temps d’incantation</label>
+      <div className="flex flex-wrap gap-1 mb-1.5">
+        {PF1_CASTING_TIMES.map(value => (
+          <button key={value} type="button" onClick={() => set('casting_time', newSpell.casting_time === value ? '' : value)} className={chipCls(newSpell.casting_time === value)}>
+            {value.replace(/^1 action /, '').replace(/^\w/, c => c.toUpperCase())}
+          </button>
+        ))}
+      </div>
+      <input type="text" placeholder="Ou autre : 1 minute, 10 minutes…" value={newSpell.casting_time ?? ''} onChange={(e) => set('casting_time', e.target.value)} className={inputCls} />
+    </div>
+    <div>
+      <label className={labelCls}>Composantes</label>
+      <div className={`flex gap-1 ${t.inputBg} border ${t.inputBorder} rounded-xl px-2.5 py-2`}>
+        {PF1_COMPONENTS.map(({ key, title }) => {
+          const active = components.includes(key);
+          return (
+            <button
+              key={key}
+              type="button"
+              title={title}
+              onClick={() => {
+                const next = active ? components.filter(c => c !== key) : [...components, key];
+                setNewSpell(prev => ({
+                  ...prev,
+                  components: next,
+                  material_components: next.some(c => c === 'M' || c === 'F' || c === 'FD') ? prev.material_components : '',
+                }));
+              }}
+              className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-lg border transition-all ${
+                active ? `${t.accentBg} ${t.accentBorder} ${t.btnPrimaryText}` : `${t.textMuted} ${t.cardBorder} hover:brightness-95`
+              }`}
+            >
+              {key}
+            </button>
+          );
+        })}
+      </div>
+      {needsMaterial && (
+        <input type="text" placeholder="Matériel / focaliseur : une pincée de soufre…" value={newSpell.material_components} onChange={(e) => set('material_components', e.target.value)} className={`${inputCls} mt-1.5`} />
+      )}
+    </div>
+    <div className="grid grid-cols-2 gap-2">
+      <div>
+        <label className={labelCls}>Portée</label>
+        <input type="text" placeholder="Courte (7,50 m + 1,50 m/2 niv.)" value={newSpell.range} onChange={(e) => set('range', e.target.value)} className={inputCls} />
+      </div>
+      <div>
+        <label className={labelCls}>Effet / cible</label>
+        <input type="text" placeholder="1 créature, rayon de 6 m…" value={newSpell.target ?? ''} onChange={(e) => set('target', e.target.value)} className={inputCls} />
+      </div>
+    </div>
+    <div>
+      <label className={labelCls}>Durée</label>
+      <input type="text" placeholder="Instantanée, 1 round/niveau…" value={newSpell.duration} onChange={(e) => set('duration', e.target.value)} className={inputCls} />
+    </div>
+    <div className={`flex items-center gap-4 ${t.inputBg} border ${t.inputBorder} rounded-xl p-2.5`}>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" checked={newSpell.concentration} onChange={(e) => set('concentration', e.target.checked)} className="w-3.5 h-3.5 rounded accent-violet-500" />
+        <span className={`text-xs font-bold ${t.textPrimary}`}>Concentration</span>
+      </label>
+    </div>
+    <div className={`flex flex-col gap-2 ${t.inputBg} border ${t.inputBorder} rounded-xl p-2.5`}>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" checked={newSpell.is_aoe} onChange={(e) => setNewSpell(prev => ({ ...prev, is_aoe: e.target.checked, save_type: e.target.checked ? prev.save_type : '', save_effect: e.target.checked ? prev.save_effect : '' }))} className="w-3.5 h-3.5 rounded accent-violet-500" />
+        <span className={`text-xs font-bold ${t.textPrimary}`}>Jet de sauvegarde</span>
+      </label>
+      {newSpell.is_aoe && (
+        <div className="flex flex-col gap-2 pl-5">
+          <div className="flex gap-1">
+            {(['Vigueur', 'Réflexes', 'Volonté'] as const).map(value => (
+              <button key={value} type="button" onClick={() => set('save_type', newSpell.save_type === value ? '' : value)} className={`flex-1 ${chipCls(newSpell.save_type === value)}`}>
+                {value}
+              </button>
+            ))}
+          </div>
+          <input type="text" placeholder="Effet : annule, 1/2 dégâts, partiel…" value={newSpell.save_effect} onChange={(e) => set('save_effect', e.target.value)} className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-lg px-2 py-1.5 text-xs focus:outline-none`} />
+        </div>
+      )}
+    </div>
+    <div>
+      <label className={labelCls}>Résistance à la magie</label>
+      <div className="space-y-1">
+        {PF1_SPELL_RESISTANCE.map(base => {
+          const active = sr.base === base;
+          // Enregistré sous la forme « Oui » ou « Oui (inoffensif, objet) ».
+          const save = (detail: string) => set('spell_resistance', detail.trim() ? `${base} (${detail})` : base);
+          return (
+            <div key={base} className="flex items-center gap-1.5">
+              <button type="button" onClick={() => set('spell_resistance', active ? '' : base)} className={`w-12 shrink-0 ${chipCls(active)}`}>
+                {base}
+              </button>
+              <input
+                type="text"
+                placeholder={base === 'Oui' ? 'inoffensif, objet…' : 'objet…'}
+                value={active ? sr.detail : ''}
+                onChange={(e) => save(e.target.value)}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-lg px-2 py-1 w-full text-xs focus:outline-none`}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </>;
 }
