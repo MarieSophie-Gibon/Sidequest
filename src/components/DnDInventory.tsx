@@ -408,6 +408,11 @@ export function DnDInventory({
                           {item.description}
                         </p>
                       )}
+                      {item.effect && (
+                        <p className={`text-[10px] ${t.accent} mt-0.5 leading-snug wrap-break-word`}>
+                          ✦ {item.effect}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mt-0.5">
                         {item.damage && (
                           <span className={`text-[9px] font-mono ${t.accent}`}>
@@ -476,6 +481,11 @@ export function DnDInventory({
                           className={`text-[10px] ${t.textSecondary} mt-0.5 leading-snug wrap-break-word`}
                         >
                           {item.description}
+                        </p>
+                      )}
+                      {item.effect && (
+                        <p className={`text-[10px] ${t.accent} mt-0.5 leading-snug wrap-break-word`}>
+                          ✦ {item.effect}
                         </p>
                       )}
                       {item.defense_bonus !== undefined &&
@@ -633,6 +643,11 @@ export function DnDInventory({
                           className={`text-[10px] ${t.textSecondary} mt-1 leading-snug wrap-break-word`}
                         >
                           {item.description}
+                        </p>
+                      )}
+                      {item.effect && (
+                        <p className={`text-[10px] ${t.accent} mt-1 leading-snug wrap-break-word`}>
+                          ✦ {item.effect}
                         </p>
                       )}
                     </div>

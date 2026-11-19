@@ -1,7 +1,7 @@
 import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import type { NewItemState } from '../../hooks/useCharacterData';
 import { useState } from 'react';
-import { Package, Sword, Shield, Trash2, FlaskConical, ScrollText, WandSparkles, Leaf } from 'lucide-react';
+import { Package, Sword, Shield, Trash2, FlaskConical, ScrollText, WandSparkles, Leaf, Sparkles, X } from 'lucide-react';
 import { ModalActions, ModalHeader } from './ModalControls';
 import type { HbItemCategory } from '../../systems/homebrew/types';
 import { Pf1ItemFields } from '../pf1e/Pf1ItemFields';
@@ -23,6 +23,9 @@ export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose,
   const isEditing = !!newItem.id;
   const [quantityInput, setQuantityInput] = useState(String(newItem.quantity));
   const [defenseInput, setDefenseInput] = useState(String(newItem.defense_bonus));
+  // Bonus / effet : affiché d'office pour un objet magique ou s'il est déjà renseigné.
+  const [showEffect, setShowEffect] = useState(!!newItem.effect);
+  const effectOpen = showEffect || newItem.category === 'objet_magique';
 
   const hbCategory = hbCategories?.find(c => c.id === newItem.category);
   // Champs affichés : ceux de la catégorie homebrew, sinon les champs D&D de l'arme / de l'armure.
@@ -86,6 +89,33 @@ export function AddItemModal({ newItem, setNewItem, onSubmit, onDelete, onClose,
               className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-16 resize-none focus:outline-none`}
             />
           </div>
+
+          {effectOpen ? (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className={`text-[10px] ${t.textMuted} uppercase flex items-center gap-1`}><Sparkles size={10} /> Bonus / effet</label>
+                {newItem.category !== 'objet_magique' && (
+                  <button type="button" aria-label="Retirer le bonus / effet" onClick={() => { setShowEffect(false); setNewItem(prev => ({ ...prev, effect: '' })); }} className={t.textMuted}>
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+              <textarea
+                placeholder="ex: +2 de résistance aux jets de sauvegarde, vision dans le noir 18 m…"
+                value={newItem.effect ?? ''}
+                onChange={(e) => setNewItem(prev => ({ ...prev, effect: e.target.value }))}
+                className={`${t.inputBg} border ${t.inputBorder} ${t.inputText} rounded-xl p-2.5 w-full text-xs h-14 resize-none focus:outline-none`}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowEffect(true)}
+              className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed ${t.inputBorder} ${t.textMuted} text-[10px] font-bold uppercase tracking-wide hover:brightness-110`}
+            >
+              <Sparkles size={12} /> Ajouter un bonus / effet
+            </button>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <div>

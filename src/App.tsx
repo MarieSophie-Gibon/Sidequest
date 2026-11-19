@@ -712,6 +712,7 @@ export default function App() {
                       data.setNewItem({
                         id: item.id, name: item.name, description: item.description || '', quantity: item.quantity, equipped: item.equipped,
                         category: item.category || 'objet', damage: item.damage || '', range: item.range || '', defense_bonus: item.defense_bonus || 0,
+                        effect: item.effect || '',
                       });
                       setModalType('add_item');
                     }}
@@ -750,6 +751,7 @@ export default function App() {
                         range: item.range || '',
                         defense_bonus: item.defense_bonus || 0,
                         pf1: item.pf1 ?? null,
+                        effect: item.effect || '',
                       });
                       setModalType('add_item');
                     }}

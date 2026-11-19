@@ -78,6 +78,8 @@ export interface NewItemState {
   damage: string;
   range: string;
   defense_bonus: number;
+  /** Bonus ou effet de l'objet, en texte libre. */
+  effect?: string;
   /** Pathfinder 1e : caractéristiques de l'arme ou de l'armure. */
   pf1?: Pf1ItemStats | null;
 }
@@ -798,6 +800,7 @@ export function useCharacterData(user: User | null, showAlert: (title: string, t
       character_id: activeChar.id,
       name: newItem.name.trim(),
       description: newItem.description.trim() || null,
+      effect: newItem.effect?.trim() || null,
       quantity: Number(newItem.quantity),
       weight: 1,
       equipped: newItem.equipped,

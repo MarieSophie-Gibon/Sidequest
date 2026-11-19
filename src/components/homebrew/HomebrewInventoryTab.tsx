@@ -67,6 +67,7 @@ export function HomebrewInventoryTab({ categories, items, onAddItem, onEditItem,
                       </button>
                     </div>
                     {item.description && <p className={`text-[10px] ${t.textSecondary} mt-1 line-clamp-2`}>{item.description}</p>}
+                    {item.effect && <p className={`text-[10px] ${t.accent} mt-0.5`}>✦ {item.effect}</p>}
                   </div>
                 ))}
               </div>

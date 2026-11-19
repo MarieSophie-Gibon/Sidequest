@@ -136,6 +136,8 @@ export interface Item {
   damage?: string;
   range?: string;
   defense_bonus?: number;
+  /** Bonus ou effet de l'objet (objet magique…), en texte libre. */
+  effect?: string | null;
   /** Pathfinder 1e : caractéristiques de l'arme ou de l'armure. */
   pf1?: Pf1ItemStats | null;
 }
