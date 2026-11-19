@@ -2,6 +2,8 @@
 
 /* Tablette : écran large ET tactile. Un ordinateur garde le format mobile quelle que soit la taille de la fenêtre. */
 @custom-variant tablet (@media (min-width: 768px) and (pointer: coarse));
+/* App installée sur ordinateur : l'app remplit sa fenêtre (pas de bandes noires si la fenêtre ne peut pas être plus étroite). */
+@custom-variant desktop-app (@media (display-mode: standalone) and (pointer: fine));
 
 @theme {
   --animate-loaderBlink: loaderBlink 1.5s ease-in-out infinite;

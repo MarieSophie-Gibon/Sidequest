@@ -1,6 +1,7 @@
 /**
- * Sidequest installée comme application (PWA) sur ordinateur : la fenêtre prend exactement
- * la largeur de l'app (le cadre au fond d'écran, `max-w-md` dans App.tsx). Sans effet dans
+ * Sidequest installée comme application (PWA) sur ordinateur : la fenêtre prend la largeur de l'app
+ * (`max-w-md` dans App.tsx) et toute la hauteur de l'écran. Si le navigateur impose une largeur
+ * minimale plus grande, l'app remplit la fenêtre (variante `desktop-app`). Sans effet dans
  * un onglet de navigateur ou sur mobile.
  *
  * Chrome et Edge autorisent window.resizeTo() dans une fenêtre d'application installée ;
@@ -9,7 +10,6 @@
 
 /** Largeur de l'app en rem : doit suivre `max-w-md` (28rem) du conteneur principal. */
 const APP_WIDTH_REM = 28;
-const MAX_HEIGHT = 900;
 
 export function fitDesktopWindowToMobile() {
   const installed = window.matchMedia('(display-mode: standalone)').matches;
@@ -18,14 +18,16 @@ export function fitDesktopWindowToMobile() {
 
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
   const appWidth = Math.round(APP_WIDTH_REM * rem);
-  if (window.innerWidth === appWidth) return;
+  const screenHeight = window.screen.availHeight;
+  if (window.innerWidth === appWidth && window.outerHeight === screenHeight) return;
 
   // resizeTo() règle la taille extérieure : on ajoute le cadre de la fenêtre (bordures).
   const frame = window.outerWidth - window.innerWidth;
-  // On garde la hauteur choisie, sauf si la fenêtre est plus haute qu'un téléphone.
-  const height = Math.min(window.outerHeight > MAX_HEIGHT ? MAX_HEIGHT : window.outerHeight, window.screen.availHeight);
+  // Toute la hauteur de l'écran (hors barre des tâches), fenêtre collée en haut.
+  const top = (window.screen as Screen & { availTop?: number }).availTop ?? 0;
   try {
-    window.resizeTo(appWidth + frame, height);
+    window.moveTo(window.screenX, top);
+    window.resizeTo(appWidth + frame, screenHeight);
   } catch {
     /* navigateur qui refuse le redimensionnement : on garde la fenêtre telle quelle */
   }
