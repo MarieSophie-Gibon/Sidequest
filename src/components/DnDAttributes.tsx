@@ -23,6 +23,7 @@ import {
   PawPrint,
   Heart,
   Bed,
+  ChevronDown,
 } from "lucide-react";
 import { ResourceTracker } from "./ResourceTracker";
 
@@ -83,6 +84,52 @@ export function DnDAttributes({
   systemSections,
 }: DnDAttributesProps) {
   const t = useThemeClasses();
+  // Capacités dépliées : leur description complète s'affiche sous la ligne.
+  const [openFeatures, setOpenFeatures] = useState<Set<string>>(() => new Set());
+  const toggleFeature = (id: string) =>
+    setOpenFeatures((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  /** Nom d'une capacité : le toucher déplie sa description (s'il y en a une). */
+  const featureName = (feat: Feature) =>
+    feat.description ? (
+      <span
+        role="button"
+        tabIndex={0}
+        aria-expanded={openFeatures.has(feat.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleFeature(feat.id);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFeature(feat.id);
+          }
+        }}
+        className={`text-xs font-bold ${t.textPrimary} flex items-center gap-1 min-w-0 cursor-pointer`}
+      >
+        <ChevronDown
+          size={11}
+          className={`${t.textMuted} shrink-0 transition-transform ${openFeatures.has(feat.id) ? "" : "-rotate-90"}`}
+        />
+        <span>{feat.name}</span>
+      </span>
+    ) : (
+      <span className={`text-xs font-bold ${t.textPrimary}`}>{feat.name}</span>
+    );
+  const featureDescription = (feat: Feature) =>
+    feat.description && openFeatures.has(feat.id) ? (
+      <p
+        className={`text-[11px] ${t.textSecondary} leading-normal whitespace-pre-line mt-2 pt-2 border-t ${t.cardBorder}`}
+      >
+        {feat.description}
+      </p>
+    ) : null;
   const { dashboardVisibility } = useAppSettings();
   const [editingFamiliarHp, setEditingFamiliarHp] = useState<{ id: string; value: string } | null>(null);
   const navigateTab = (tab: TabKey) => onNavigateTab?.(tab);
@@ -469,16 +516,13 @@ export function DnDAttributes({
                         className={`w-full ${t.inputBg} rounded-xl p-3 border ${canUse ? t.cardBorder : "border-transparent opacity-50"} text-left active:scale-[0.97] hover:brightness-95 transition-all disabled:cursor-not-allowed`}
                       >
                         <div className="flex justify-between items-center gap-2">
-                          <span
-                            className={`text-xs font-bold ${t.textPrimary}`}
-                          >
-                            {feat.name}
-                          </span>
+                          {featureName(feat)}
                           <span className="text-[10px] font-mono font-bold text-violet-100 bg-violet-500/45 px-1.5 py-0.5 rounded-md border border-violet-200/70 shadow-[0_0_12px_rgba(167,139,250,0.35)] flex items-center gap-0.5 shrink-0">
                             <Zap size={10} className="inline" />
                             {feat.resource_cost}
                           </span>
                         </div>
+                        {featureDescription(feat)}
                       </button>
                     </div>
                   );
@@ -488,10 +532,8 @@ export function DnDAttributes({
                     key={feat.id}
                     className={`${t.inputBg} rounded-xl p-3 border ${t.cardBorder}`}
                   >
-                    <div className="flex justify-between items-center">
-                      <span className={`text-xs font-bold ${t.textPrimary}`}>
-                        {feat.name}
-                      </span>
+                    <div className="flex justify-between items-center gap-2">
+                      {featureName(feat)}
                       <div className="flex items-center gap-1.5">
                         {Array.from({ length: feat.max }).map((_, i) => (
                           <button
@@ -510,6 +552,7 @@ export function DnDAttributes({
                         ))}
                       </div>
                     </div>
+                    {featureDescription(feat)}
                   </div>
                 );
               })}
@@ -542,12 +585,8 @@ export function DnDAttributes({
                   key={feat.id}
                   className={`${t.inputBg} rounded-xl p-3 border ${t.cardBorder}`}
                 >
-                  <div className="flex justify-between items-center">
-                    <span
-                      className={`text-xs font-bold ${t.textPrimary} block`}
-                    >
-                      {feat.name}
-                    </span>
+                  <div className="flex justify-between items-center gap-2">
+                    {featureName(feat)}
                     <div className="flex items-center gap-1.5">
                       {Array.from({ length: feat.max }).map((_, i) => (
                         <button
@@ -566,6 +605,7 @@ export function DnDAttributes({
                       ))}
                     </div>
                   </div>
+                  {featureDescription(feat)}
                 </div>
               ))}
 
@@ -574,10 +614,8 @@ export function DnDAttributes({
                   key={feat.id}
                   className={`${t.inputBg} rounded-xl p-3 border ${t.cardBorder}`}
                 >
-                  <div className="flex justify-between items-center ">
-                    <span className={`text-xs font-bold ${t.textPrimary}`}>
-                      {feat.name}
-                    </span>
+                  <div className="flex justify-between items-center gap-2">
+                    {featureName(feat)}
                     <div className="flex items-center gap-1.5">
                       {Array.from({ length: feat.max }).map((_, i) => (
                         <button
@@ -596,7 +634,7 @@ export function DnDAttributes({
                       ))}
                     </div>
                   </div>
-
+                  {featureDescription(feat)}
                 </div>
               ))}
             </div>
