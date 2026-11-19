@@ -3,7 +3,7 @@ import { useThemeClasses } from '../../contexts/AppSettingsContext';
 import { AlertTriangle } from 'lucide-react';
 import type { Breakdown, Pf1Data, Pf1ManeuverSettings, Pf1Sheet } from '../../systems/pf1e/types';
 import { signed } from '../../systems/pf1e/rules';
-import { BreakdownText, Pf1Collapsible } from './ui';
+import { Pf1Collapsible } from './ui';
 
 /** Manœuvres de combat PF1 : d20 + BMO contre le DMD de la cible. */
 const MANEUVERS: { id: string; name: string; improvedFeat: string; effect: string }[] = [
@@ -64,13 +64,17 @@ export function Pf1ManeuversCard({ data, sheet, onChange }: { data: Pf1Data; she
                     ? <span className={`text-[8px] font-bold uppercase px-1 py-0.5 rounded border ${t.accentBorder} ${t.accent} leading-none`}>Science</span>
                     : <AlertTriangle size={10} className="text-amber-400 shrink-0" aria-label="Provoque une attaque d’opportunité" />}
                 </span>
-                <span className="text-xs font-bold font-mono text-emerald-500 shrink-0">{signed(bd.total)}</span>
+                <span className="flex items-center gap-2 shrink-0">
+                  {/* Le don « Science de… » donne aussi +2 au DMD contre cette manœuvre. */}
+                  {s.improved && (
+                    <span className={`text-[10px] ${t.textMuted} font-semibold`}>DMD <span className={`font-mono font-bold ${t.textPrimary}`}>{sheet.cmd.total + 2}</span></span>
+                  )}
+                  <span className="text-xs font-bold font-mono text-emerald-500">{signed(bd.total)}</span>
+                </span>
               </button>
               {isOpen && (
                 <div className="px-3 pb-2 space-y-2">
                   <p className={`text-[10px] ${t.textSecondary}`}>{m.effect}</p>
-                  <BreakdownText breakdown={bd} />
-                  <p className={`text-[10px] ${t.textMuted}`}>DMD contre cette manœuvre : <span className={`font-mono font-bold ${t.textPrimary}`}>{sheet.cmd.total + (s.improved ? 2 : 0)}</span></p>
                   <div className="flex items-center justify-between gap-2">
                     <label className={`flex items-center gap-1.5 text-[10px] ${t.textSecondary} cursor-pointer`}>
                       <input type="checkbox" checked={s.improved} onChange={(e) => update(m.id, { improved: e.target.checked })} />
